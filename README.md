@@ -36,10 +36,10 @@ Our application will provide:
 
 1. **Register** → Users create secure accounts
 2. **Submit** → Enter domain/IP for assessment  
-3. **Download** → Get lightweight local scanner
-4. **Scan** → Execute Nmap/Nikto on their network
+3. **Download** → Get lightweight local scanner for any subnet(s) you wish to scan
+4. **Scan** → Execute Nmap/Nikto on domain and/or subnet(s)
 5. **Report** → Receive actionable security insights
-6. **Connect** → Access Cyber Clinic expert guidance
+6. **Connect** → Contact the Cyber Clinic for expert guidance
 
 ---
 
@@ -59,6 +59,7 @@ Our application will provide:
 ## 🚀 Getting Started (For Development)
 
 ### Prerequisites
+- 📦 Docker
 - 🐍 Python 3.10+
 - 🔧 Git
 - 🌐 Modern browser (Chrome, Edge, Firefox)
@@ -70,11 +71,18 @@ Our application will provide:
 git clone https://github.com/VanessaMedinaUNR/CyberClinic.git
 cd CyberClinic
 
-#Create virtual environment (when backend is ready)
-python -m venv venv
+#Start Web App and all associated containers
+cd Web
+docker-compose up
+
+#Create virtual environment for downloadable application testing
+cd.. # back into ~/CyberClinic/
+cd Application
+python3 -m venv .venv
+source venv/bin/activate
 
 #On Windows: venv\Scripts\activate
-source venv/bin/activate
+
 
 #Note: requirements.txt will be added as we develop dependencies
 ```
@@ -111,10 +119,10 @@ source venv/bin/activate
 <sub>Focus: x, y, z</sub>
 </td>
 <td align="center">
-<a href="#"><img src="https://github.com/github.png" width="100px;" alt="Austin Finch"/></a><br />
+<a href="https://github.com/Austin-Finch"><img src="https://github.com/Austin-Finch.png" width="100px;" alt="Austin Finch"/></a><br />
 <sub><b>Austin Finch</b></sub><br/>
 <sub><em>x Developer/Engineer</em></sub><br/>
-<sub>Focus: x, y, z</sub>
+<sub>Focus: Dockerization, Database, Backend</sub>
 </td>
 <td align="center">
 <a href="https://github.com/VanessaMedinaUNR"><img src="https://github.com/VanessaMedinaUNR.png" width="100px;" alt="Vanessa Medina"/></a><br />
