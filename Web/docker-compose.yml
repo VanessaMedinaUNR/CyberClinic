@@ -1,0 +1,62 @@
+name: CyberClinic Web Portal
+
+services:
+
+  frontend:
+    image: openeuler/react:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - frontend
+
+  backend:
+    image: python:latest
+    build:
+      context: backend
+      target: builder
+    command: python3 main.py
+    depends_on:
+      - reptor
+      - database
+    networks:
+      - backend
+      - frontend
+
+  backend-dev:
+    image: python:latest
+    build:
+      context: backend
+      target: builder
+    volumes:
+      - ./backend:/src
+    ports:
+      - "80:443"
+    command: sleep infinity
+    networks:
+      - backend
+      - frontend
+
+  database:
+    image: bitnami/postgresql:latest
+    restart: unless-stopped
+    expose:
+      - 5432
+    env_file:
+      - database.env
+    networks:
+      - backend
+
+
+  reptor:
+    image: syslifters/sysreptor:latest
+    restart: unless-stopped
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
