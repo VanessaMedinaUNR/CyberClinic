@@ -2,7 +2,6 @@
 #CS 425 Team 13 - User login/registration
 
 from flask import Blueprint, request, jsonify
-import hashlib
 import re
 
 #create a blueprint to organize all authentication routes
@@ -11,12 +10,8 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 #temporary storage for user accounts (will use real database later)
 #this is just for testing until we connect to postgresql
+#password hashing will be handled by PostgreSQL pgcrypto extension
 users_db = {}
-
-def hash_password(password):
-    #convert plain text password into a secure hash
-    #we never store the actual password, only the hashed version
-    return hashlib.sha256(password.encode()).hexdigest()
 
 def validate_email(email):
     #check if the email address looks correct
@@ -60,14 +55,14 @@ def register():
             if user_data['email'] == email:
                 return jsonify({'error': 'email already registered'}), 409
         
-        #create the new user account with secure password hash
-        password_hash = hash_password(password)
+        #create new user account - password hashing will be done by PostgreSQL pgcrypto
+        #for now storing plaintext for development (will be replaced with database integration)
         user_data = {
             'username': username,
             'email': email,
-            'password_hash': password_hash,
+            'password': password,  #temporary - will use pgcrypto in database
             'organization': organization,
-            'created_at': '2025-11-30',  #will use proper datetime later
+            'created_at': '2025-12-02',  #will use proper datetime when database connected
             'is_active': True
         }
         
@@ -111,9 +106,9 @@ def login():
         
         user_data = users_db[username]
         
-        #check if the password they entered matches what we have stored
-        password_hash = hash_password(password)
-        if password_hash != user_data['password_hash']:
+        #check if password matches - will be replaced with PostgreSQL pgcrypto verification
+        #temporary simple comparison for development until database integration
+        if password != user_data['password']:
             return jsonify({'error': 'invalid credentials'}), 401
         
         #make sure their account is still active

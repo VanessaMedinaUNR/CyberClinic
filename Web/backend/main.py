@@ -4,8 +4,10 @@
 from flask import Flask, jsonify, request
 import os
 
-#imported authentication routes from app package
+#imported authentication routes from app package  
 from app.routes.auth import auth_bp
+#imported models matching project UML design
+from app.models.user import UserAccount, ScanJob, NetworkTarget
 
 def create_app():
     #this creates our main flask web application
