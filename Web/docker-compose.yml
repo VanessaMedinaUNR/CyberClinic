@@ -17,6 +17,8 @@ services:
       context: backend
       target: builder
     command: python3 main.py
+    env_file:
+      - backend/backend.env
     depends_on:
       - reptor
       - database
@@ -31,6 +33,8 @@ services:
       target: builder
     volumes:
       - ./backend:/src
+    env_file:
+      - backend/backend.env
     ports:
       - "80:443"
     command: sleep infinity
