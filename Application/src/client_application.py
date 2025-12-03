@@ -1,11 +1,13 @@
 #Cyber Clinic Standalone Application - Main entry point
 #CS 425 Team 13 - Fall 2025
-
+import keyring
 import sys
 import os
+import socket
+import app
 from dotenv import load_dotenv
 import permission_handler as perms
-import backend_handler as backend
+import vpn_handler as vpn
 import platform
 import hashlib
 from PyQt6.QtCore import Qt
@@ -60,6 +62,19 @@ class Form(QDialog):
     def verify_user(self):
         email = self.e.text()
         passwd = self.p.text()
+        
+        conn = vpn.vpn_client(crt, "localhost", int(vpn_port))
+
+        send = f'{apphash}: {email}:{passwd}'
+        try:
+            conn.send(send.encode('latin-1'))
+            data = conn.recv(1024)
+            print(f"Received from server: {data}")
+            if data:
+                keyring.set_password("cyberclinic", email, passwd)
+                app.save_user(email)
+        finally:
+            conn.close()
 
         print(f"hash: {apphash}\n")
         print(f"{email}: {passwd}")
@@ -79,16 +94,24 @@ def compute_hash(filepath: str):
 
 
 if __name__ == '__main__':
-    system = platform.system()
-    if not(perms.is_admin(system)):
-        perms.request_admin_privileges(system)
-        if not(perms.is_admin(system)):
-            sys.exit("Please re-run with administrative privleges!")
-    
-    file = os.path.abspath(__file__)
-    apphash = compute_hash(file)
+    if not app.admin():
+        sys.exit("Please re-run with administrative privleges!")
 
     load_dotenv()
-    app = QApplication(sys.argv)  
-    w = Form()
-    app.exec()
+
+    file = os.path.abspath(__file__)
+    apphash = compute_hash(file)
+    
+    vpn_crt = os.getenv('VPN_CRT', 'server.crt')
+    vpn_host = os.getenv('VPN_HOST', 'localhost')
+    vpn_port = os.getenv('VPN_PORT', '6666')
+    crt = os.path.join(os.path.dirname(file), vpn_crt)
+
+    user = os.environ.get('CYBERCLINIC_USER')
+    if user:
+        passwd = keyring.get_password("cyberclinic", user)
+        print(passwd)
+    else:
+        app = QApplication(sys.argv)  
+        w = Form()
+        app.exec()
