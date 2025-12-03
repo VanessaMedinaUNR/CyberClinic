@@ -1,5 +1,7 @@
-#Cyber Clinic authentication routes
-#User login/registration
+"""
+Cyber Clinic Authentication Routes
+Handles user login and registration with email-based authentication
+"""
 
 from flask import Blueprint, request, jsonify
 import re
@@ -8,44 +10,40 @@ import hashlib
 import secrets
 from app.database import get_db
 
-#create a blueprint to organize all authentication routes
-#keeps login/register code separate from main app
+# Create blueprint for authentication routes
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
-#temporary storage for user accounts (will use real database later)
-#this is just for testing until we connect to postgresql
-#password hashing will be handled by PostgreSQL pgcrypto extension
+# Temporary storage for development (fallback when DB is unavailable)
 users_db = {}
 
-def validate_email(email):
-    #check if the email address looks correct
-    #uses a pattern to make sure it has @ symbol and domain
+# Validation functions
+def is_valid_email(email):
+    """Validate email format using regex pattern"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
+    return bool(re.match(pattern, email))
 
-def validate_phone(phone):
-    #basic phone number validation - accepts various formats
-    #removes spaces, hyphens, parentheses, and plus signs for digit check
+def is_valid_phone(phone):
+    """Validate phone number format (flexible, accepts various formats)"""
     if not phone or len(phone.strip()) < 10:
         return False
+    # Remove formatting characters and check if digits
     cleaned = re.sub(r'[\s\-\(\)\+\.]', '', phone)
-    #check if it contains at least 10 digits (flexible format)
-    return len(cleaned) >= 10 and len(cleaned) <= 20 and cleaned.isdigit()
+    return 10 <= len(cleaned) <= 20 and cleaned.isdigit()
 
-def hash_password_fallback(password):
-    #fallback password hashing when pgcrypto is not available
-    #uses secure Python hashing as backup
+# Password hashing for fallback storage
+def hash_password(password):
+    """Create secure password hash using PBKDF2"""
     salt = secrets.token_hex(16)
-    password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
-    return f"{salt}:{password_hash.hex()}"
+    hash_bytes = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
+    return f"{salt}:{hash_bytes.hex()}"
 
-def verify_password_fallback(password, stored_hash):
-    #verify password against fallback hash
+def verify_password(password, stored_hash):
+    """Verify password against stored hash"""
     try:
         salt, hash_hex = stored_hash.split(':', 1)
-        password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
-        return hash_hex == password_hash.hex()
-    except:
+        hash_bytes = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
+        return hash_hex == hash_bytes.hex()
+    except ValueError:
         return False
 
 @auth_bp.route('/register', methods=['POST'])
