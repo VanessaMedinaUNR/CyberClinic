@@ -22,6 +22,7 @@ CREATE TABLE client
   client_id      serial  NOT NULL,
   client_name    varchar NOT NULL,
   scan_frequency int     NOT NULL,
+  last_scheduled date    NOT NULL,
   PRIMARY KEY (client_id)
 );
 
