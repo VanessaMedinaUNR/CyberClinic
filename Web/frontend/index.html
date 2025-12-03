@@ -9,7 +9,7 @@
    <div id = "bounding_box">
         <h1>Welcome to CyberClinic</h1>
         <h2>University of Nevada Reno</h2>
-        <form action="" method="get">
+        <form action="http://localhost:5000/api/auth/login" method="POST">
             <div>
                 <label for="email">Enter your email:</label>
                 <input type="email" name="email" id="email" required>
@@ -19,7 +19,7 @@
                 <input type="text" name="password" id="password" required>
             </div>
             <div>
-                <button id="submit" onclick="">Submit</button>
+                <button id="submit" type="submit">Submit</button>
             </div>
         </form>
         <div id="external_buttons">
