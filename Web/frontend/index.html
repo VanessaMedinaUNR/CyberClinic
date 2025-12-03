@@ -6,7 +6,7 @@
     <title>Login</title>
 </head>
 <body>
-   <div id = "login_box">
+   <div id = "bounding_box">
         <h1>Welcome to CyberClinic</h1>
         <h2>University of Nevada Reno</h2>
         <form action="" method="get">
@@ -16,18 +16,16 @@
             </div>
             <div>
                 <label for="password">Enter your password</label>
-                <input type="password" name="password" id="password" required>
+                <input type="text" name="password" id="password" required>
             </div>
             <div>
                 <button id="submit" onclick="">Submit</button>
             </div>
-            <div>
-                <button id ="signup" onclick="window.location.href='signup.html'">Sign Up</button>
-            </div>
-            <div>
-                <button id = "forgotpw" onclick="">Forgot Password</button>
-            </div>
         </form>
+        <div id="external_buttons">
+            <button id="signup" type="button" onclick="window.location.href='signup.html'">Sign Up</button>
+            <button id="forgotpw" type="button" onclick="window.location.href='forgotpw.html'">Forgot Password</button>
+        </div>
    </div> 
 </body>
 </html>

@@ -1,0 +1,14 @@
+FROM nginx:alpine
+
+RUN rm -rf /usr/share/nginx/html/*
+
+COPY . /usr/share/nginx/html
+
+EXPOSE 80
+
+# instructions to run frontend docker build
+# docker build -t my-frontend . 
+# docker run -d -p 8080:80 my-frontend
+# access the site at: http://localhost:8080
+# to stop first run docker ps to copy container_id of "my-frontend" image
+# docker stop <container_id>
