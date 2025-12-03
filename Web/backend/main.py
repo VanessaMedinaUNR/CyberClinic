@@ -1,13 +1,12 @@
 #Cyber Clinic backend - Main entry point
-#CS 425 Team 13 - Fall 2025
 
 from flask import Flask, jsonify, request
 import os
-
-#imported authentication routes from app package  
+import subprocess
 from app.routes.auth import auth_bp
-#imported models matching project UML design
-from app.models.user import UserAccount, ScanJob, NetworkTarget
+from app.routes.scans import scans_bp
+from app.routes.reports import reports_bp
+from app.routes.standalone import standalone_bp
 
 def create_app():
     #this creates our main flask web application
@@ -21,6 +20,11 @@ def create_app():
     #connect our authentication routes to the main app
     #this adds all the /api/auth/* endpoints like login and register
     app.register_blueprint(auth_bp)
+    
+    #add additional routes for full CyberClinic functionality
+    app.register_blueprint(scans_bp) 
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(standalone_bp)
     
     #create a simple health check endpoint at the root URL
     @app.route('/')
@@ -43,9 +47,11 @@ def create_app():
                 'GET / - health check',
                 'GET /api/info - this info',
                 'POST /api/auth/register - user registration (READY)',
-                'POST /api/auth/login - user login (READY)',
-                'GET /api/auth/users - list users (dev only)',
-                'POST /api/scans/submit - submit scan request (coming soon)'
+                'POST /api/auth/login - user login (READY)', 
+                'POST /api/scans/submit - submit scan request (READY)',
+                'GET /api/scans/status/<id> - get scan status (READY)',
+                'POST /api/reports/generate/<id> - generate report (READY)',
+                'POST /api/standalone/execute/<id> - Austin\'s client integration (READY)'
             ],
             'status': 'development',
             'database': 'not connected yet',
@@ -60,9 +66,9 @@ if __name__ == '__main__':
     app = create_app()
     
     #server settings for docker containers
-    host = '0.0.0.0'  #listen on all network interfaces so docker can connect
-    port = 5000       #use port 5000 which is standard for flask apps
-    debug = True      #auto reload when we change code files
+    host = '0.0.0.0'
+    port = 5000
+    debug = True
     
     print("Starting Cyber Clinic Backend...")
     print(f"Server running on http://{host}:{port}")

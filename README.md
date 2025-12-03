@@ -119,7 +119,7 @@ source venv/bin/activate
 <sub>Focus: x, y, z</sub>
 </td>
 <td align="center">
-<a href="https://github.com/Austin-Finch"><img src="https://github.com/Austin-Finch.png" width="100px;" alt="Austin Finch"/></a><br />
+<a href="#"><img src="https://github.com/Austin-Finch.png" width="100px;" alt="Austin Finch"/></a><br />
 <sub><b>Austin Finch</b></sub><br/>
 <sub><em>x Developer/Engineer</em></sub><br/>
 <sub>Focus: Dockerization, Database, Backend</sub>

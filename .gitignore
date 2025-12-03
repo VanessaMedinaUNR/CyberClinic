@@ -1,4 +1,48 @@
+# Environment files and secrets
 *.env
+.env.*
+!.env.example
+
+# Python cache files
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Application specific
+/Web/backend/app/reports/
+/Web/backend/app/results/
+*.log
+*.sqlite
+*.db
+
+# Development and testing
+test_results.json
+coverage/
+.coverage
+.pytest_cache/
+test_*.py
+*_test.py
+requirements_minimal.txt
+start_dev.sh
+
+# Docker volumes and data
+postgres_data/
+reptor_data/
