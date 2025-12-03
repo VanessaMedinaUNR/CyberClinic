@@ -8,8 +8,7 @@ body {
     height: 100vh;
 }
 
-
-#login_box {
+#bounding_box {
     background: white;
     padding: 30px;
     width: 350px;
@@ -18,7 +17,7 @@ body {
     text-align: center;
 }
 
-
+/* Titles */
 #login_box h1 {
     margin-bottom: 5px;
     font-size: 24px;
@@ -31,6 +30,7 @@ body {
     color: #555;
 }
 
+/* Form fields */
 form div {
     margin: 15px 0;
     text-align: left;
@@ -43,9 +43,10 @@ label {
     color: #333;
 }
 
-
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="text"],
+input[type="tel"] {
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
@@ -53,7 +54,8 @@ input[type="password"] {
     font-size: 14px;
 }
 
-button {
+/* Submit button inside form */
+form button {
     width: 100%;
     padding: 10px;
     border: none;
@@ -64,15 +66,28 @@ button {
     cursor: pointer;
 }
 
-button:hover {
+form button:hover {
     background: #004d99;
 }
 
-
-#signup, #forgotpw {
-    background: #777;
+/* Buttons outside form (Sign Up / Forgot Password) */
+#external_buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
 }
 
-#signup:hover, #forgotpw:hover {
+#external_buttons button {
+    width: 48%; /* two buttons side by side */
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: #777;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+#external_buttons button:hover {
     background: #555;
 }
