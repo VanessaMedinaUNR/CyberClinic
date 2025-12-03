@@ -54,9 +54,6 @@ def create_app():
     return app
 
 if __name__ == '__main__':
-    #Run the standalone application handler
-    subprocess.run(["python", "standalone_handler.py"])
-
     #this runs when we start the file directly (not imported)
     #starts up our web server so people can connect to it
     app = create_app()

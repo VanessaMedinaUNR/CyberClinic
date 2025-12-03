@@ -16,7 +16,11 @@ services:
     build:
       context: backend
       target: builder
-    command: python3 main.py
+    ports:
+      - "6666:6666"
+    expose:
+      - 5000
+    command: python3 main.py & standalone_handler.py
     env_file:
       - backend/backend.env
     depends_on:
@@ -36,11 +40,14 @@ services:
     env_file:
       - backend/backend.env
     ports:
-      - "80:443"
+      - "5000:5000"
+      - "6666:6666"
     command: sleep infinity
     networks:
       - backend
       - frontend
+    depends_on:
+      - database
 
   database:
     image: bitnami/postgresql:latest

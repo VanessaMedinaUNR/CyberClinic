@@ -1,4 +1,4 @@
-from python:latest AS builder
+FROM python:latest AS builder
 WORKDIR /src
 
 COPY requirements.txt requirements.txt
