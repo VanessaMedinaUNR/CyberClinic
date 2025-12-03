@@ -96,12 +96,13 @@ class DatabaseManager:
         #create database tables if they dont exist
         #this matches the UML design and schema requirements
         schema_sql = """
-        -- create users table matching UserAccount model
+        -- create users table with backend-generated UUID and required fields
         CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
+            id UUID PRIMARY KEY,
             email VARCHAR(100) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
+            organization VARCHAR(100) NOT NULL,
+            phone_number VARCHAR(20) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP,
             is_active BOOLEAN DEFAULT true
@@ -134,8 +135,8 @@ class DatabaseManager:
         );
         
         -- create indexes for better query performance
-        CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
         CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+        CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization);
         CREATE INDEX IF NOT EXISTS idx_scan_jobs_user_id ON scan_jobs(user_id);
         CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status);
         CREATE INDEX IF NOT EXISTS idx_network_targets_type ON network_targets(target_type);

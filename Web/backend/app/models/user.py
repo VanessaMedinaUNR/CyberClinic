@@ -3,25 +3,30 @@
 from datetime import datetime
 
 class UserAccount:
-    #represents a user account
-    #corresponds to User table in project design
+    #represents a user account with backend-generated UUID
+    #corresponds to updated user table schema
     
-    def __init__(self, email, phone_number=None):
+    def __init__(self, email, organization, phone_number):
         #create new user - password hashing handled by PostgreSQL pgcrypto
-        self.user_id = None  #bigserial - database will set this
+        self.user_id = None  #UUID - backend generated
         self.email = email
-        self.salt = None  #varchar - database will generate with pgcrypto
-        self.hash = None  #varchar - database will generate with pgcrypto  
-        self.client_admin = False  #boolean - default non-admin
-        self.phone_number = phone_number  #varchar - optional contact
+        self.organization = organization  #required organization field
+        self.phone_number = phone_number  #required phone field
+        self.password_hash = None  #handled by PostgreSQL pgcrypto
+        self.is_active = True  #boolean - account status
+        self.created_at = None  #timestamp - set by database
+        self.last_login = None  #timestamp - updated on login
         
     def to_dict(self):
         #convert user info to JSON format - exclude sensitive data
         return {
             'user_id': self.user_id,
             'email': self.email,
+            'organization': self.organization,
             'phone_number': self.phone_number,
-            'client_admin': self.client_admin
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_login': self.last_login.isoformat() if self.last_login else None
         }
     
     def verify_password(self, password):
@@ -29,19 +34,25 @@ class UserAccount:
         #this method signature matches UML but implementation in database
         pass
     
-    def update_contact_info(self, email=None, phone=None):
-        #update email or phone number as specified in UML
+    def update_contact_info(self, email=None, phone=None, organization=None):
+        #update user contact information
         if email:
             self.email = email
         if phone:
             self.phone_number = phone
+        if organization:
+            self.organization = organization
             
-    def mark_as_client_admin(self):
-        #grant admin permissions as specified in UML
-        self.client_admin = True
+    def deactivate_account(self):
+        #deactivate user account
+        self.is_active = False
+        
+    def activate_account(self):
+        #reactivate user account
+        self.is_active = True
     
     def __str__(self):
-        return f"UserAccount(user_id={self.user_id}, email='{self.email}')"
+        return f"UserAccount(user_id={self.user_id}, email='{self.email}', org='{self.organization}')"
 
 
 class ScanJob:

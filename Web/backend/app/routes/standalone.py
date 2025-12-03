@@ -21,7 +21,7 @@ class StandaloneAppHandler:
     #manages communication between web backend and standalone app
     
     def __init__(self):
-        self.standalone_app_path = os.environ.get('STANDALONE_APP_PATH', '/app/standalone')
+        self.standalone_app_path = os.environ.get('STANDALONE_APP_PATH', '/src/standalone')
         # Use relative path that works both locally and in docker
         default_path = os.path.join(os.path.dirname(__file__), '..', '..', 'results')
         self.scan_results_path = os.environ.get('SCAN_RESULTS_PATH', default_path)
