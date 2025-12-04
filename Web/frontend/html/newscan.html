@@ -42,6 +42,12 @@
         </form>    
    </div> 
    <script>
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
     document.getElementById("newScanForm").addEventListener("submit", async function(event) {
         event.preventDefault(); 
         
@@ -60,8 +66,8 @@
                 target_type: target_type,
                 target_value: target_value,
                 scan_type: scan_type,
-                client_id: 1, // Default client for development
-                user_id: 1   // Default user for development
+                client_id: getCookie("client_id"), // Default client for development
+                user_id: getCookie("user_id")   // Default user for development
             })
         });
     
