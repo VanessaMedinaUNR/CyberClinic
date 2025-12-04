@@ -95,7 +95,7 @@ def submit_scan():
         
         #check if target already exists in network_targets table  
         existing_target = db.execute_single(
-            "SELECT * FROM network WHERE client_id = %s subnet_name = %s",
+            "SELECT * FROM network WHERE client_id = %s AND subnet_name = %s",
             (client_id, target_name)
         )
         
