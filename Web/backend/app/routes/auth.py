@@ -199,10 +199,16 @@ def login():
             
             #check if user exists and password is correct using pgcrypto
             user_data = db.execute_single(
-                """SELECT u.user_id, client_id, client_name, email, phone_number, client_admin
-                   FROM users u JOIN client_users ON u.user_id = client_users.user_id
+                """SELECT u.user_id, cu.client_id, email, phone_number, client_admin
+                   FROM users u 
+                   JOIN client_users cu ON u.user_id = cu.user_id
                    WHERE email = %s AND password_hash = crypt(%s, password_hash)""",
                 (email, password)
+            )
+
+            client = db.execute_single(
+                """SELECT * FROM client WHERE client_id = %s""",
+                (user_data['client_id'],)
             )
             
             if not user_data:
@@ -216,10 +222,10 @@ def login():
             return jsonify({
                 'message': 'login successful',
                 'user': {
-                    'user_id': user_data['id'],
-                    'client_id': user_data['client_id'],
+                    'user_id': user_data['user_id'],
+                    'client_id': client['client_id'],
                     'email': user_data['email'],
-                    'client_name': user_data['client_name'],
+                    'client_name': client['client_name'],
                     'phone_number': user_data['phone_number']
                 },
                 'session': 'temporary-session-token'
@@ -245,9 +251,9 @@ def login():
                 'message': 'login successful (temp storage)',
                 'user': {
                     'user_id': user_data['id'],
-                    'client_id': user_data['client_id'],
+                    'client_id': client['client_id'],
                     'email': user_data['email'],
-                    'client_name': user_data['client_name'],
+                    'client_name': client['client_name'],
                     'phone_number': user_data['phone_number']
                 },
                 'session': 'temporary-session-token'
