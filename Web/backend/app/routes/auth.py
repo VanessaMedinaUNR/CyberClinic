@@ -1,7 +1,5 @@
-"""
-Cyber Clinic Authentication Routes
-Handles user login and registration with email-based authentication
-"""
+#Cyber Clinic Authentication Routes
+#Handles user login and registration with email-based authentication
 
 from flask import Blueprint, request, jsonify
 import re
@@ -10,27 +8,33 @@ import hashlib
 import secrets
 from app.database import get_db
 
-# Create blueprint for authentication routes
+#create blueprint for authentication routes
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-
-# Temporary storage for development (fallback when DB is unavailable)
+#temporary storage for development (fallback when DB is unavailable)
 users_db = {}
 
-# Validation functions
+#validation functions
 def is_valid_email(email):
     """Validate email format using regex pattern"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return bool(re.match(pattern, email))
 
 def is_valid_phone(phone):
-    """Validate phone number format (flexible, accepts various formats)"""
-    if not phone or len(phone.strip()) < 10:
+    """Validate phone number format (flexible, accepts various international formats)"""
+    if not phone or len(phone.strip()) < 7:
         return False
-    # Remove formatting characters and check if digits
-    cleaned = re.sub(r'[\s\-\(\)\+\.]', '', phone)
-    return 10 <= len(cleaned) <= 20 and cleaned.isdigit()
+    #check for multiple plus signs (invalid)
+    if phone.count('+') > 1:
+        return False
+    #remove all formatting characters and spaces
+    cleaned = re.sub(r'[\s\-\(\)\+\.\s]', '', phone)
+    #check if it's all digits after cleaning
+    if not cleaned.isdigit():
+        return False
+    length = len(cleaned)
+    return 7 <= length <= 15
 
-# Password hashing for fallback storage
+#password hashing for fallback storage
 def hash_password(password):
     """Create secure password hash using PBKDF2"""
     salt = secrets.token_hex(16)
@@ -58,21 +62,21 @@ def register():
         email = data.get('email', '').strip().lower()
         password = data.get('password', '')
         organization = data.get('organization', '').strip()
-        phone_number = data.get('phone_number', '').strip()
+        phone_number = data.get('phone', '').strip() 
         
         #make sure they provided the required information
         if not email or not password or not organization or not phone_number:
             return jsonify({
                 'error': 'missing required fields',
-                'required': ['email', 'password', 'organization', 'phone_number']
+                'required': ['email', 'password', 'organization', 'phone']
             }), 400
         
         #validate email format
-        if not validate_email(email):
+        if not is_valid_email(email):
             return jsonify({'error': 'invalid email format'}), 400
         
         #validate phone number format
-        if not validate_phone(phone_number):
+        if not is_valid_phone(phone_number):
             return jsonify({'error': 'invalid phone number format'}), 400
         
         #make sure password is long enough to be secure
@@ -121,11 +125,11 @@ def register():
                     return jsonify({'error': 'email already registered'}), 409
             
             #create new user in temporary storage with secure password hashing
-            password_hash = hash_password_fallback(password)
+            password_hash = hash_password(password)
             user_data = {
                 'user_id': user_id,
                 'email': email,
-                'password_hash': password_hash,  #securely hashed even in fallback
+                'password_hash': password_hash, 
                 'organization': organization,
                 'phone_number': phone_number,
                 'created_at': '2025-12-03',
@@ -195,7 +199,7 @@ def login():
                     'organization': user_data['organization'],
                     'phone_number': user_data['phone_number']
                 },
-                'session': 'temporary-session-token'  #will implement proper jwt later
+                'session': 'temporary-session-token'
             }), 200
             
         except Exception as db_error:
@@ -206,7 +210,7 @@ def login():
             user_data = users_db[email]
             
             #check if password matches using secure verification
-            if not verify_password_fallback(password, user_data['password_hash']):
+            if not verify_password(password, user_data['password_hash']):
                 return jsonify({'error': 'invalid credentials'}), 401
             
             #make sure account is active
