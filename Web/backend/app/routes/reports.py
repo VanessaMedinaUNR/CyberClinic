@@ -5,6 +5,7 @@ import os
 import json
 from datetime import datetime
 import logging
+import ipaddress
 
 #import reptor client for report generation
 try:
@@ -44,25 +45,8 @@ class ReportGenerator:
             
             logger.info(f"Initializing SysReptor with server: {server_url}")
             
-            #try different initialization methods based on reptor version
-            try:
-                #method 1: Direct initialization with server parameter
-                self.reptor_client = Reptor(server=server_url, token=token)
-                logger.info("SysReptor client initialized with 'server' parameter")
-            except TypeError as te:
-                logger.warning(f"'server' parameter failed: {te}, trying alternative methods")
-                
-                #method 2: Try with serverurl (fallback)
-                try:
-                    self.reptor_client = Reptor(serverurl=server_url, token=token)
-                    logger.info("SysReptor client initialized with 'serverurl' parameter")
-                except TypeError as te2:
-                    logger.warning(f"'serverurl' parameter also failed: {te2}, trying config dict")
-                    
-                    #method 3: Try with config dict
-                    config = {'server': server_url, 'token': token}
-                    self.reptor_client = Reptor(config=config)
-                    logger.info("SysReptor client initialized with config dict")
+            self.reptor_client = Reptor(server=server_url, token=token)
+            logger.info("SysReptor client initialized with 'server' parameter")
             
         except Exception as e:
             logger.error(f"Failed to initialize SysReptor with all methods: {e}")
@@ -79,10 +63,10 @@ class ReportGenerator:
             
             #get scan details and results
             scan_data = db.execute_single(
-                """SELECT sj.*, nt.target_name, nt.target_type, nt.target_value, u.username, u.email
+                """SELECT sj.*, nt.subnet_name, nt.subnet_netmask, nt.subnet_ip, c.client_name, c.client_id
                    FROM scan_jobs sj 
-                   JOIN network_targets nt ON sj.target_id = nt.id
-                   JOIN users u ON sj.user_id = u.id
+                   JOIN network nt ON sj.client_id = nt.client_id AND sj.subnet_name = nt.subnet_name
+                   JOIN client c ON sj.client_id = c.client_id
                    WHERE sj.id = %s AND sj.status = 'completed'""",
                 (scan_id,)
             )
@@ -90,19 +74,49 @@ class ReportGenerator:
             if not scan_data:
                 raise Exception(f"Completed scan job {scan_id} not found")
             
+            admin_email = db.execute_single(
+                """SELECT u.email
+                FROM users u
+                JOIN client_users cu ON cu.client_id = %s
+                WHERE u.client_admin = TRUE LIMIT 1""",
+                (scan_data['client_id'])
+            )
+
+            target_value = None
+            target_type = None
+            #determine target value and type
+            domain = db.execute_single(
+                """SELECT domain
+                FROM network_domains
+                WHERE client_id = %s, subnet_name = %s""",
+                (scan_data['client_id'], scan_data['subnet_name'])
+                )
+            if domain:
+                target_type = "domain"
+                target_value = domain
+            else:
+                if scan_data["subnet_netmask"] == "255.255.255.255":
+                    target_type = "ip"
+                    target_value = scan_data["subnet_ip"]
+                else:
+                    target_type = "range"
+                    subnet_ip = scan_data['subnet_ip']
+                    subnet_netmask = scan_data['subnet_netmask']
+                    target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
+
             #prepare report data structure
             report_data = {
                 'scan_info': {
                     'scan_id': scan_data['id'],
                     'scan_type': scan_data['scan_type'],
                     'target': {
-                        'name': scan_data['target_name'],
-                        'type': scan_data['target_type'],
-                        'value': scan_data['target_value']
+                        'name': scan_data['subnet_name'],
+                        'type': target_type,
+                        'value': target_value
                     },
                     'user': {
-                        'username': scan_data['username'],
-                        'email': scan_data['email']
+                        'client_name': scan_data['client_name'],
+                        'email': admin_email
                     },
                     'timestamps': {
                         'created': scan_data['created_at'].isoformat(),
@@ -325,7 +339,7 @@ def download_report(scan_id):
         db = get_db()
         
         scan_data = db.execute_single(
-            "SELECT results_path, target_name FROM scan_jobs sj JOIN network_targets nt ON sj.target_id = nt.id WHERE sj.id = %s",
+            "SELECT results_path, subnet_name FROM scan_jobs sj JOIN network nt ON sj.client_id = nt.client_id WHERE sj.id = %s",
             (scan_id,)
         )
         
@@ -338,7 +352,7 @@ def download_report(scan_id):
             return jsonify({'error': 'Report file not found'}), 404
         
         #determine appropriate filename for download
-        filename = f"cyberclinic_report_{scan_data['target_name']}_{scan_id}.{os.path.splitext(report_path)[1][1:]}"
+        filename = f"cyberclinic_report_{scan_data['subnet_name']}_{scan_id}.{os.path.splitext(report_path)[1][1:]}"
         
         return send_file(report_path, as_attachment=True, download_name=filename)
         
@@ -370,9 +384,9 @@ def list_reports():
         
         query = f"""
             SELECT sj.id, sj.scan_type, sj.completed_at, sj.results_path,
-                   nt.target_name, nt.target_type, nt.target_value, u.username
+                   nt.subnet_name, nt.subnet_ip, nt.subnet_netmask, c.client_id c.client_name
             FROM scan_jobs sj 
-            JOIN network_targets nt ON sj.target_id = nt.id
+            JOIN network nt ON sj.subnet_name = nt.subnet_name AND sj.client_id = nt.client_id
             JOIN users u ON sj.user_id = u.id
             {where_clause}
             ORDER BY sj.completed_at DESC
@@ -381,6 +395,28 @@ def list_reports():
         
         reports = db.execute_query(query, params)
         
+        target_value = None
+        target_type = None
+        #determine target value and type
+        domain = db.execute_single(
+            """SELECT domain
+            FROM network_domains
+            WHERE client_id = %s, subnet_name = %s""",
+            (reports['client_id'], reports['subnet_name'])
+            )
+        if domain:
+            target_type = "domain"
+            target_value = domain
+        else:
+            if reports["subnet_netmask"] == "255.255.255.255":
+                target_type = "ip"
+                target_value = reports["subnet_ip"]
+            else:
+                target_type = "range"
+                subnet_ip = reports['subnet_ip']
+                subnet_netmask = reports['subnet_netmask']
+                target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
+
         #format report list
         report_list = []
         for report in reports:
@@ -389,10 +425,10 @@ def list_reports():
                 'scan_type': report['scan_type'],
                 'target': {
                     'name': report['target_name'],
-                    'type': report['target_type'],
-                    'value': report['target_value']
+                    'type': target_type,
+                    'value': target_value
                 },
-                'user': report['username'],
+                'client_name': report['client_name'],
                 'completed_at': report['completed_at'].isoformat(),
                 'has_report': bool(report['results_path']),
                 'download_url': f'/api/reports/download/{report["id"]}'

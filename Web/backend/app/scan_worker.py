@@ -5,6 +5,7 @@ import time
 import logging
 import threading
 import json
+import ipaddress
 from datetime import datetime
 from app.database import get_db
 from app.scan_executor import ScanExecutor
@@ -53,9 +54,9 @@ class ScanWorker:
         
         # Get pending scan jobs
         pending_scans = db.execute_query(
-            """SELECT sj.*, nt.target_name, nt.target_type, nt.target_value
+            """SELECT sj.*, nt.subnet_name, nt.subnet_ip, nt.subnet_netmask
                FROM scan_jobs sj
-               LEFT JOIN network_targets nt ON sj.target_id = nt.id
+               LEFT JOIN network nt ON sj.subnet_name = nt.subnet_name AND sj.client_id = nt.client_id
                WHERE sj.status = 'pending'
                ORDER BY sj.created_at ASC
                LIMIT 5""",
@@ -81,10 +82,29 @@ class ScanWorker:
                 "UPDATE scan_jobs SET status = 'running', started_at = CURRENT_TIMESTAMP WHERE id = %s",
                 (scan_id,)
             )
-            
-            #determine target value from network_targets table
-            target_value = scan_job['target_value']
-            target_type = scan_job['target_type']
+
+            target_value = None
+            target_type = None
+            #determine target value and type
+            domain = db.execute_single(
+                """SELECT domain
+                FROM network_domains
+                WHERE client_id = %s, subnet_name = %s""",
+                (scan_job['client_id'], scan_job['subnet_name'])
+                )
+            if domain:
+                target_type = "domain"
+                target_value = domain
+            else:
+                if scan_job["subnet_netmask"] == "255.255.255.255":
+                    target_type = "ip"
+                    target_value = scan_job["subnet_ip"]
+                else:
+                    target_type = "range"
+                    subnet_ip = scan_job['subnet_ip']
+                    subnet_netmask = scan_job['subnet_netmask']
+                    target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
+
             
             #parse scan configuration
             scan_config = {}

@@ -9,11 +9,11 @@ import logging
 #database connection configuration using environment variables
 #these values come from database.env file in docker-compose setup
 DB_CONFIG = {
-    'host': os.environ.get('POSTGRES_HOST', 'localhost'),
-    'port': os.environ.get('POSTGRES_PORT', 5432),
-    'database': os.environ.get('POSTGRES_DB', 'cyberclinic'),
-    'user': os.environ.get('POSTGRES_USER', 'cyberclinic_user'),
-    'password': os.environ.get('POSTGRES_PASSWORD', 'dev_password_change_in_production')
+    'host': os.environ.get('DB_HOST', 'database'),
+    'port': os.environ.get('DB_PORT', 5432),
+    'database': os.environ.get('DB_NAME', 'cyberclinic'),
+    'user': os.environ.get('DB_USER', 'cyberclinic_user'),
+    'password': os.environ.get('DB_PASS', 'dev_password_change_in_production')
 }
 
 #setup logging for database operations
@@ -92,68 +92,6 @@ class DatabaseManager:
             cursor.execute(query, params)
             return cursor.rowcount
 
-    def init_database_schema(self):
-        #create database tables if they dont exist
-        #this matches the UML design and schema requirements
-        schema_sql = """
-        -- create users table with backend-generated UUID and required fields
-        CREATE TABLE IF NOT EXISTS users (
-            id UUID PRIMARY KEY,
-            email VARCHAR(100) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            organization VARCHAR(100) NOT NULL,
-            phone_number VARCHAR(20) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_login TIMESTAMP,
-            is_active BOOLEAN DEFAULT true
-        );
-        
-        -- create network_targets table matching NetworkTarget model  
-        CREATE TABLE IF NOT EXISTS network_targets (
-            id SERIAL PRIMARY KEY,
-            target_name VARCHAR(100) NOT NULL,
-            target_type VARCHAR(20) NOT NULL CHECK (target_type IN ('domain', 'ip', 'range')),
-            target_value VARCHAR(255) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            verified BOOLEAN DEFAULT false,
-            verification_date TIMESTAMP
-        );
-        
-        -- create scan_jobs table matching ScanJob model
-        CREATE TABLE IF NOT EXISTS scan_jobs (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            target_id INTEGER REFERENCES network_targets(id) ON DELETE CASCADE,
-            scan_type VARCHAR(50) NOT NULL,
-            status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            started_at TIMESTAMP,
-            completed_at TIMESTAMP,
-            scan_config JSONB,
-            results_path VARCHAR(500),
-            error_message TEXT
-        );
-        
-        -- create indexes for better query performance
-        CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-        CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization);
-        CREATE INDEX IF NOT EXISTS idx_scan_jobs_user_id ON scan_jobs(user_id);
-        CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status);
-        CREATE INDEX IF NOT EXISTS idx_network_targets_type ON network_targets(target_type);
-        
-        -- enable pgcrypto extension for password hashing
-        CREATE EXTENSION IF NOT EXISTS pgcrypto;
-        """
-        
-        try:
-            with self.get_cursor() as cursor:
-                cursor.execute(schema_sql)
-            logger.info("Database schema initialized successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Schema initialization failed: {e}")
-            return False
-
 #create global database manager instance
 db_manager = DatabaseManager()
 
@@ -161,7 +99,7 @@ def init_db():
     #initialize database connection and create schema
     #this is called when the flask app starts up
     if db_manager.connect():
-        return db_manager.init_database_schema()
+        return db_manager
     return False
 
 def get_db():

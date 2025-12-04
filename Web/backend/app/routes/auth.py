@@ -92,18 +92,40 @@ def register():
             
             #check if email is already registered
             existing_user = db.execute_single(
-                "SELECT id FROM users WHERE email = %s", (email,)
+                "SELECT user_id FROM users WHERE email = %s", (email,)
             )
             
             if existing_user:
                 return jsonify({'error': 'email already registered'}), 409
             
+            client_id = db.execute_single(
+                "SELECT client_id FROM client WHERE client_name = %s", (client_name,)
+            )
+
+            client_admin = False # User not admin by default
+
+            # Create new client if it does not already exist
+            if not client_id:
+                print("Creating client")
+                client_admin = True # First user to a client is admin by default
+                client_id = str(uuid.uuid4())
+                db.execute_command(
+                     """INSERT INTO client (client_id, client_name)
+                     VALUES (%s, %s)""",
+                     (client_id, client_name)
+                )
+            
             #insert new user into database
             #password hashing will be done by PostgreSQL pgcrypto
             db.execute_command(
-                """INSERT INTO users (id, email, password_hash, organization, phone_number)
-                   VALUES (%s, %s, crypt(%s, gen_salt('bf')), %s, %s)""",
-                (user_id, email, password, client_name, phone_number)
+                """INSERT INTO users (user_id, email, password_hash, client_admin, phone_number)
+                VALUES (%s, %s, crypt(%s, gen_salt('bf')), %s, %s)""",
+                (user_id, email, password, client_admin, phone_number)
+            )
+            db.execute_command(
+                """INSERT INTO client_users (user_id, client_id)
+                VALUES (%s, %s)""",
+                (user_id, client_id)
             )
             
             #send back success message without showing password
@@ -177,8 +199,8 @@ def login():
             
             #check if user exists and password is correct using pgcrypto
             user_data = db.execute_single(
-                """SELECT user_id, client_id, client_name, email, phone_number, client_admin
-                   FROM users JOIN client_users
+                """SELECT u.user_id, client_id, client_name, email, phone_number, client_admin
+                   FROM users u JOIN client_users ON u.user_id = client_users.user_id
                    WHERE email = %s AND password_hash = crypt(%s, password_hash)""",
                 (email, password)
             )

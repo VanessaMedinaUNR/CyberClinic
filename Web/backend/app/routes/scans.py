@@ -95,21 +95,28 @@ def submit_scan():
         
         #check if target already exists in network_targets table  
         existing_target = db.execute_single(
-            "SELECT id FROM network_targets WHERE target_value = %s AND target_type = %s",
-            (target_value, target_type)
+            "SELECT * FROM network WHERE client_id = %s subnet_name = %s",
+            (client_id, target_name)
         )
         
         if existing_target:
-            target_id = existing_target['id']
-            logger.info(f"Using existing target: {target_id}")
+            target_name = existing_target['subnet_name']
+            logger.info(f"Using existing target: {target_name}")
         else:
             #create new network target
-            target_id = db.execute_single(
-                """INSERT INTO network_targets (target_name, target_type, target_value) 
-                   VALUES (%s, %s, %s) RETURNING id""",
-                (target_name, target_type, target_value)
-            )['id']
-            logger.info(f"Created new target: {target_id}")
+            target_name = db.execute_single(
+                """INSERT INTO network (client_id, subnet_name, subnet_ip, subnet_netmask, public_facing) 
+                   VALUES (%s, %s, %s, %s, %s) RETURNING subnet_name""",
+                (client_id, target_name, ip.network_address, ip.netmask, public_facing)
+            )['subnet_name']
+            
+            if target_type == "domain":
+                db.execute_single(
+                """INSERT INTO network_domains (domain, client_id, subnet_name) 
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (target_value, client_id, target_name)
+                )
+            logger.info(f"Created new target: {target_name}")
         
         #get user_id from session (placeholder - will integrate with auth later)
         user_id = data.get('user_id', 1) 
@@ -122,17 +129,17 @@ def submit_scan():
         }
         
         scan_job_id = db.execute_single(
-            """INSERT INTO scan_jobs (user_id, target_id, scan_type, scan_config, status) 
+            """INSERT INTO scan_jobs (client_id, subnet_name, scan_type, scan_config, status) 
                VALUES (%s, %s, %s, %s, 'pending') RETURNING id""",
-            (user_id, target_id, scan_type, str(scan_config))
+            (client_id, target_name, scan_type, str(scan_config))
         )['id'] 
         
-        logger.info(f"Created scan job: {scan_job_id} for target: {target_id}")
+        logger.info(f"Created scan job: {scan_job_id} for target: {target_name}")
         
         return jsonify({
             'success': True,
             'scan_job_id': scan_job_id,
-            'target_id': target_id,
+            'target_id': target_name,
             'status': 'pending',
             'message': 'Scan request submitted successfully'
         }), 201
@@ -148,17 +155,39 @@ def get_scan_status(scan_id):
         db = get_db()
         
         scan_details = db.execute_single(
-            """SELECT sj.*, nt.target_name, nt.target_type, nt.target_value, u.username
+            """SELECT sj.*, nt.subnet_name, nt.target_value, c.client_name
                FROM scan_jobs sj 
-               JOIN network_targets nt ON sj.target_id = nt.id
-               JOIN users u ON sj.user_id = u.id
+               JOIN network nt ON sj.client_id = nt.client_id AND sj.subnet_name = nt.subnet_name
+               JOIN client c ON sj.client_id = c.client_id
                WHERE sj.id = %s""",
-            (scan_id,)
+            (scan_id)
         )
         
         if not scan_details:
             return jsonify({'error': 'Scan job not found'}), 404
         
+        target_value = None
+        target_type = None
+        #determine target value and type
+        domain = db.execute_single(
+            """SELECT domain
+            FROM network_domains
+            WHERE client_id = %s, subnet_name = %s""",
+            (scan_details['client_id'], scan_details['subnet_name'])
+            )
+        if domain:
+            target_type = "domain"
+            target_value = domain
+        else:
+            if scan_details["subnet_netmask"] == "255.255.255.255":
+                target_type = "ip"
+                target_value = scan_details["subnet_ip"]
+            else:
+                target_type = "range"
+                subnet_ip = scan_details['subnet_ip']
+                subnet_netmask = scan_details['subnet_netmask']
+                target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
+
         #calculate scan duration if completed
         duration = None
         if scan_details['started_at'] and scan_details['completed_at']:
@@ -170,8 +199,8 @@ def get_scan_status(scan_id):
             'scan_type': scan_details['scan_type'],
             'target': {
                 'name': scan_details['target_name'],
-                'type': scan_details['target_type'],
-                'value': scan_details['target_value']
+                'type': target_type,
+                'value': target_value
             },
             'user': scan_details['username'],
             'created_at': scan_details['created_at'].isoformat(),
@@ -209,7 +238,7 @@ def list_scans():
             params.append(status_filter)
         
         if user_filter:
-            where_conditions.append("sj.user_id = %s")
+            where_conditions.append("sj.client_id = %s")
             params.append(int(user_filter))
         
         if scan_type_filter:
@@ -222,10 +251,10 @@ def list_scans():
         params.extend([limit, offset])
         
         query = f"""
-            SELECT sj.*, nt.target_name, nt.target_type, nt.target_value, u.username
+            SELECT sj.*, nt.subnet_name, nt.subnet_ip, nt.subnet_netmask, c.client_id
             FROM scan_jobs sj 
-            JOIN network_targets nt ON sj.target_id = nt.id
-            JOIN users u ON sj.user_id = u.id
+            JOIN network nt ON sj.client_id = nt.client_id AND sj.subnet_name = nt.subnet_name
+            JOIN client c ON sj.client_id = c.client_id
             {where_clause}
             ORDER BY sj.created_at DESC
             LIMIT %s OFFSET %s
@@ -236,14 +265,35 @@ def list_scans():
         #format scan list for response
         scan_list = []
         for scan in scans:
+            target_type = None
+            target_value = None
+
+            domain = db.execute_single(
+                """SELECT domain
+                FROM network_domains
+                WHERE client_id = %s AND subnet_name = %s""",
+                (scan['client_id'], scans['subnet_name'])
+                )
+            if domain:
+                target_type = "domain"
+                target_value = domain
+            else:
+                if scan["subnet_netmask"] == "255.255.255.255":
+                    target_type = "ip"
+                    target_value = scan["subnet_ip"]
+                else:
+                    target_type = "range"
+                    subnet_ip = scan['subnet_ip']
+                    subnet_netmask = scan['subnet_netmask']
+                    target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
             scan_list.append({
                 'scan_id': scan['id'],
                 'status': scan['status'],
                 'scan_type': scan['scan_type'],
                 'target': {
                     'name': scan['target_name'],
-                    'type': scan['target_type'],
-                    'value': scan['target_value']
+                    'type': target_type,
+                    'value': target_value
                 },
                 'user': scan['username'],
                 'created_at': scan['created_at'].isoformat(),
@@ -329,7 +379,7 @@ def verify_target():
         #update database if target exists
         db = get_db()
         db.execute_command(
-            "UPDATE network_targets SET verified = true, verification_date = CURRENT_TIMESTAMP WHERE target_value = %s",
+            "UPDATE network SET verified = true, verification_date = CURRENT_TIMESTAMP WHERE target_value = %s",
             (target_value,)
         )
         
@@ -351,7 +401,7 @@ def get_scan_results(scan_id):
         scan_details = db.execute_single(
             """SELECT sj.*, n.subnet_name as target_name
                FROM scan_jobs sj 
-               LEFT JOIN network n ON sj.target_id = n.subnet_id
+               LEFT JOIN network n ON sj.subnet_name = n.subnet_name AND sj.client_id = n.client_id
                WHERE sj.id = %s""",
             (scan_id,)
         )

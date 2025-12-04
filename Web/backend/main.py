@@ -1,8 +1,8 @@
 #Cyber Clinic backend - Main entry point
 
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 import os
-import subprocess
 import atexit
 from app.routes.auth import auth_bp
 from app.routes.scans import scans_bp
@@ -49,7 +49,7 @@ def create_app():
                 'POST /api/scans/submit - submit scan request (READY)',
                 'GET /api/scans/status/<id> - get scan status (READY)',
                 'POST /api/reports/generate/<id> - generate report (READY)',
-                'POST /api/standalone/execute/<id> - Austin\'s client integration (READY)'
+                'POST /api/standalone/execute/<id> - Austin\'s client integration (NOT READY)'
             ],
             'status': 'development',
             'database': 'not connected yet',
@@ -62,6 +62,7 @@ if __name__ == '__main__':
     #this runs when we start the file directly (not imported)
     #starts up our web server so people can connect to it
     app = create_app()
+    CORS(app)
     #start the background scan worker
     print("Starting background scan worker...")
     start_scan_worker()
