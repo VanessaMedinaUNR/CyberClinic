@@ -8,8 +8,121 @@
         body{
             display: block;
             height: auto;
-            background: #f8fafc;
+            background: white;
         }
+        #bounding_box{
+            width:95%;
+            margin: 20px auto;
+            padding: 0;
+            background: transparent;
+            box-shadow: none;
+            text-align: left;
+            max-width: 1200px; 
+
+        }
+        .dashboard-header {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .brand-section h1{ 
+            color: navy; 
+            font: size 18px; 
+            margin:0;
+        }
+
+        .brand-section p {
+            color: #64748b;
+            font-size: 12px;
+            margin: 0;
+        }
+        .user-controls{
+            display:flex;
+            align-items:center;
+            gap: 15px;
+            font-size:14px;
+            color: black;
+        }
+        table {
+            width:100%; 
+            border-collapse: 
+            collapse;
+        }
+        th{ 
+            text-align: left;
+            padding: 15px; 
+            color:black; 
+            border-bottom: 1px 
+            solid #eee; 
+            font-size:14px;
+        }
+        td { 
+            padding: 15px; 
+            border-bottom: 1px solid #eee; 
+            color: #333; 
+            vertical-align:middle;
+        }
+
+        .btn-black{
+            background: #0f172a;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border:none;
+            cursor:pointer;
+            font-weight: bold;
+
+        }
+        
+
     </style>
+    </head>
+    <body>
+        <div id="bounding_box">
+            
+            <div class="dashboard-header">
+                <div class="brand-section">
+                <h1>CyberClinic</h1>
+                <p> University of Nevada, Reno</p>
+            </div>
+            <div class=" user-controls">
+                <span id="User-email"> user@email.com </span>
+                <a href="setting.hml" style="text-decoration: none;">⚙️</a>
+            </div>
+        </div>
+
+        <div style=" display: flex; justify-content: space-between; align-items: center; margin-bottom: 20 px;">
+            <h1 style="font-size: 20px; color: #333; margin: 0;">Dashboard </h1>
+            <button class="btn-black" onclick "">+ Configure New Scan </button>
+        </div> 
+
+        <div class="content-card">
+            <div class="card-title-row">
+                <h2>Active scans & Reports </h2>
+            </div>
+            <table id="scans-table">
+                <thread>
+                    <tr>
+                        <th>Name / Target </th>
+                        <th> Date (last Run) </th>
+                        <th>Status </th>
+                        <th> Security Rating</th>
+                        <th style="text-align: right;">Actions </th>
+                    </tr>
+                </thread>
+                    <tbody>
+                
+                    </tbody>
+                
+            </table>
+        </div>
+    </div>
+ </body>
+ </html>
    
     
