@@ -1,0 +1,27 @@
+server {
+    listen ${NGINX_PORT};
+    server_name ${NGINX_SERVER};
+
+    # Serve static files for the frontend
+    location / {
+        root /usr/share/nginx/html;  # Path to your frontend build files
+        index index.html;
+        try_files ${DOLLAR}uri ${DOLLAR}uri/ =404;
+    }
+
+    # Proxy requests to the Flask API
+    location /api {
+        proxy_pass http://${FLASK_SERVER}:${FLASK_PORT};  # Point to the Flask container in Docker network
+        proxy_set_header Host ${NGINX_SERVER};
+        proxy_set_header X-Real-IP ${DOLLAR}remote_addr;
+        proxy_set_header X-Forwarded-For ${DOLLAR}proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto ${DOLLAR}scheme;
+    }
+
+    # Error pages and logs configuration (FUTURE)
+    error_page 404 /404.html;
+    error_page 500 /500.html;
+    location = /500.html {
+        root /usr/share/nginx/html;  # Path to custom error pages if you have them
+    }
+}

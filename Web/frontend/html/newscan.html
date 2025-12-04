@@ -29,7 +29,8 @@
             <div>
                 <label for="scan_type">Select scan type:</label>
                 <select name="scan_type" id="scan_type" required>
-                    <option value="nmap">NMAP</option>
+                    <option value="nmap">NMAP (Network/Port Scan)</option>
+                    <option value="nikto">Nikto (Web Vulnerability Scan)</option>
                     <option value="vulnerability">Vulnerability</option>
                     <option value="full">Full</option>
                 </select>
@@ -41,6 +42,12 @@
         </form>    
    </div> 
    <script>
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
     document.getElementById("newScanForm").addEventListener("submit", async function(event) {
         event.preventDefault(); 
         
@@ -58,7 +65,9 @@
                 target_name: target_name,
                 target_type: target_type,
                 target_value: target_value,
-                scan_type: scan_type
+                scan_type: scan_type,
+                client_id: getCookie("client_id"), // Default client for development
+                user_id: getCookie("user_id")   // Default user for development
             })
         });
     

@@ -1,7 +1,35 @@
-from python:latest AS builder
+FROM python:3.11-slim AS builder
+
 WORKDIR /src
 
-COPY requirements.txt requirements.txt
-RUN pip3 install -r requirements.txt
+#install system dependencies and scanning tools
+RUN apt-get update && apt-get install -y \
+    gcc \
+    nmap \
+    curl \
+    wget \
+    git \
+    perl \
+    && rm -rf /var/lib/apt/lists/*
 
+#install Nikto from GitHub since it's not in main repos
+RUN git clone https://github.com/sullo/nikto.git /opt/nikto \
+    && ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto \
+    && chmod +x /opt/nikto/program/nikto.pl
+
+#copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+#copy application code
 COPY . .
+
+#create non-root user for security
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /src
+USER app
+
+#health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/ || exit 1
