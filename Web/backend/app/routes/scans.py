@@ -87,7 +87,7 @@ def submit_scan():
             return jsonify({'error': 'Invalid target type. Must be: domain, ip, or range'}), 400
         
         #validate scan type
-        valid_scan_types = ['nmap', 'nikto', 'vulnerability', 'full']
+        valid_scan_types = ['nmap', 'vulnerability', 'full']
         if scan_type not in valid_scan_types:
             return jsonify({'error': f'Invalid scan type. Must be one of: {", ".join(valid_scan_types)}'}), 400
         
@@ -120,25 +120,54 @@ def submit_scan():
         
         #get user_id from session (placeholder - will integrate with auth later)
         user_id = data.get('user_id', 1) 
-        
+
+        scan_job_ids = []
         #create scan job
-        scan_config = {
-            'target_type': target_type,
-            'scan_options': data.get('scan_options', {}),
-            'priority': data.get('priority', 'normal')
-        }
+        if scan_type.lower() == "full":
+            nmap_scan_config = {
+                'target_type': target_type,
+                'scan_options': data.get('scan_options', {}),
+                'priority': data.get('priority', 'normal')
+            }
+            
+            nmap_scan_job_id = db.execute_single(
+                """INSERT INTO scan_jobs (client_id, subnet_name, scan_type, scan_config, status) 
+                VALUES (%s, %s, %s, %s, 'pending') RETURNING id""",
+                (client_id, target_name, 'nmap', str(nmap_scan_config))
+            )['id']
+            scan_job_ids.append(nmap_scan_job_id)
+
+            nikto_scan_config = {
+                'target_type': target_type,
+                'scan_options': data.get('scan_options', {}),
+                'priority': data.get('priority', 'normal')
+            }
+            
+            nikto_scan_job_id = db.execute_single(
+                """INSERT INTO scan_jobs (client_id, subnet_name, scan_type, scan_config, status) 
+                VALUES (%s, %s, %s, %s, 'pending') RETURNING id""",
+                (client_id, target_name, 'nikto', str(nikto_scan_config))
+            )['id']
+            scan_job_ids.append(nikto_scan_job_id)
+        else:
+            scan_config = {
+                'target_type': target_type,
+                'scan_options': data.get('scan_options', {}),
+                'priority': data.get('priority', 'normal')
+            }
+            
+            scan_job_id = db.execute_single(
+                """INSERT INTO scan_jobs (client_id, subnet_name, scan_type, scan_config, status) 
+                VALUES (%s, %s, %s, %s, 'pending') RETURNING id""",
+                (client_id, target_name, scan_type, str(scan_config))
+            )['id']
+            scan_job_ids.append(scan_job_id)
         
-        scan_job_id = db.execute_single(
-            """INSERT INTO scan_jobs (client_id, subnet_name, scan_type, scan_config, status) 
-               VALUES (%s, %s, %s, %s, 'pending') RETURNING id""",
-            (client_id, target_name, scan_type, str(scan_config))
-        )['id'] 
-        
-        logger.info(f"Created scan job: {scan_job_id} for target: {target_name}")
-        
+        for job_id in scan_job_ids:
+            logger.info(f"Created scan job: {job_id} for target: {target_name}")
         return jsonify({
             'success': True,
-            'scan_job_id': scan_job_id,
+            'scan_job_ids': scan_job_ids,
             'target_id': target_name,
             'status': 'pending',
             'message': 'Scan request submitted successfully'
