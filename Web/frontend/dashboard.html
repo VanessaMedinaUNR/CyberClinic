@@ -106,7 +106,7 @@
                 <h2>Active scans & Reports </h2>
             </div>
             <table id="scans-table">
-                <thread>
+                <thead>
                     <tr>
                         <th>Name / Target </th>
                         <th> Date (last Run) </th>
@@ -114,7 +114,7 @@
                         <th> Security Rating</th>
                         <th style="text-align: right;">Actions </th>
                     </tr>
-                </thread>
+                </thead>
                     <tbody>
                 
                     </tbody>
@@ -123,36 +123,102 @@
         </div>
     </div>
     <script>
-        document.getElementById("loginForm").addEventListener("submit", async function(event) {
-            event.preventDefault(); 
-            
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
-        
-            
-            const response = await fetch("http://localhost:5000/api/auth/submit", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
-            });
-        
-            const result = await response.json();
-            console.log(result);
-        
-            if (response.ok) {
-                
-                window.location.href = "dashboard.html"; 
-            } else {
-                alert(result.error || "Login failed.");
-            }
+        document.addEventListener("DOMContentLoaded", async function(){
+            await loadscans();
         });
+        async function loadscans(){
+            try{
+                const response = await fetch ("http://localhost:5000/api/scans/list",{
+                    method: "GET",
+                    headers: {
+                        "content-Type": "application/json"
+                    }
+
+                });
+                if (!response.ok){
+                    throw new Error("Failed to connect to server");
+                }
+
+                const data = await response.json();
+
+                const scans = data.scans;
+
+                const tableBody = document.querySelector("#scans-table tbody");
+                tableBody.innerHTML = "";
+
+                if (!scans ||scans.length === 0){
+                    tableBody.innerHTML = "<tr><td colspan='5' style= 'text-align:center'> No Scans found.</td></tr>";
+                    return;
+                
+                }
+                scans.forEach(scan => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                    <td>
+                        <strong>${scan.target.name}</strong><br>
+                        <span style="font-size: 12px; color: #666;">${scan.target.value}</span>
+                    </td>
+                    <td>${new Date(scan.created_at).toLocaleDateString()}</td>
+                    <td>${scan.scan_type}</td>
+                    <td>
+                        <span style="color: ${getStatusColor(scan.status)}; font-weight: bold;">
+                            ${scan.status}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <button class="btn-black" onclick="window.location.href='report.html?id=${scan.scan_id}'" style="padding: 5px 10px; font-size: 12px;">
+                            View Report
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+
+    
+    function getStatusColor(status) {
+        if (status === 'completed') return 'green';
+        if (status === 'failed') return 'red';
+        if (status === 'pending') return 'orange';
+        return 'black';
+    }
+
+        
+
+            
+    //         document.getElementById("loginForm").addEventListener("submit", async function(event) {
+    //         event.preventDefault(); 
+            
+    //         const email = document.getElementById("email").value;
+    //         const password = document.getElementById("password").value;
+        
+            
+    //         const response = await fetch("http://localhost:5000/api/auth/submit", {
+    //             method: "POST",
+    //             headers: {
+    //                 "Content-Type": "application/json"
+    //             },
+    //             body: JSON.stringify({
+    //                 email: email,
+    //                 password: password
+    //             })
+    //         });
+        
+    //         const result = await response.json();
+    //         console.log(result);
+        
+    //         if (response.ok) {
+                
+    //             window.location.href = "dashboard.html"; 
+    //         } else {
+    //             alert(result.error || "Login failed.");
+    //         }
+    //    }); 
         </script>
  </body>
  </html>
    
-    
