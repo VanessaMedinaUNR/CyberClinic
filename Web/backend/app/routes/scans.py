@@ -87,7 +87,7 @@ def submit_scan():
             return jsonify({'error': 'Invalid target type. Must be: domain, ip, or range'}), 400
         
         #validate scan type
-        valid_scan_types = ['nmap', 'vulnerability', 'full']
+        valid_scan_types = ['nmap', 'nikto', 'full']
         if scan_type not in valid_scan_types:
             return jsonify({'error': f'Invalid scan type. Must be one of: {", ".join(valid_scan_types)}'}), 400
         
@@ -165,6 +165,7 @@ def submit_scan():
         
         for job_id in scan_job_ids:
             logger.info(f"Created scan job: {job_id} for target: {target_name}")
+        
         return jsonify({
             'success': True,
             'scan_job_ids': scan_job_ids,
