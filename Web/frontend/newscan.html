@@ -1,0 +1,77 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel ="stylesheet" href="login.css">
+    <title>New Scan</title>
+</head>
+<body>
+    <div id = "bounding_box">
+        <h1>Generate a New Scan!</h1>
+        <h4>Please enter a name for your scan, select target type; ip, domain, or range, it's target value and what type of scan!</h4>
+        <form id="newScanForm">
+            <div>
+                <label for="target_name">Enter your scan name:</label>
+                <input type="text" name="target_name" id="target_name" required>
+            </div>
+            <div>
+                <label for="target_type">Select your target type:</label>
+                <select name="target_type" id="target_type" required>
+                    <option value="domain">Domain</option>
+                    <option value="ip">IP</option>
+                    <option value="range">Range</option>
+                </select>
+            </div>
+            <div>
+                <label for="target_value">Enter target value:</label>
+                <input type="text" name="target_value" id="target_value" required>
+            </div>
+            <div>
+                <label for="scan_type">Select scan type:</label>
+                <select name="scan_type" id="scan_type" required>
+                    <option value="nmap">NMAP</option>
+                    <option value="vulnerability">Vulnerability</option>
+                    <option value="full">Full</option>
+                </select>
+            </div>
+            <div id="external_buttons">
+                <button type="submit">Generate Scan</button>
+                <button type="button" onclick="window.location.href='dashboard.html'">Back</button>
+            </div>
+        </form>    
+   </div> 
+   <script>
+    document.getElementById("newScanForm").addEventListener("submit", async function(event) {
+        event.preventDefault(); 
+        
+        const target_name = document.getElementById("target_name").value;
+        const target_type = document.getElementById("target_type").value;
+        const target_value = document.getElementById("target_value").value;
+        const scan_type = document.getElementById("scan_type").value;
+        
+        const response = await fetch("http://localhost:5000/api/scans/submit", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                target_name: target_name,
+                target_type: target_type,
+                target_value: target_value,
+                scan_type: scan_type
+            })
+        });
+    
+        const result = await response.json();
+        console.log(result);
+    
+        if (response.ok) {
+            
+            window.location.href = "dashboard.html"; 
+        } else {
+            alert(result.error || "Scan failed.");
+        }
+    });
+    </script>
+</body>
+</html>

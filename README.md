@@ -128,7 +128,7 @@ source venv/bin/activate
 <a href="https://github.com/VanessaMedinaUNR"><img src="https://github.com/VanessaMedinaUNR.png" width="100px;" alt="Vanessa Medina"/></a><br />
 <sub><b>Vanessa Medina</b></sub><br/>
 <sub><em>x Developer/Engineer</em></sub><br/>
-<sub>Focus: x, y, z</sub>
+<sub>Focus: Frontend, Backend to Frontend Integration</sub>
 </td>
 <td align="center">
 <a href="https://github.com/Wovern-NV"><img src="https://github.com/Wovern-NV.png" width="100px;" alt="Manuel Morales-Marroquin"/></a><br />

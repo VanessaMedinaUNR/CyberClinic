@@ -92,13 +92,13 @@
             </div>
             <div class=" user-controls">
                 <span id="User-email"> user@email.com </span>
-                <a href="setting.hml" style="text-decoration: none;">⚙️</a>
+                <a href="settings.html" style="text-decoration: none;">⚙️</a>
             </div>
         </div>
 
         <div style=" display: flex; justify-content: space-between; align-items: center; margin-bottom: 20 px;">
             <h1 style="font-size: 20px; color: #333; margin: 0;">Dashboard </h1>
-            <button class="btn-black" onclick "">+ Configure New Scan </button>
+            <button class="btn-black" id = "newScan" onclick="window.location.href='newscan.html'">+ Configure New Scan </button>
         </div> 
 
         <div class="content-card">
@@ -122,6 +122,36 @@
             </table>
         </div>
     </div>
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async function(event) {
+            event.preventDefault(); 
+            
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+        
+            
+            const response = await fetch("http://localhost:5000/api/auth/submit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
+            });
+        
+            const result = await response.json();
+            console.log(result);
+        
+            if (response.ok) {
+                
+                window.location.href = "dashboard.html"; 
+            } else {
+                alert(result.error || "Login failed.");
+            }
+        });
+        </script>
  </body>
  </html>
    
