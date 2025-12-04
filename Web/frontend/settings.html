@@ -1,0 +1,87 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel ="stylesheet" href="login.css">
+    <title>Settings</title>
+    <style> 
+    body{
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f3f5f7;
+        height: auto;
+        display: block;
+    }
+    #bounding_box{
+        width: 95%;
+        margin: 20px auto;
+        padding:0;
+        background: transparent;
+        box-shadow: none;
+        text-align: left;
+        max-width: 1000px;
+    }
+    .dahsboard-header{
+        background:white ;
+        padding: 15pc 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    .brand-section h1{
+        color:navy;
+        font-size: 30px;
+        margin:0;
+        font-weight: bold;
+    }
+    .brand-section p{
+        color: #64748b;
+        font-size:12px;
+        margin:0;
+
+    }
+    .back-link{
+        display:incline-flex;
+        align-items: center;
+        gap: 5px;
+        color:black;
+        text-decoration:none;
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 20px;
+        cursor: pointer;
+
+    }
+    .back-link svg{
+        width: 16px;
+        height: 16px;
+
+    }
+
+    </style>
+</head>
+<body>
+    <div id="bounding_box">
+        <div class="dashboard-header">
+            <div class="brand-section">
+                <h1>CyberClinic</h1>
+                <p>University of Nevada, Reno </p>
+            </div>
+        </div>
+        <!-- got this from https://www.svgrepo.com/svg/324205/back-arrow-navigation -->
+        <a href="dashboard.html" class="back-link">
+            <svg fll="#000000" viewBox="0 0 52 52" data-name="Layer 1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier"><path d="M50,24H6.83L27.41,3.41a2,2,0,0,0,0-2.82,2,2,0,0,0-2.82,0l-24,24a1.79,1.79,0,0,0-.25.31A1.19,1.19,0,0,0,.25,25c0,.07-.07.13-.1.2l-.06.2a.84.84,0,0,0,0,.17,2,2,0,0,0,0,.78.84.84,0,0,0,0,.17l.06.2c0,.07.07.13.1.2a1.19,1.19,0,0,0,.09.15,1.79,1.79,0,0,0,.25.31l24,24a2,2,0,1,0,2.82-2.82L6.83,28H50a2,2,0,0,0,0-4Z"></path></g></svg>
+        </a>
+        <h1 class="page-title"> Account Settings </h1>
+        <div class="setting-card">
+            <div class="card-header">
+                <h3>User Details</h3>
+                <p>Update Your contact information</p>
+            </div>
+            <div class="settings-card"></div>
+        </div>
+    </div>
