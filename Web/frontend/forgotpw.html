@@ -9,15 +9,42 @@
     <div id = "bounding_box">
         <h1>Forgot your password</h1>
         <h4>Please enter the email you'd like your password reset information sent to.</h4>
-        <form action="index.html" method="get">
+        <form id="forgotpw">
             <div>
                 <label for="email">Enter your email:</label>
                 <input type="email" name="email" id="email" required>
             </div>
             <div>
-                <button id="submit" onclick="">Submit</button>
+                <button type="submit" onclick="">Sent Reset Link</button>
             </div>
         </form> 
     </div> 
+   <script>
+    document.getElementById("submit").addEventListener("submit", async function(event) {
+        event.preventDefault(); 
+        
+        const email = document.getElementById("email").value;
+        
+        const response = await fetch("http://localhost:5000/api/auth/forgot-pw", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: email
+            })
+        });
+    
+        const result = await response.json();
+        console.log(result);
+    
+        if (response.ok) {
+            
+            window.location.href = "index.html"; 
+        } else {
+            alert(result.error || "Error sending reset request.");
+        }
+    });
+    </script>
 </body>
 </html>
