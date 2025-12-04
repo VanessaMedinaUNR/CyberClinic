@@ -32,7 +32,7 @@
         }
         .brand-section h1{ 
             color: navy; 
-            font: size 18px; 
+            font-size:18px; 
             margin:0;
         }
 
@@ -110,8 +110,8 @@
                     <tr>
                         <th>Name / Target </th>
                         <th> Date (last Run) </th>
-                        <th>Status </th>
-                        <th> Security Rating</th>
+                        <th> Scan Type</th>
+                        <th> Status</th>
                         <th style="text-align: right;">Actions </th>
                     </tr>
                 </thead>
@@ -131,7 +131,7 @@
                 const response = await fetch ("http://localhost:5000/api/scans/list",{
                     method: "GET",
                     headers: {
-                        "content-Type": "application/json"
+                        "Content-Type": "application/json"
                     }
 
                 });
