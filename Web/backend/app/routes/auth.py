@@ -262,3 +262,5 @@ def login():
     except Exception as e:
         #handle any unexpected errors during login
         return jsonify({'error': 'login failed', 'details': str(e)}), 500
+
+# Done by Morales-Marroquin and Austin Finch

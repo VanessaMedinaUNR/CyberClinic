@@ -80,3 +80,5 @@ if __name__ == '__main__':
     print("Scan worker running - will process scan jobs automatically")
     
     app.run(host=host, port=port, debug=debug)
+
+# Done by Morales-Marroquin and Austin Finch

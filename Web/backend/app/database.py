@@ -105,3 +105,5 @@ def init_db():
 def get_db():
     #get database manager instance for use in routes
     return db_manager
+
+# Done by Morales-Marroquin and Austin Finch

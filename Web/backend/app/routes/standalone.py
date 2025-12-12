@@ -280,3 +280,5 @@ def standalone_status():
     except Exception as e:
         logger.error(f"Standalone status check failed: {e}")
         return jsonify({'error': 'Status check failed'}), 500
+
+# Done by Morales-Marroquin

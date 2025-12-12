@@ -25,3 +25,5 @@ server {
         root /usr/share/nginx/html;  # Path to custom error pages if you have them
     }
 }
+
+# Done by Austin Finch

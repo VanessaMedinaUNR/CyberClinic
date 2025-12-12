@@ -186,3 +186,5 @@ def stop_scan_worker():
     if scan_worker:
         scan_worker.stop()
         scan_worker = None
+
+# Done by Morales-Marroquin and Austin Finch

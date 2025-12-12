@@ -512,3 +512,5 @@ def debug_reptor():
             'message': str(e),
             'error_type': type(e).__name__
         }), 500
+
+# Done by Morales-Marroquin and Austin Finch

@@ -139,3 +139,5 @@ VALUES ('bfcac88a-c552-4bae-973a-60362a9459ae', '99ce94b2-759e-4ed1-a8b0-d76e536
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status);
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_client_id ON scan_jobs(client_id);
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_created_at ON scan_jobs(created_at);
+
+-- Done by Austin Finch

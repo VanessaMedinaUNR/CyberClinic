@@ -512,3 +512,5 @@ def scan_dashboard():
     except Exception as e:
         logger.error(f"Dashboard query failed: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+# Done by Morales-Marroquin and Austin Finch
