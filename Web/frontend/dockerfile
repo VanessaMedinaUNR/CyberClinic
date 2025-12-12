@@ -11,3 +11,5 @@ COPY html/ /usr/share/nginx/html
 # access the site at: http://localhost:8080
 # to stop first run docker ps to copy container_id of "my-frontend" image
 # docker stop <container_id>
+
+#done by Vanessa Medina
