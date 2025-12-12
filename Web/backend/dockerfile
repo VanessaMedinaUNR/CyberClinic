@@ -33,3 +33,5 @@ USER app
 #health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/ || exit 1
+
+# Done by Morales-Marroquin and Austin Finch
