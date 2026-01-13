@@ -9,11 +9,11 @@ import logging
 #database connection configuration using environment variables
 #these values come from database.env file in docker-compose setup
 DB_CONFIG = {
-    'host': os.environ.get('DB_HOST', 'database'),
-    'port': os.environ.get('DB_PORT', 5432),
-    'database': os.environ.get('DB_NAME', 'cyberclinic'),
-    'user': os.environ.get('DB_USER', 'cyberclinic_user'),
-    'password': os.environ.get('DB_PASS', 'dev_password_change_in_production')
+    'host': os.environ.get('DB_HOST'),
+    'port': os.environ.get('DB_PORT'),
+    'database': os.environ.get('DB_NAME'),
+    'user': os.environ.get('DB_USER'),
+    'password': os.environ.get('DB_PASS')
 }
 
 #setup logging for database operations

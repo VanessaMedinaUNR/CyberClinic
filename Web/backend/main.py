@@ -15,8 +15,8 @@ def create_app():
     #sets up basic configuration for development mode
     app = Flask(__name__)
     #get secret key from environment or use default for development
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-    app.config['DEBUG'] = True
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+    app.config['DEBUG'] = os.environ.get('FLASK_DEBUG')
     #connect our authentication routes to the main app
     #this adds all the /api/auth/* endpoints like login and register
     app.register_blueprint(auth_bp)
@@ -69,8 +69,8 @@ if __name__ == '__main__':
     #register cleanup function to stop worker on exit
     atexit.register(stop_scan_worker)
     #server settings for docker containers
-    host = '0.0.0.0'
-    port = 5000
+    host = os.environ.get('FLASK_SERVER')
+    port = os.environ.get('FLASK_PORT')
     #disable debug in Docker to avoid I/O issues
     debug = os.environ.get('FLASK_ENV') == 'development' and not os.path.exists('/.dockerenv')
     
