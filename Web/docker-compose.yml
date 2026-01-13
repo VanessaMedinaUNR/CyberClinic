@@ -103,6 +103,8 @@ services:
     networks:
       - backend
       - frontend
+    depends_on:
+      - database
 
   database:
     container_name: cyberclinic-database

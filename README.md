@@ -86,12 +86,11 @@ docker-compose up
 cd.. # back into ~/CyberClinic/
 cd Application
 python3 -m venv .venv
-source venv/bin/activate
+source .venv/bin/activate #On Windows: .venv\Scripts\activate
 
-#On Windows: venv\Scripts\activate
-
-
-#Note: requirements.txt will be added as we develop dependencies
+pip install -r requirements.txt
+cd src
+python -m  PyInstaller --distpath /dist/{Your Distribution} -n CyberClinic --noconfirm client_application.py
 ```
 
 > **Development Note:** Full installation instructions will be updated as we build out the application components.
