@@ -1,9 +1,7 @@
 FROM python:3.11-slim AS builder
 
-ARG SERVER
 ARG PORT
-ENV SERVER=${SERVER}
-ENV PORT=${PORT}
+ENV PORT=$PORT
 
 WORKDIR /src
 
@@ -35,8 +33,6 @@ RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /src
 USER app
 
-#health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://${SERVER}:${PORT}/ || exit 1
+CMD python3 main.py
 
 # Done by Morales-Marroquin and Austin Finch

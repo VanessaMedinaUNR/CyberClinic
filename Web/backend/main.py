@@ -52,7 +52,7 @@ def create_app():
                 'POST /api/standalone/execute/<id> - Austin\'s client integration (NOT READY)'
             ],
             'status': 'development',
-            'database': 'not connected yet',
+            'database': 'connected',
             'reptor': 'not integrated yet'
         })
     

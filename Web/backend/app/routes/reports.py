@@ -40,8 +40,8 @@ class ReportGenerator:
         #initialize connection to SysReptor server
         #uses environment variables for configuration
         try:
-            server_url = os.environ.get('REPTOR_SERVER_URL', 'http://reptor:8000')
-            token = os.environ.get('REPTOR_API_TOKEN', 'dev-token')
+            server_url = os.environ.get('REPTOR_SERVER_URL')
+            token = os.environ.get('REPTOR_API_TOKEN')
             
             logger.info(f"Initializing SysReptor with server: {server_url}")
             
