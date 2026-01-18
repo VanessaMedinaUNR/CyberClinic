@@ -86,7 +86,7 @@ CREATE TABLE users
   email         email       NOT NULL,
   password_hash text        NOT NULL,
   client_admin  boolean     NOT NULL,
-  phone_number  varchar(20) NOT NULL,
+  phone_number  varchar(16) NOT NULL,
   created_at    timestamp   DEFAULT CURRENT_TIMESTAMP,
   updated_at    timestamp   DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id)

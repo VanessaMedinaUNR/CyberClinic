@@ -29,14 +29,16 @@ ENV/
 Thumbs.db
 
 # Application specific
-*/_internal
-*/build
+_internal
+build/
+Cyberclinic.spec
 /Web/backend/app/reports/
 /Web/backend/app/results/
 *.log
 *.sqlite
 *.db
 VPN_config
+Application/src/server.crt
 Web/backend/results
 Web/backend/reports
 

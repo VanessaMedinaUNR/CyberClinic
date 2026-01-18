@@ -4,6 +4,7 @@ import platform
 import subprocess
 from pathlib import Path
 import permission_handler as perms
+import keyring
 
 def admin():
     system = platform.system()

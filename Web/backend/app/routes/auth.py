@@ -6,6 +6,7 @@ import re
 import uuid
 import hashlib
 import secrets
+import phonenumbers
 from app.database import get_db
 
 #create blueprint for authentication routes
@@ -18,21 +19,6 @@ def is_valid_email(email):
     """Validate email format using regex pattern"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return bool(re.match(pattern, email))
-
-def is_valid_phone(phone):
-    """Validate phone number format (flexible, accepts various international formats)"""
-    if not phone or len(phone.strip()) < 7:
-        return False
-    #check for multiple plus signs (invalid)
-    if phone.count('+') > 1:
-        return False
-    #remove all formatting characters and spaces
-    cleaned = re.sub(r'[\s\-\(\)\+\.\s]', '', phone)
-    #check if it's all digits after cleaning
-    if not cleaned.isdigit():
-        return False
-    length = len(cleaned)
-    return 7 <= length <= 15
 
 #password hashing for fallback storage
 def hash_password(password):
@@ -76,8 +62,13 @@ def register():
             return jsonify({'error': 'invalid email format'}), 400
         
         #validate phone number format
-        if not is_valid_phone(phone_number):
+        try:
+            parsed_phone = phonenumbers.parse(phone_number, "US")
+        except Exception:
             return jsonify({'error': 'invalid phone number format'}), 400
+        if not phonenumbers.is_valid_number(parsed_phone):
+            return jsonify({'error': 'invalid phone number'}), 400
+        formatted_phone = phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.NATIONAL)
         
         #make sure password is long enough to be secure
         if len(password) < 6:
@@ -100,7 +91,7 @@ def register():
             
             client_id = db.execute_single(
                 "SELECT client_id FROM client WHERE client_name = %s", (client_name,)
-            )
+            )['client_id']
 
             client_admin = False # User not admin by default
 
@@ -120,7 +111,7 @@ def register():
             db.execute_command(
                 """INSERT INTO users (user_id, email, password_hash, client_admin, phone_number)
                 VALUES (%s, %s, crypt(%s, gen_salt('bf')), %s, %s)""",
-                (user_id, email, password, client_admin, phone_number)
+                (user_id, email, password, client_admin, formatted_phone)
             )
             db.execute_command(
                 """INSERT INTO client_users (user_id, client_id)

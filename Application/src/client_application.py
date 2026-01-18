@@ -65,21 +65,31 @@ class Form(QDialog):
         
         conn = vpn.vpn_client(crt, "localhost", int(vpn_port))
 
-        send = f'{apphash}: {email}:{passwd}'
+        print(f"hash: {apphash}\n")
+        print(f"{email}: {passwd}")
+        send = f'{apphash}:{email}:{passwd}'
+
+        self.l.setText("Verifying...")
+        
         try:
             conn.send(send.encode('latin-1'))
             data = conn.recv(1024)
-            print(f"Received from server: {data}")
-            if data:
+
+            parts = data.decode('latin-1').strip().split(':')
+            message, user_id, email = parts
+
+            print(f"Received from server: {message}: {user_id} - {email}")
+
+            if message == "AUTH_SUCCESS":
+                self.l.setText("User verification success!")
                 keyring.set_password("cyberclinic", email, passwd)
-                app.save_user(email)
+                #app.save_user(email)
+            else:
+                self.l.setText("User verification failed! Please try again.")
+        except Exception as e:
+            self.l.setText("Connection error, please try again later")
         finally:
             conn.close()
-
-        print(f"hash: {apphash}\n")
-        print(f"{email}: {passwd}")
-
-        self.l.setText("Verifying...")
 
 
 def compute_hash(filepath: str):

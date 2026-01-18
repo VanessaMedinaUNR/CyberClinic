@@ -16,7 +16,7 @@ def authenticate_client_credentials(auth_string):
     """
     try:
         #parse format: "hash:email:password"
-        parts = auth_string.split(':', 2)
+        parts = auth_string.split(':')
         if len(parts) != 3:
             return False, None, "Invalid authentication format"
         
@@ -27,17 +27,15 @@ def authenticate_client_credentials(auth_string):
         
         #check credentials using same method as our login endpoint
         user_data = db.execute_single(
-            """SELECT id, email, organization, phone_number, is_active
-               FROM users 
-               WHERE email = %s AND password_hash = crypt(%s, password_hash)""",
+            """SELECT user_id, email, client_id, client_admin FROM users NATURAL JOIN client_users WHERE users.email = %s AND password_hash = crypt(%s, password_hash)""",
             (email.strip(), password)
         )
         
         if not user_data:
             return False, None, "Invalid credentials"
         
-        if not user_data['is_active']:
-            return False, None, "Account deactivated"
+        if not user_data['client_admin']:
+            return False, None, "This action can only be completed by an Administrator"
         
         logger.info(f"VPN authentication successful for {email}")
         return True, user_data, "Authentication successful"
@@ -67,7 +65,7 @@ def start_vpn_server(host, port, cert, key):
             
             if success:
                 #send success response
-                response = f"AUTH_SUCCESS:{user_data['id']}:{user_data['email']}"
+                response = f"AUTH_SUCCESS:{user_data['user_id']}:{user_data['email']}"
                 conn.sendall(response.encode('latin-1'))
                 logger.info(f"VPN client authenticated: {user_data['email']}")
             else:
@@ -94,7 +92,7 @@ def get_user_by_email(email):
     try:
         db = get_db()
         user_data = db.execute_single(
-            "SELECT id, email, organization, phone_number, is_active FROM users WHERE email = %s",
+            "SELECT user_id, email, client_id, client_admin FROM users NATURAL JOIN client_users WHERE users.email = %s",
             (email,)
         )
         return user_data
@@ -115,7 +113,7 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(f"Database connection error: {e}")
 
-    vpn_host = os.getenv('VPN_HOST', '127.0.0.1')
+    vpn_host = os.getenv('BACKEND_SERVER', '0.0.0.0')
     hostname = socket.gethostname()
     print(f"Hostname: {hostname}")
     print(f"VPN Host: {vpn_host}")
