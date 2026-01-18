@@ -4,35 +4,55 @@ services:
 
   frontend:
     #image: openeuler/react:latest
+    environment:
+      - NGINX_SERVER=${FRONTEND_SERVER}
+      - NGINX_PORT=${FRONTEND_PORT}
+      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_PORT=${BACKEND_PORT}
+      - DOLLAR=$
     ports:
-      - "8080:8080"
+      - ${FRONTEND_PORT}
     build:
       context: frontend
       dockerfile: Dockerfile
-    environment:
-      - NGINX_SERVER=localhost
-      - NGINX_PORT=8080
-      - FLASK_SERVER=backend-dev
-      - FLASK_PORT=5000
-      - DOLLAR=$
     command: sleep infinity
     # run the following in the container to begin the frontend
     #   envsubst < /etc/nginx/conf.d/cyberclinic.template > /etc/nginx/conf.d/default.conf
     #   nginx
     depends_on:
-      - backend-dev
+      - ${BACKEND_SERVER}
     networks:
       - frontend
 
   backend:
     image: python:latest
+    args:
+      - SERVER=${BACKEND_SERVER}
+      - PORT=${BACKEND_PORT}
     build:
       context: backend
       target: builder
     volumes:
       - ./backend:/src
+    environment:
+    #Web-related Variables
+      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_PORT=${BACKEND_PORT}
+      - FLASK_DEBUG=${FLASK_DEBUG}
+      - SECRET_KEY=${FLASK_SECRET_KEY}
+    #Standalone-related Variables
+      - VPN_HOST=${VPN_HOST}
+      - VPN_PORT=${VPN_PORT}
+      - VPN_CRT=${VPN_CRT}
+      - VPN_KEY=${VPN_KEY}
+    #Databse-related Variables
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}  
+      - DB_PASS=${DB_PASS}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
     expose:
-      - 5000
+      - ${BACKEND_PORT}
     command: python3 main.py
     depends_on:
       - reptor
@@ -46,10 +66,28 @@ services:
     build:
       context: backend
       target: builder
+    environment:
+    #Web-related Variables
+      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_PORT=${BACKEND_PORT}
+      - FLASK_DEBUG=${FLASK_DEBUG}
+      - SECRET_KEY=${FLASK_SECRET_KEY}
+    #Standalone-related Variables
+      - VPN_HOST=${VPN_HOST}
+      - VPN_PORT=${VPN_PORT}
+      - VPN_CRT=${VPN_CRT}
+      - VPN_KEY=${VPN_KEY}
+    #Databse-related Variables
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}  
+      - DB_PASS=${DB_PASS}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
     volumes:
       - ./backend:/src
     ports:
-      - "5000:5000"
+      - ${BACKEND_PORT}:${BACKEND_PORT}
+      - ${VPN_PORT}
     command: sleep infinity
     networks:
       - backend
@@ -58,12 +96,16 @@ services:
   database:
     image: bitnami/postgresql:latest
     restart: unless-stopped
-    expose:
-      - 5432
-    env_file:
-      - database.env
+    environment:
+      - POSTGRESQL_DATABASE=${DB_NAME}
+      - POSTGRESQL_USERNAME=${DB_USER}
+      - POSTGRESQL_PASSWORD=${DB_PASS}
+      - POSTGRESQL_PORT_NUMBER=${DB_PORT}
+      - POSTGRESQL_MAX_CONNECTIONS=100 #performance settings for handling multiple connections
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    expose:
+      - ${DB_PORT}
     networks:
       - backend
 

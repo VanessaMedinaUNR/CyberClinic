@@ -1,7 +1,6 @@
 # Environment files and secrets
-*.env
-.env.*
-!.env.example
+.env*
+!.env.dev
 
 # Python cache files
 __pycache__/
@@ -27,8 +26,8 @@ ENV/
 Thumbs.db
 
 # Application specific
-_internal
-build
+*/_internal
+*/build
 /Web/backend/app/reports/
 /Web/backend/app/results/
 *.log
