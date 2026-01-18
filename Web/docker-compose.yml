@@ -1,9 +1,12 @@
 name: CyberClinic Web Portal
 
+include:
+ - reptor/sysreptor/deploy/docker-compose.yml
+
 services:
 
   frontend:
-    #image: openeuler/react:latest
+    container_name: cyberclinic-frontend
     environment:
       - NGINX_SERVER=${FRONTEND_SERVER}
       - NGINX_PORT=${FRONTEND_PORT}
@@ -25,10 +28,8 @@ services:
       - frontend
 
   backend:
+    container_name: cyberclinic-backend
     image: python:latest
-    args:
-      - SERVER=${BACKEND_SERVER}
-      - PORT=${BACKEND_PORT}
     build:
       context: backend
       target: builder
@@ -41,7 +42,6 @@ services:
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
-      - VPN_HOST=${VPN_HOST}
       - VPN_PORT=${VPN_PORT}
       - VPN_CRT=${VPN_CRT}
       - VPN_KEY=${VPN_KEY}
@@ -55,13 +55,22 @@ services:
       - ${BACKEND_PORT}
     command: python3 main.py
     depends_on:
-      - reptor
-      - database
+      app:
+        condition: service_healthy
+      database:
+        condition: service_healthy
     networks:
       - backend
       - frontend
+    healthcheck:
+      test: curl -f http://localhost:$$BACKEND_PORT/
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
 
   backend-dev:
+    container_name: cyberclinic-backend
     image: python:latest
     build:
       context: backend
@@ -73,7 +82,6 @@ services:
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
-      - VPN_HOST=${VPN_HOST}
       - VPN_PORT=${VPN_PORT}
       - VPN_CRT=${VPN_CRT}
       - VPN_KEY=${VPN_KEY}
@@ -83,6 +91,9 @@ services:
       - DB_PASS=${DB_PASS}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
+    #Sysreptor-related Variables
+      - REPTOR_SERVER_URL=http://${REPTOR_SERVER}:${REPTOR_PORT}
+      - REPTOR_API_TOKEN=${REPTOR_API_TOKEN}
     volumes:
       - ./backend:/src
     ports:
@@ -94,6 +105,7 @@ services:
       - frontend
 
   database:
+    container_name: cyberclinic-database
     image: bitnami/postgresql:latest
     restart: unless-stopped
     environment:
@@ -108,13 +120,30 @@ services:
       - ${DB_PORT}
     networks:
       - backend
+    healthcheck:
+      test: pg_isready -U $$DB_USER -d $$DB_NAME
+      interval: 30s
+      timeout: 30s
+      start_period: 30s
+      retries: 3
 
 
-  reptor:
-    image: syslifters/sysreptor:latest
-    restart: unless-stopped
-    networks:
-      - backend
+#  reptor:
+#    image: syslifters/sysreptor:latest
+#    restart: unless-stopped
+#    ports:
+#      - ${REPTOR_PORT}:${REPTOR_PORT}
+#    environment:
+#      - ALLOWED_HOSTS=${REPTOR_ALLOWED_HOSTS}
+#      - REPTOR_TOKEN=${REPTOR_API_TOKEN}
+#    networks:
+#      - backend
+#    healthcheck:
+#      test: ["CMD-SHELL", "curl", "-f", "http://${REPTOR_SERVER}:${REPTOR_PORT}/"]
+#      interval: 30s
+#      timeout: 30s
+#      retries: 5
+#      start_period: 5s
 
 networks:
   backend:
