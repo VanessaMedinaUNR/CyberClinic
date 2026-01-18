@@ -29,8 +29,8 @@ ENV/
 Thumbs.db
 
 # Application specific
-*/_internal
-*/build
+_internal
+build
 /Web/backend/app/reports/
 /Web/backend/app/results/
 *.log
@@ -39,6 +39,7 @@ Thumbs.db
 VPN_config
 Web/backend/results
 Web/backend/reports
+server.crt
 
 # Development and testing
 test_results.json
