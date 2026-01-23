@@ -14,7 +14,7 @@ services:
       - FLASK_PORT=${BACKEND_PORT}
       - DOLLAR=$
     ports:
-      - ${FRONTEND_PORT}
+      - ${FRONTEND_PORT}:${FRONTEND_PORT}
     build:
       context: frontend
       dockerfile: Dockerfile
@@ -53,6 +53,8 @@ services:
       - DB_PORT=${DB_PORT}
     expose:
       - ${BACKEND_PORT}
+    ports:
+      - ${VPN_PORT}:${VPN_PORT}
     command: python3 main.py
     depends_on:
       app:
@@ -98,11 +100,13 @@ services:
       - ./backend:/src
     ports:
       - ${BACKEND_PORT}:${BACKEND_PORT}
-      - ${VPN_PORT}
+      - ${VPN_PORT}:${VPN_PORT}
     command: sleep infinity
     networks:
       - backend
       - frontend
+    depends_on:
+      - database
 
   database:
     container_name: cyberclinic-database
