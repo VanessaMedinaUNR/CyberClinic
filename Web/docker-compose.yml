@@ -18,8 +18,8 @@ services:
       context: frontend
       dockerfile: Dockerfile
     command: sleep infinity
-    depends_on:
-      - ${BACKEND_SERVER}
+    #depends_on:
+      #- ${BACKEND_SERVER}
     networks:
       - frontend
 
