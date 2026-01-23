@@ -2,7 +2,7 @@ FROM node:24-alpine
 
 WORKDIR /cyberclinic
 
-COPY . .
+COPY cyberclinicreact/ .
 RUN npm install
 
 
