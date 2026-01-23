@@ -7,7 +7,7 @@ CREATE DOMAIN email AS citext
   );
 CREATE DOMAIN web_domain AS TEXT
   CHECK (
-    VALUE ~* '^[a-z0-9]+(\\.[a-z]{2,})$'
+    VALUE ~* '^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)*[A-Za-z0-9-]{1,63}(?<!-)$'
   );
 
 

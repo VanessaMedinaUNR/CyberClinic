@@ -98,6 +98,7 @@
 
         <div style=" display: flex; justify-content: space-between; align-items: center; margin-bottom: 20 px;">
             <h1 style="font-size: 20px; color: #333; margin: 0;">Dashboard </h1>
+             <button class="btn-black" id = "newTarget" onclick="window.location.href='newtarget.html'">+ Configure New Target </button>
             <button class="btn-black" id = "newScan" onclick="window.location.href='newscan.html'">+ Configure New Scan </button>
         </div> 
 
@@ -128,8 +129,6 @@
             const parts = value.split(`; ${name}=`);
             if (parts.length === 2) return parts.pop().split(';').shift();
         }
-        console.log("client_id: " + getCookie("client_id"));
-        console.log("user_id: " + getCookie("user_id"));
     </script>
  </body>
  </html>

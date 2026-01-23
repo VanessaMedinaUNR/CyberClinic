@@ -18,6 +18,7 @@ markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
 phonenumbers==9.0.22
+ping3==5.1.5
 psycopg2-binary==2.9.11
 pycparser==2.23
 Pygments==2.19.2
