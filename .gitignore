@@ -41,6 +41,7 @@ VPN_config
 Application/src/server.crt
 Web/backend/results
 Web/backend/reports
+server.crt
 
 # Development and testing
 test_results.json
