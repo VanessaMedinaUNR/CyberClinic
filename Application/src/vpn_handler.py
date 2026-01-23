@@ -9,7 +9,9 @@ def vpn_client(crt, host, port):
     context.load_verify_locations(crt)
 
     raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    raw_socket.connect((host, port))
-    conn = context.wrap_socket(raw_socket, server_hostname=host)
-
-    return conn
+    try:
+        raw_socket.connect((host, port))
+        conn = context.wrap_socket(raw_socket, server_hostname=host)
+        return conn
+    except Exception as e:
+        pass

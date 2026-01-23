@@ -22,8 +22,8 @@ def create_app():
     app.register_blueprint(auth_bp)
     #add additional routes for full CyberClinic functionality
     app.register_blueprint(scans_bp) 
-    app.register_blueprint(reports_bp)
-    app.register_blueprint(standalone_bp)
+    #app.register_blueprint(reports_bp)
+    #app.register_blueprint(standalone_bp)
     #create a simple health check endpoint at the root URL
     @app.route('/')
     def health_check():

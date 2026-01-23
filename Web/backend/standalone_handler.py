@@ -65,9 +65,23 @@ def start_vpn_server(host, port, cert, key):
             
             if success:
                 #send success response
-                response = f"AUTH_SUCCESS:{user_data['user_id']}:{user_data['email']}"
+                response = f"AUTH_SUCCESS:{user_data['client_id']}:{user_data['email']}"
                 conn.sendall(response.encode('latin-1'))
-                logger.info(f"VPN client authenticated: {user_data['email']}")
+                logger.info(f"VPN client authenticated: {user_data['client_id']}")
+
+                subnet_names = db.execute_single(
+                    """SELECT subnet_name FROM network WHERE client_id = %s""",
+                    (user_data['client_id'],)
+                )
+                if not subnet_names:
+                    response = f"SUBNET_INVALID:"
+                    conn.sendall(response.encode('latin-1'))
+                else:
+                    logger.info(f'Client Subnet List: {subnet_names}')
+                    response = f"SUBNET_LIST"
+                    for name in subnet_names:
+                        response += f':{name}'
+                    conn.sendall(response.encode('latin-1'))
             else:
                 #send failure response
                 conn.sendall(f"AUTH_FAILED:{message}".encode('latin-1'))

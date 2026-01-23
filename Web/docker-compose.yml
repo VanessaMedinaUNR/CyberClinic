@@ -54,7 +54,7 @@ services:
     expose:
       - ${BACKEND_PORT}
     ports:
-      - ${VPN_PORT}
+      - ${VPN_PORT}:${VPN_PORT}
     command: python3 main.py
     depends_on:
       app:
