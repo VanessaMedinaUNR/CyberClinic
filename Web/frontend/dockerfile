@@ -1,15 +1,9 @@
-FROM nginx:alpine
+FROM node:24-alpine
 
-COPY cyberclinic.template /etc/nginx/conf.d/cyberclinic.template
-RUN rm -rf /usr/share/nginx/html/*
+WORKDIR /cyberclinic
 
-COPY html/ /usr/share/nginx/html
+COPY . .
+RUN npm install
 
-# instructions to run frontend docker build
-# docker build -t my-frontend . 
-# docker run -d -p 8080:80 my-frontend
-# access the site at: http://localhost:8080
-# to stop first run docker ps to copy container_id of "my-frontend" image
-# docker stop <container_id>
 
-#done by Vanessa Medina
+#done by Austin Finch
