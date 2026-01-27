@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+//class is the link between your HTML and CSS
 import './dashboard.css';
 
 function Dashboard() {

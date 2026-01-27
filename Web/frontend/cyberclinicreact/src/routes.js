@@ -4,7 +4,9 @@ import Login from "./login";
 import Signup from "./signup";
 import NewScan from "./newscan";
 import Dashboard from "./dashboard";
-import setting from "./setting";
+import Setting from "./setting";
+
+//make sure the import... is cap
 
 export default function AppRoutes() {
     return (
