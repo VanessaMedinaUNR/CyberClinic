@@ -33,7 +33,7 @@ function getCookie(name) {
             {/* remember that when trying to navigate it is /... not ./ been having issues */}
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
              <h1 style={{ fontSize: '20px', color: '#333', margin: 0 }}>Dashboard </h1>
-             <button className="btn-black" id = "newScan" onClick={() => (navigate("./newScan"))}>+ Configure New Scan 
+             <button className="btn-black" id = "newScan" onClick={() => (navigate("/newScan"))}>+ Configure New Scan 
              </button>
             </div>
             <div className="content-card">

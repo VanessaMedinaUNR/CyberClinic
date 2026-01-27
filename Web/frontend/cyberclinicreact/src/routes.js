@@ -14,7 +14,7 @@ export default function AppRoutes() {
             <Route path="/" element={<Login />} />
             <Route path="/forgotpw" element={<Forgotpw />} />
             <Route path="/signup" element ={<Signup/>} />
-            <Route path="/newscan" element ={<Signup/>} />
+            <Route path="/newscan" element ={<NewScan/>} /> {/*it was saying Signup instead of newscan*/}
             <Route path="/dashboard" element ={<Dashboard/>} />
             <Route path="/setting" element ={<Setting/>} />
         </Routes>
