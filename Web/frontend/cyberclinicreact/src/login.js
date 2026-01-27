@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 
+//useState: render changes on website 
+//useNavigate: have access to change pages 
+
 import './login.css';
 
 function Login() {
