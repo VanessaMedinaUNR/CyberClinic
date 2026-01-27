@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import './dashboard.css';
 
 function Dashboard() {
-    const navigate = useNavigate();
+    const navigate = useNavigate(); //able to navigate between pages 
 
     async function handleSubmit(e){
         e.preventDefault();
@@ -26,11 +26,11 @@ function getCookie(name) {
                     <p>University of Nevada, Reno</p>
                 </div>
                 <div className="user-controls">
-                    <span id="User-email"> </span>
-                    <button type = "button" onClick={() => (navigate("./settings"))} style={{ textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer' }}>⚙️</button>
+                    <span id="User-email"> </span> 
+                    <button type = "button" onClick={() => (navigate("/setting"))} style={{ textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer' }}>⚙️</button>
                 </div>
              </div>
-
+            {/* remember that when trying to navigate it is /... not ./ been having issues */}
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
              <h1 style={{ fontSize: '20px', color: '#333', margin: 0 }}>Dashboard </h1>
              <button className="btn-black" id = "newScan" onClick={() => (navigate("./newScan"))}>+ Configure New Scan 
