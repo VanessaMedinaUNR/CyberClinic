@@ -94,7 +94,7 @@ class ScanWorker:
                 )
             if domain:
                 target_type = "domain"
-                target_value = domain
+                target_value = domain['domain']
             else:
                 if scan_job["subnet_netmask"] == "255.255.255.255":
                     target_type = "ip"

@@ -6,7 +6,12 @@ import re
 import uuid
 import hashlib
 import secrets
+import phonenumbers
+import logging
 from app.database import get_db
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 #create blueprint for authentication routes
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -16,23 +21,8 @@ users_db = {}
 #validation functions
 def is_valid_email(email):
     """Validate email format using regex pattern"""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    pattern = r'^\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,3}$'
     return bool(re.match(pattern, email))
-
-def is_valid_phone(phone):
-    """Validate phone number format (flexible, accepts various international formats)"""
-    if not phone or len(phone.strip()) < 7:
-        return False
-    #check for multiple plus signs (invalid)
-    if phone.count('+') > 1:
-        return False
-    #remove all formatting characters and spaces
-    cleaned = re.sub(r'[\s\-\(\)\+\.\s]', '', phone)
-    #check if it's all digits after cleaning
-    if not cleaned.isdigit():
-        return False
-    length = len(cleaned)
-    return 7 <= length <= 15
 
 #password hashing for fallback storage
 def hash_password(password):
@@ -76,15 +66,21 @@ def register():
             return jsonify({'error': 'invalid email format'}), 400
         
         #validate phone number format
-        if not is_valid_phone(phone_number):
+        try:
+            parsed_phone = phonenumbers.parse(phone_number, "US")
+        except Exception:
             return jsonify({'error': 'invalid phone number format'}), 400
-        
+        if not phonenumbers.is_valid_number(parsed_phone):
+            return jsonify({'error': 'invalid phone number'}), 400
+        formatted_phone = phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.NATIONAL)
+        logger.info(f'Formatted Phone: {formatted_phone}')
         #make sure password is long enough to be secure
         if len(password) < 6:
             return jsonify({'error': 'password must be at least 6 characters'}), 400
         
         #generate unique user ID
         user_id = str(uuid.uuid4())
+        client_id = str(uuid.uuid4())
         
         try:
             #use database when available
@@ -98,29 +94,29 @@ def register():
             if existing_user:
                 return jsonify({'error': 'email already registered'}), 409
             
-            client_id = db.execute_single(
+            client = db.execute_single(
                 "SELECT client_id FROM client WHERE client_name = %s", (client_name,)
             )
 
             client_admin = False # User not admin by default
 
             # Create new client if it does not already exist
-            if not client_id:
+            if not client:
                 print("Creating client")
                 client_admin = True # First user to a client is admin by default
-                client_id = str(uuid.uuid4())
                 db.execute_command(
                      """INSERT INTO client (client_id, client_name)
                      VALUES (%s, %s)""",
                      (client_id, client_name)
                 )
+                
             
             #insert new user into database
             #password hashing will be done by PostgreSQL pgcrypto
             db.execute_command(
                 """INSERT INTO users (user_id, email, password_hash, client_admin, phone_number)
                 VALUES (%s, %s, crypt(%s, gen_salt('bf')), %s, %s)""",
-                (user_id, email, password, client_admin, phone_number)
+                (user_id, email, password, client_admin, formatted_phone)
             )
             db.execute_command(
                 """INSERT INTO client_users (user_id, client_id)
@@ -144,7 +140,8 @@ def register():
             #check if email is already registered in temp storage
             for temp_user_data in users_db.values():
                 if temp_user_data['email'] == email:
-                    return jsonify({'error': 'email already registered'}), 409
+                    logger.error(str(db_error))
+                    return jsonify({'error': 'Temporarily Unavailable'}), 409
             
             #create new user in temporary storage with secure password hashing
             password_hash = hash_password(password)
@@ -155,7 +152,6 @@ def register():
                 'organization': client_name,
                 'phone_number': phone_number,
                 'created_at': '2025-12-03',
-                'is_active': True
             }
             
             #save to temporary storage using email as key since no username
@@ -174,7 +170,8 @@ def register():
         
     except Exception as e:
         #handle any unexpected errors that might happen
-        return jsonify({'error': 'registration failed', 'details': str(e)}), 500
+        logger.error(str(e))
+        return jsonify({'error': 'registration failed'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -212,11 +209,8 @@ def login():
             )
             
             if not user_data:
+                logger.warning(f'Failed login for {email}')
                 return jsonify({'error': 'invalid credentials'}), 401
-            
-            #make sure account is active
-            #if not user_data['is_active']:
-            #    return jsonify({'error': 'account deactivated'}), 403
             
             #login successful
             return jsonify({
@@ -242,15 +236,11 @@ def login():
             if not verify_password(password, user_data['password_hash']):
                 return jsonify({'error': 'invalid credentials'}), 401
             
-            #make sure account is active
-            #if not user_data['is_active']:
-            #    return jsonify({'error': 'account deactivated'}), 403
-            
             #login successful
             return jsonify({
                 'message': 'login successful (temp storage)',
                 'user': {
-                    'user_id': user_data['id'],
+                    'user_id': user_data['user_id'],
                     'client_id': client['client_id'],
                     'email': user_data['email'],
                     'client_name': client['client_name'],

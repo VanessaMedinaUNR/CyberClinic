@@ -13,7 +13,7 @@ function Login() {
   const navigate = useNavigate();
   
 
-  /*function setCookie(name,value,days) {
+  function setCookie(name,value,days) {
     let expires = "";
     if (days) {
         const date = new Date();
@@ -21,12 +21,13 @@ function Login() {
         expires = "; expires=" + date.toUTCString();
     }
     document.cookie = name + "=" + (value || "")  + expires + "; path=/";
-  }*/
+  }
 
   async function handleSubmit(e) {
+    'use server';
     e.preventDefault();
 
-    const response = await fetch("http://localhost:5000/api/auth/login", {
+    const response = await fetch(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/login", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -39,10 +40,10 @@ function Login() {
     
     const result = await response.json();
       if (response.ok) {
-          //const client_id = result.user.client_id;
-          //const user_id = result.user.user_id;
-          //setCookie("client_id", client_id, 5);
-          //setCookie("user_id", user_id, 5);
+          const client_id = result.user.client_id;
+          const user_id = result.user.user_id;
+          setCookie("client_id", client_id, 5);
+          setCookie("user_id", user_id, 5);
           navigate("./dashboard");
       } else {
           alert(result.error || "Login failed.");

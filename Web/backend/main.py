@@ -8,6 +8,7 @@ from app.routes.auth import auth_bp
 from app.routes.scans import scans_bp
 from app.routes.reports import reports_bp
 from app.routes.standalone import standalone_bp
+from app.routes.target_management import targets_bp
 from app.scan_worker import start_scan_worker, stop_scan_worker
 
 def create_app():
@@ -24,6 +25,7 @@ def create_app():
     app.register_blueprint(scans_bp) 
     app.register_blueprint(reports_bp)
     app.register_blueprint(standalone_bp)
+    app.register_blueprint(targets_bp)
     #create a simple health check endpoint at the root URL
     @app.route('/')
     def health_check():
@@ -62,7 +64,7 @@ if __name__ == '__main__':
     #this runs when we start the file directly (not imported)
     #starts up our web server so people can connect to it
     app = create_app()
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     #start the background scan worker
     print("Starting background scan worker...")
     start_scan_worker()

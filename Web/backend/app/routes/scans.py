@@ -49,78 +49,55 @@ def submit_scan():
     #submit a new scan request
     #creates network target, validates it, and creates scan job
     try:
+        db = get_db()
         data = request.get_json()
-        #get client_id from session (placeholder - will integrate with auth later)
-        client_id = user_id = data.get('client_id', 1)
+        #get client_id from session (placeholder - will integrate with frontend auth later)
+        client_id = data.get('client_id', 1)
+        if not client_id:
+            return jsonify({'error': 'Authentication required'}), 400
         
         #validate required fields  
-        required_fields = ['target_name', 'target_type', 'target_value', 'scan_type']
+        required_fields = ['target_name', 'scan_type']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'Missing required field: {field}'}), 400
 
         target_name = data['target_name'].strip()
-        target_type = data['target_type'].lower()
-        target_value = data['target_value'].strip()
         scan_type = data['scan_type']
-        
-        public_facing = True 
-        ip: ipaddress.IPv4Network
-
-        #validate target type and value
-        if target_type == 'domain':
-            if not validate_domain(target_value):
-                return jsonify({'error': 'Invalid domain format'}), 400
-            ip = ipaddress.IPv4Network(socket.gethostbyname(target_value))
-
-        elif target_type == 'ip':
-            if not validate_ip_address(target_value):
-                return jsonify({'error': 'Invalid IP address format'}), 400
-            ip = ipaddress.IPv4Network(target_value, strict=False)
-
-        elif target_type == 'range':
-            if not validate_ip_range(target_value):
-                return jsonify({'error': 'Invalid IP range format (use CIDR notation)'}), 400
-            ip = ipaddress.IPv4Network(target_value, strict=False)
-
-        else:
-            return jsonify({'error': 'Invalid target type. Must be: domain, ip, or range'}), 400
-        
+                
         #validate scan type
         valid_scan_types = ['nmap', 'nikto', 'full']
         if scan_type not in valid_scan_types:
             return jsonify({'error': f'Invalid scan type. Must be one of: {", ".join(valid_scan_types)}'}), 400
         
-        db = get_db()
+        #get user_id from session (placeholder - will integrate with auth later)
+        user_id = data.get('user_id', 1) 
         
         #check if target already exists in network_targets table  
+        target_type = None
         existing_target = db.execute_single(
-            "SELECT * FROM network WHERE client_id = %s AND subnet_name = %s",
+            """SELECT * FROM network WHERE client_id = %s AND subnet_name = %s""",
             (client_id, target_name)
         )
         
         if existing_target:
             target_name = existing_target['subnet_name']
+            if existing_target['subnet_netmask'] == '255.255.255.255':
+                domain = db.execute_single(
+                    """SELECT domain from network_domains WHERE client_id = %s AND subnet_name = %s""",
+                    (client_id, target_name)
+                )
+                if domain:
+                    target_type = 'domain'
+                else:
+                    target_type = 'ip'
+            else:
+                target_type = 'range'
             logger.info(f"Using existing target: {target_name}")
         else:
-            #create new network target
-            target_name = db.execute_single(
-                """INSERT INTO network (client_id, subnet_name, subnet_ip, subnet_netmask, public_facing) 
-                   VALUES (%s, %s, %s, %s, %s) RETURNING subnet_name""",
-                (client_id, target_name, str(ip.network_address), str(ip.netmask), public_facing)
-            )['subnet_name']
-            
-            if target_type == "domain":
-                db.execute_single(
-                """INSERT INTO network_domains (domain, client_id, subnet_name) 
-                   VALUES (%s, %s, %s, %s, %s)""",
-                (target_value, client_id, target_name)
-                )
-            logger.info(f"Created new target: {target_name}")
+            logger.warning(f"Invalid target submitted by {user_id} for {client_id}: {target_name}")
+            return jsonify({'error': 'Invalid target'}), 400
         
-        #get user_id from session (placeholder - will integrate with auth later)
-        user_id = data.get('user_id', 1) 
-
         scan_job_ids = []
         #create scan job
         if scan_type.lower() == "full":

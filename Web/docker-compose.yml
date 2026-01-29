@@ -8,20 +8,21 @@ services:
   frontend:
     container_name: cyberclinic-frontend
     environment:
-      - FRONTEND_SERVER=${FRONTEND_SERVER}
-      - FRONTEND_PORT=${FRONTEND_PORT}
-      - BACKEND_SERVER=${BACKEND_SERVER}
-      - BACKEND_PORT=${BACKEND_PORT}
+      - REACT_APP_FRONTEND_SERVER=${FRONTEND_SERVER}
+      - REACT_APP_FRONTEND_PORT=${FRONTEND_PORT}
+      - REACT_APP_BACKEND_SERVER=http://${HOST}:${BACKEND_PORT}
     ports:
-      - ${FRONTEND_PORT}
+      - ${FRONTEND_PORT}:${FRONTEND_PORT}
     build:
       context: frontend
       dockerfile: Dockerfile
-    command: sleep infinity
-    #depends_on:
-      #- ${BACKEND_SERVER}
+    depends_on:
+      - ${BACKEND_SERVER}
     networks:
       - frontend
+    command: sleep infinity
+    # run the following in the container to begin the frontend
+    #   npm start
 
   backend:
     container_name: cyberclinic-backend
@@ -49,6 +50,8 @@ services:
       - DB_PORT=${DB_PORT}
     expose:
       - ${BACKEND_PORT}
+    ports:
+      - ${VPN_PORT}:${VPN_PORT}
     command: python3 main.py
     depends_on:
       app:
@@ -73,7 +76,7 @@ services:
       target: builder
     environment:
     #Web-related Variables
-      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_SERVER=0.0.0.0
       - FLASK_PORT=${BACKEND_PORT}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
@@ -92,13 +95,17 @@ services:
       - REPTOR_API_TOKEN=${REPTOR_API_TOKEN}
     volumes:
       - ./backend:/src
+    expose:
+      - ${BACKEND_PORT}
     ports:
       - ${BACKEND_PORT}:${BACKEND_PORT}
-      - ${VPN_PORT}
+      - ${VPN_PORT}:${VPN_PORT}
     command: sleep infinity
     networks:
       - backend
       - frontend
+    depends_on:
+      - database
 
   database:
     container_name: cyberclinic-database
@@ -114,6 +121,8 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     expose:
       - ${DB_PORT}
+    ports:
+      - ${DB_PORT}:${DB_PORT}
     networks:
       - backend
     healthcheck:

@@ -5,6 +5,7 @@ import Signup from "./signup";
 import NewScan from "./newscan";
 import Dashboard from "./dashboard";
 import Setting from "./setting";
+import NewTarget from './newtarget'
 
 //make sure the import... is cap
 
@@ -15,6 +16,7 @@ export default function AppRoutes() {
             <Route path="/forgotpw" element={<Forgotpw />} />
             <Route path="/signup" element ={<Signup/>} />
             <Route path="/newscan" element ={<NewScan/>} /> {/*it was saying Signup instead of newscan*/}
+            <Route path="/newtarget" element ={<NewTarget/>} />
             <Route path="/dashboard" element ={<Dashboard/>} />
             <Route path="/setting" element ={<Setting/>} />
         </Routes>
