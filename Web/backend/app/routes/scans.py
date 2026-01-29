@@ -113,7 +113,7 @@ def submit_scan():
             if target_type == "domain":
                 db.execute_single(
                 """INSERT INTO network_domains (domain, client_id, subnet_name) 
-                   VALUES (%s, %s, %s, %s, %s)""",
+                   VALUES (%s, %s, %s)""",
                 (target_value, client_id, target_name)
                 )
             logger.info(f"Created new target: {target_name}")
@@ -185,38 +185,30 @@ def get_scan_status(scan_id):
         db = get_db()
         
         scan_details = db.execute_single(
-            """SELECT sj.*, nt.subnet_name, nt.target_value, c.client_name
+            """SELECT sj.*, nt.subnet_ip, nt.subnet_netmask, c.client_name
                FROM scan_jobs sj 
                JOIN network nt ON sj.client_id = nt.client_id AND sj.subnet_name = nt.subnet_name
                JOIN client c ON sj.client_id = c.client_id
                WHERE sj.id = %s""",
-            (scan_id)
+            (scan_id,)
         )
         
         if not scan_details:
             return jsonify({'error': 'Scan job not found'}), 404
         
-        target_value = None
-        target_type = None
-        #determine target value and type
-        domain = db.execute_single(
+        target_value = scan_details.get('subnet_ip', 'N/A')
+        target_type = 'nmap'  # Default for now
+        
+        # Try to get domain if exists
+        domain_result = db.execute_single(
             """SELECT domain
             FROM network_domains
-            WHERE client_id = %s, subnet_name = %s""",
+            WHERE client_id = %s AND subnet_name = %s""",
             (scan_details['client_id'], scan_details['subnet_name'])
-            )
-        if domain:
+        )
+        if domain_result:
             target_type = "domain"
-            target_value = domain
-        else:
-            if scan_details["subnet_netmask"] == "255.255.255.255":
-                target_type = "ip"
-                target_value = scan_details["subnet_ip"]
-            else:
-                target_type = "range"
-                subnet_ip = scan_details['subnet_ip']
-                subnet_netmask = scan_details['subnet_netmask']
-                target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
+            target_value = domain_result['domain']
 
         #calculate scan duration if completed
         duration = None

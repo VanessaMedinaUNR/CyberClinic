@@ -1,19 +1,22 @@
-#Cyber Clinic backend - Report generation and SysReptor integration
+#Cyber Clinic backend - Report generation with custom HTML/PDF generator
 
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, render_template
 import os
 import json
 from datetime import datetime
 import logging
 import ipaddress
 
-#import reptor client for report generation
+#import custom report generator
+from app.report_generator import CustomReportGenerator
+
+#import reptor client for backward compatibility (optional)
 try:
     from reptor import Reptor
     REPTOR_AVAILABLE = True
 except ImportError:
     REPTOR_AVAILABLE = False
-    logging.warning("Reptor not available - report generation will use placeholders")
+    logging.warning("Reptor not available - using custom report generator only")
 
 #import our database manager for data operations
 from app.database import get_db
@@ -21,6 +24,9 @@ from app.database import get_db
 reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
 #setup logging for report operations
 logger = logging.getLogger(__name__)
+
+#initialize custom report generator
+custom_generator = CustomReportGenerator()
 
 class ReportGenerator:
     #handles report generation using SysReptor integration
@@ -296,6 +302,15 @@ class ReportGenerator:
 #create global report generator instance
 report_generator = ReportGenerator()
 
+@reports_bp.route('/viewer', methods=['GET'])
+def view_reports():
+    #serve the reports viewer page
+    try:
+        return render_template('reports_viewer.html')
+    except Exception as e:
+        logger.error(f"Failed to load reports viewer: {e}")
+        return jsonify({'error': 'Failed to load viewer'}), 500
+
 @reports_bp.route('/generate/<int:scan_id>', methods=['POST'])
 def generate_report(scan_id):
     #generate a report for a completed scan job
@@ -513,4 +528,197 @@ def debug_reptor():
             'error_type': type(e).__name__
         }), 500
 
-# Done by Morales-Marroquin and Austin Finch
+    """
+    Generate a custom HTML/PDF report from scan results
+    Uses the new CustomReportGenerator with Cyber Clinic branding
+    
+    POST /api/reports/generate/123
+    {
+        "format": "html"  // or "pdf"
+    }
+    """
+    try:
+        db = get_db()
+        
+        #get report format preference
+        data = request.get_json() or {}
+        report_format = data.get('format', 'html').lower()
+        
+        if report_format not in ['html', 'pdf']:
+            return jsonify({'error': 'Invalid format. Use "html" or "pdf"'}), 400
+        
+        #get scan data from database
+        scan_data = db.execute_single(
+            """SELECT sj.*, nt.subnet_name, nt.subnet_netmask, nt.subnet_ip, c.client_name, c.client_id
+               FROM scan_jobs sj 
+               JOIN network nt ON sj.client_id = nt.client_id AND sj.subnet_name = nt.subnet_name
+               JOIN client c ON sj.client_id = c.client_id
+               WHERE sj.id = %s AND sj.status = 'completed'""",
+            (scan_id,)
+        )
+        
+        if not scan_data:
+            return jsonify({'error': f'Completed scan {scan_id} not found'}), 404
+        
+        #get admin email
+        admin_email = db.execute_single(
+            """SELECT u.email
+            FROM users u
+            JOIN client_users cu ON cu.user_id = u.user_id
+            WHERE cu.client_id = %s AND u.client_admin = TRUE 
+            LIMIT 1""",
+            (scan_data['client_id'],)
+        )
+        
+        #determine target value and type
+        domain_result = db.execute_single(
+            """SELECT domain
+            FROM network_domains
+            WHERE client_id = %s AND subnet_name = %s""",
+            (scan_data['client_id'], scan_data['subnet_name'])
+        )
+        
+        if domain_result:
+            target_type = "domain"
+            target_value = domain_result['domain']
+        else:
+            if scan_data["subnet_netmask"] == "255.255.255.255":
+                target_type = "ip"
+                target_value = scan_data["subnet_ip"]
+            else:
+                target_type = "range"
+                subnet_ip = scan_data['subnet_ip']
+                subnet_netmask = scan_data['subnet_netmask']
+                target_value = str(ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}'))
+        
+        #prepare data for custom report generator
+        report_data = {
+            'scan_id': scan_data['id'],
+            'scan_type': scan_data['scan_type'],
+            'target': {
+                'value': target_value,
+                'name': scan_data['subnet_name'],
+                'type': target_type
+            },
+            'client': {
+                'name': scan_data['client_name'],
+                'email': admin_email['email'] if admin_email else 'contact@cyberclinic.unr.edu'
+            },
+            'timestamps': {
+                'started': scan_data['started_at'].isoformat() if scan_data['started_at'] else None,
+                'completed': scan_data['completed_at'].isoformat() if scan_data['completed_at'] else None
+            },
+            'results_paths': [scan_data['results_path']] if scan_data['results_path'] else []
+        }
+        
+        #generate report using custom generator
+        logger.info(f"Generating custom {report_format} report for scan {scan_id}")
+        report_path = custom_generator.generate_report(report_data, output_format=report_format)
+        
+        #update database with report path
+        db.execute_command(
+            "UPDATE scan_jobs SET results_path = %s WHERE id = %s",
+            (report_path, scan_id)
+        )
+        
+        return jsonify({
+            'message': 'Report generated successfully',
+            'scan_id': scan_id,
+            'format': report_format,
+            'report_path': report_path,
+            'download_url': f'/api/reports/download/{scan_id}'
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Custom report generation failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'error': 'Report generation failed',
+            'details': str(e)
+        }), 500
+@reports_bp.route('/available', methods=['GET'])
+def list_available_reports():
+    #list all available reports in the reports folder
+    #allows users to view and download generated reports
+    try:
+        reports_dir = os.path.join(os.path.dirname(__file__), '..', 'reports')
+        
+        if not os.path.exists(reports_dir):
+            return jsonify({
+                'message': 'Reports directory not found',
+                'reports': []
+            }), 200
+        
+        reports = []
+        
+        #scan reports folder for HTML and PDF files
+        for filename in os.listdir(reports_dir):
+            if filename.endswith(('.html', '.pdf')):
+                filepath = os.path.join(reports_dir, filename)
+                
+                #get file info
+                file_stat = os.stat(filepath)
+                file_size_mb = file_stat.st_size / (1024 * 1024)  #convert to MB
+                
+                #extract report info from filename
+                #format: cyberclinic_report_<scan_id>_<timestamp>.<ext>
+                parts = filename.replace('cyberclinic_report_', '').replace('.html', '').replace('.pdf', '').split('_')
+                
+                report_info = {
+                    'filename': filename,
+                    'file_type': filename.split('.')[-1].upper(),
+                    'size_mb': round(file_size_mb, 2),
+                    'created': datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
+                    'download_url': f'/api/reports/download-file/{filename}'
+                }
+                
+                #try to extract scan ID if available
+                if len(parts) > 0:
+                    try:
+                        report_info['scan_id'] = parts[0]
+                    except:
+                        pass
+                
+                reports.append(report_info)
+        
+        #sort by creation date descending
+        reports.sort(key=lambda x: x['created'], reverse=True)
+        
+        return jsonify({
+            'message': f'Found {len(reports)} reports',
+            'count': len(reports),
+            'reports': reports
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to list available reports: {e}")
+        return jsonify({
+            'error': 'Failed to list reports',
+            'details': str(e)
+        }), 500
+
+@reports_bp.route('/download-file/<filename>', methods=['GET'])
+def download_report_file(filename):
+    #download a specific report file from the reports folder
+    try:
+        reports_dir = os.path.join(os.path.dirname(__file__), '..', 'reports')
+        filepath = os.path.join(reports_dir, filename)
+        
+        #security check: ensure file is in reports directory
+        if not os.path.abspath(filepath).startswith(os.path.abspath(reports_dir)):
+            return jsonify({'error': 'Invalid file path'}), 400
+        
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Report file not found'}), 404
+        
+        return send_file(filepath, as_attachment=True, download_name=filename)
+        
+    except Exception as e:
+        logger.error(f"Report file download failed for {filename}: {e}")
+        return jsonify({
+            'error': 'File download failed',
+            'details': str(e)
+        }), 500
+        
+        # Done by Morales-Marroquin and Austin Finch

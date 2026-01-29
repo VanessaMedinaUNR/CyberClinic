@@ -17,7 +17,6 @@ services:
     build:
       context: frontend
       dockerfile: Dockerfile
-    command: sleep infinity
     #depends_on:
       #- ${BACKEND_SERVER}
     networks:
@@ -33,7 +32,7 @@ services:
       - ./backend:/src
     environment:
     #Web-related Variables
-      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_SERVER=0.0.0.0
       - FLASK_PORT=${BACKEND_PORT}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
@@ -47,8 +46,8 @@ services:
       - DB_PASS=${DB_PASS}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
-    expose:
-      - ${BACKEND_PORT}
+    ports:
+      - ${BACKEND_PORT}:${BACKEND_PORT}
     command: python3 main.py
     depends_on:
       app:
@@ -66,14 +65,14 @@ services:
       start_period: 30s
 
   backend-dev:
-    container_name: cyberclinic-backend
+    container_name: cyberclinic-backend-dev
     image: python:latest
     build:
       context: backend
       target: builder
     environment:
     #Web-related Variables
-      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_SERVER=0.0.0.0
       - FLASK_PORT=${BACKEND_PORT}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
@@ -93,9 +92,8 @@ services:
     volumes:
       - ./backend:/src
     ports:
-      - ${BACKEND_PORT}:${BACKEND_PORT}
       - ${VPN_PORT}
-    command: sleep infinity
+    command: python3 main.py
     networks:
       - backend
       - frontend

@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report_title }} - Cyber Clinic Security Assessment</title>
+    <style>
+        /* Cyber Clinic Report Styling */
+        @page {
+            size: A4;
+            margin: 2cm 1.5cm;
+            @top-right {
+                content: "Cyber Clinic Report";
+                font-size: 10pt;
+                color: #0033A0;
+            }
+            @bottom-left {
+                content: "CONFIDENTIAL";
+                font-size: 9pt;
+                font-style: italic;
+                color: #666;
+            }
+            @bottom-center {
+                content: "{{ report_title }}";
+                font-size: 9pt;
+                color: #333;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+        }
+        
+        /* Cover Page */
+        .cover-page {
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 100vh;
+            padding: 3cm 2cm;
+            background: linear-gradient(135deg, #0033A0 0%, #003D82 50%, #002855 100%);
+            color: white;
+        }
+        
+        .cover-header {
+            text-align: center;
+        }
+        
+        .cover-logo {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 0.3em;
+            letter-spacing: 2px;
+        }
+        
+        .cover-subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 1em;
+        }
+        
+        .cover-title {
+            text-align: center;
+            margin: 4em 0;
+        }
+        
+        .cover-title h1 {
+            font-size: 2.8em;
+            font-weight: 300;
+            margin-bottom: 0.5em;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: white;
+        }
+        
+        .cover-title h2 {
+            font-size: 2em;
+            font-weight: 600;
+            color: #FFD700;
+        }
+        
+        .cover-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2em;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .cover-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5em;
+        }
+        
+        .cover-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cover-info-label {
+            font-size: 0.85em;
+            opacity: 0.8;
+            margin-bottom: 0.3em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .cover-info-value {
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        
+        .cover-footer {
+            text-align: center;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        /* Main Content */
+        .content {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #0033A0;
+            font-size: 2.2em;
+            margin: 1em 0 0.5em 0;
+            padding-bottom: 0.3em;
+            border-bottom: 3px solid #0033A0;
+        }
+        
+        h2 {
+            color: #003D82;
+            font-size: 1.8em;
+            margin: 1.5em 0 0.5em 0;
+            padding-bottom: 0.2em;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        h3 {
+            color: #002855;
+            font-size: 1.4em;
+            margin: 1.2em 0 0.5em 0;
+        }
+        
+        h4 {
+            color: #333;
+            font-size: 1.1em;
+            margin: 1em 0 0.5em 0;
+            font-weight: 600;
+        }
+        
+        /* Executive Summary */
+        .executive-summary {
+            background: #f8f9fa;
+            padding: 2em;
+            margin: 2em 0;
+            border-left: 5px solid #0033A0;
+            border-radius: 4px;
+        }
+        
+        /* Statistics Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5em;
+            margin: 2em 0;
+        }
+        
+        .stat-card {
+            background: #fff;
+            padding: 1.5em;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            border-top: 4px solid;
+        }
+        
+        .stat-card.critical { border-top-color: #8B0000; }
+        .stat-card.high { border-top-color: #DC143C; }
+        .stat-card.medium { border-top-color: #FF8C00; }
+        .stat-card.low { border-top-color: #FFD700; }
+        .stat-card.info { border-top-color: #4682B4; }
+        
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 0.2em 0;
+        }
+        
+        .stat-card.critical .stat-number { color: #8B0000; }
+        .stat-card.high .stat-number { color: #DC143C; }
+        .stat-card.medium .stat-number { color: #FF8C00; }
+        .stat-card.low .stat-number { color: #FFD700; }
+        .stat-card.info .stat-number { color: #4682B4; }
+        
+        .stat-label {
+            font-size: 1.1em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Severity Bar Chart */
+        .severity-chart {
+            margin: 2em 0;
+            padding: 1.5em;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .chart-bar {
+            margin: 1em 0;
+        }
+        
+        .chart-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+        }
+        
+        .chart-bar-container {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .chart-bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            padding: 0 1em;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .chart-bar-fill.critical { background: #8B0000; }
+        .chart-bar-fill.high { background: #DC143C; }
+        .chart-bar-fill.medium { background: #FF8C00; }
+        .chart-bar-fill.low { background: #FFD700; color: #333; }
+        .chart-bar-fill.info { background: #4682B4; }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: #0033A0;
+            color: white;
+            padding: 1em;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+        
+        td {
+            padding: 1em;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        /* Finding Cards */
+        .finding-card {
+            background: #fff;
+            margin: 2em 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            page-break-inside: avoid;
+        }
+        
+        .finding-header {
+            padding: 1.5em;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .finding-header.critical { background: #8B0000; }
+        .finding-header.high { background: #DC143C; }
+        .finding-header.medium { background: #FF8C00; }
+        .finding-header.low { background: #FFD700; color: #333; }
+        .finding-header.info { background: #4682B4; }
+        
+        .finding-title {
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+        
+        .finding-cvss {
+            font-size: 2em;
+            font-weight: bold;
+            background: rgba(0,0,0,0.2);
+            padding: 0.3em 0.6em;
+            border-radius: 4px;
+        }
+        
+        .finding-body {
+            padding: 1.5em;
+        }
+        
+        .finding-section {
+            margin: 1.5em 0;
+        }
+        
+        .finding-section-title {
+            font-weight: 600;
+            color: #0033A0;
+            margin-bottom: 0.5em;
+            font-size: 1.1em;
+        }
+        
+        .finding-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1em;
+            background: #f8f9fa;
+            padding: 1em;
+            border-radius: 4px;
+            margin: 1em 0;
+        }
+        
+        .finding-meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .finding-meta-label {
+            font-size: 0.85em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.3em;
+        }
+        
+        .finding-meta-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.4em 0.8em;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge.critical { background: #8B0000; color: white; }
+        .badge.high { background: #DC143C; color: white; }
+        .badge.medium { background: #FF8C00; color: white; }
+        .badge.low { background: #FFD700; color: #333; }
+        .badge.info { background: #4682B4; color: white; }
+        
+        /* Risk Level Indicator */
+        .risk-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.8em 1.2em;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        .risk-indicator.critical { background: #8B0000; color: white; }
+        .risk-indicator.high { background: #DC143C; color: white; }
+        .risk-indicator.medium { background: #FF8C00; color: white; }
+        .risk-indicator.low { background: #FFD700; color: #333; }
+        .risk-indicator.minimal { background: #28a745; color: white; }
+        
+        /* Alert Boxes */
+        .alert {
+            padding: 1.2em;
+            margin: 1.5em 0;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ff8c00;
+            color: #856404;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #4682B4;
+            color: #0c5460;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        /* Code Blocks */
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1em;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        /* Lists */
+        ul, ol {
+            margin: 1em 0 1em 2em;
+        }
+        
+        li {
+            margin: 0.5em 0;
+        }
+        
+        /* Page Breaks */
+        .page-break {
+            page-break-after: always;
+        }
+        
+        /* Footer */
+        .report-footer {
+            margin-top: 4em;
+            padding-top: 2em;
+            border-top: 2px solid #0033A0;
+            text-align: center;
+            color: #666;
+        }
+        
+        .report-footer-logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #0033A0;
+            margin-bottom: 0.5em;
+        }
+        
+        /* Watermark for Draft */
+        {% if is_draft %}
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 8em;
+            color: rgba(220, 20, 60, 0.1);
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        {% endif %}
+        
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% if is_draft %}
+    <div class="watermark">DRAFT</div>
+    {% endif %}
+    
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <div class="cover-header">
+            <div class="cover-logo">🛡️ CYBER CLINIC</div>
+            <div class="cover-subtitle">University of Nevada, Reno • Computer Science & Engineering</div>
+        </div>
+        
+        <div class="cover-title">
+            <h1>Security Assessment Report</h1>
+            <h2>{{ report_title }}</h2>
+        </div>
+        
+        <div class="cover-info">
+            <div class="cover-info-grid">
+                <div class="cover-info-item">
+                    <span class="cover-info-label">Client Organization</span>
+                    <span class="cover-info-value">{{ client_name }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">Report Date</span>
+                    <span class="cover-info-value">{{ report_date }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">Scan Target</span>
+                    <span class="cover-info-value">{{ target_value }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">Scan Type</span>
+                    <span class="cover-info-value">{{ scan_type_display }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">Contact</span>
+                    <span class="cover-info-value">{{ contact_email }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">Report Version</span>
+                    <span class="cover-info-value">1.0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cover-footer">
+            <p><strong>CONFIDENTIAL</strong></p>
+            <p>This report contains sensitive security information and should be handled accordingly.</p>
+            <p>Generated by Cyber Clinic • CS 425 Team 13</p>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="content">
+        <!-- Table of Contents -->
+        <h1>Table of Contents</h1>
+        <ol>
+            <li><a href="#executive-summary">Executive Summary</a></li>
+            <li><a href="#scan-methodology">Scan Methodology</a></li>
+            <li><a href="#findings-overview">Findings Overview</a></li>
+            <li><a href="#open-ports">Open Ports Detected</a></li>
+            <li><a href="#detailed-findings">Detailed Findings</a></li>
+            <li><a href="#recommendations">Recommendations</a></li>
+            <li><a href="#appendix">Appendix</a></li>
+        </ol>
+        
+        <div class="page-break"></div>
+        
+        <!-- Executive Summary -->
+        <h1 id="executive-summary">Executive Summary</h1>
+        <div class="executive-summary">
+            <p>
+                This security assessment was conducted by Cyber Clinic on <strong>{{ report_date }}</strong> 
+                for <strong>{{ client_name }}</strong>. The scan targeted <strong>{{ target_value }}</strong> 
+                using {{ scan_type_display }} scanning tools.
+            </p>
+            <p style="margin-top: 1em;">
+                <strong>Overall Risk Level:</strong> 
+                <span class="risk-indicator {{ overall_risk|lower }}">{{ overall_risk|upper }}</span>
+            </p>
+        </div>
+        
+        <!-- Statistics -->
+        <h2>Vulnerability Statistics</h2>
+        <div class="stats-grid">
+            <div class="stat-card critical">
+                <div class="stat-number">{{ finding_stats.critical }}</div>
+                <div class="stat-label">Critical</div>
+            </div>
+            <div class="stat-card high">
+                <div class="stat-number">{{ finding_stats.high }}</div>
+                <div class="stat-label">High</div>
+            </div>
+            <div class="stat-card medium">
+                <div class="stat-number">{{ finding_stats.medium }}</div>
+                <div class="stat-label">Medium</div>
+            </div>
+            <div class="stat-card low">
+                <div class="stat-number">{{ finding_stats.low }}</div>
+                <div class="stat-label">Low</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-number">{{ finding_stats.info }}</div>
+                <div class="stat-label">Info</div>
+            </div>
+            <div class="stat-card" style="border-top-color: #0033A0;">
+                <div class="stat-number" style="color: #0033A0;">{{ finding_stats.total }}</div>
+                <div class="stat-label">Total Findings</div>
+            </div>
+        </div>
+        
+        <!-- Severity Chart -->
+        <div class="severity-chart">
+            <h3>Findings Distribution</h3>
+            {% for severity, count in [('critical', finding_stats.critical), ('high', finding_stats.high), ('medium', finding_stats.medium), ('low', finding_stats.low), ('info', finding_stats.info)] %}
+            {% if count > 0 %}
+            <div class="chart-bar">
+                <div class="chart-label">
+                    <span>{{ severity|capitalize }}</span>
+                    <span>{{ count }} finding{{ 's' if count != 1 else '' }}</span>
+                </div>
+                <div class="chart-bar-container">
+                    <div class="chart-bar-fill {{ severity }}" style="width: {{ (count / finding_stats.total * 100)|round|int }}%;">
+                        {% if count / finding_stats.total > 0.15 %}{{ count }}{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- Scan Methodology -->
+        <h1 id="scan-methodology">Scan Methodology</h1>
+        <p>
+            This security assessment utilized industry-standard vulnerability scanning tools to identify 
+            potential security issues in the target environment.
+        </p>
+        
+        <h3>Tools Used</h3>
+        <ul>
+            {% if 'nmap' in scan_types_used %}
+            <li><strong>Nmap</strong> - Network and port scanning to identify open services, operating systems, and service versions</li>
+            {% endif %}
+            {% if 'nikto' in scan_types_used %}
+            <li><strong>Nikto</strong> - Web application vulnerability scanning to identify common web security issues</li>
+            {% endif %}
+        </ul>
+        
+        <h3>Scan Details</h3>
+        <table>
+            <tr>
+                <th style="width: 30%;">Attribute</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td><strong>Target</strong></td>
+                <td><code>{{ target_value }}</code></td>
+            </tr>
+            <tr>
+                <td><strong>Scan Type</strong></td>
+                <td>{{ scan_type_display }}</td>
+            </tr>
+            <tr>
+                <td><strong>Scan Date</strong></td>
+                <td>{{ scan_date }}</td>
+            </tr>
+            <tr>
+                <td><strong>Scan Duration</strong></td>
+                <td>{{ scan_duration }}</td>
+            </tr>
+            <tr>
+                <td><strong>Hosts Scanned</strong></td>
+                <td>{{ hosts_scanned }}</td>
+            </tr>
+        </table>
+        
+        <div class="page-break"></div>
+        
+        <!-- Findings Overview -->
+        <h1 id="findings-overview">Findings Overview</h1>
+        
+        {% if finding_stats.total == 0 %}
+        <div class="alert alert-success">
+            <h3>✓ No Vulnerabilities Detected</h3>
+            <p>
+                The security scan completed successfully and did not identify any significant security vulnerabilities 
+                in the target environment. This is an excellent security posture.
+            </p>
+            <p style="margin-top: 1em;">
+                <strong>Note:</strong> While no issues were found in this scan, it's recommended to:
+            </p>
+            <ul>
+                <li>Maintain regular security updates for all systems and software</li>
+                <li>Continue periodic security assessments</li>
+                <li>Monitor logs for suspicious activity</li>
+                <li>Keep security patches up to date</li>
+            </ul>
+        </div>
+        {% else %}
+        <p>
+            This security assessment identified <strong>{{ finding_stats.total }}</strong> finding{{ 's' if finding_stats.total != 1 else '' }} 
+            across the scanned infrastructure:
+        </p>
+        
+        {% if finding_stats.critical > 0 %}
+        <div class="alert alert-warning">
+            <strong>⚠ Critical Issues Detected</strong><br>
+            {{ finding_stats.critical }} critical vulnerabilit{{ 'ies' if finding_stats.critical != 1 else 'y' }} require{{ 's' if finding_stats.critical == 1 else '' }} immediate attention.
+            These pose significant security risks and should be remediated as soon as possible.
+        </div>
+        {% endif %}
+        
+        <!-- Summary Table -->
+        <h2>Findings Summary</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 10%;">Severity</th>
+                    <th style="width: 10%; text-align: center;">CVSS</th>
+                    <th style="width: 50%;">Finding</th>
+                    <th style="width: 25%;">Affected Component</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for finding in findings %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><span class="badge {{ finding.severity }}">{{ finding.severity|upper }}</span></td>
+                    <td style="text-align: center;"><strong>{{ finding.cvss.score }}</strong></td>
+                    <td><a href="#finding-{{ loop.index }}">{{ finding.title }}</a></td>
+                    <td><code>{{ finding.affected_component }}</code></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        
+        <!-- Open Ports Section -->
+        {% if nmap_data and nmap_data.hosts %}
+        <h2 id="open-ports">Open Ports Detected</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Host (IP)</th>
+                    <th style="width: 10%;">Port</th>
+                    <th style="width: 15%;">Service</th>
+                    <th style="width: 25%;">Product</th>
+                    <th style="width: 15%;">Version</th>
+                    <th style="width: 20%;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for host in nmap_data.hosts %}
+                    {% set host_ip = host.ip %}
+                    {% for port in host.ports %}
+                        {% if port.state == 'open' %}
+                        <tr>
+                            <td><code>{{ host_ip }}</code></td>
+                            <td><code>{{ port.port }}/{{ port.protocol }}</code></td>
+                            <td>{{ port.service.name|default('unknown') }}</td>
+                            <td>{{ port.service.product|default('-') }}</td>
+                            <td>{{ port.service.version|default('-') }}</td>
+                            <td><span class="badge medium">{{ port.state|upper }}</span></td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        
+        <div class="page-break"></div>
+        
+        <!-- Detailed Findings -->
+        <h1 id="detailed-findings">Detailed Findings</h1>
+        
+        {% if finding_stats.total == 0 %}
+        <div class="alert alert-info">
+            <p>No security findings to report. See the Findings Overview section for details.</p>
+        </div>
+        {% else %}
+        {% for finding in findings %}
+        <div class="finding-card" id="finding-{{ loop.index }}">
+            <div class="finding-header {{ finding.severity }}">
+                <div class="finding-title">
+                    {{ finding.severity|upper }}-{{ loop.index }}: {{ finding.title }}
+                </div>
+                <div class="finding-cvss">{{ finding.cvss.score }}</div>
+            </div>
+            
+            <div class="finding-body">
+                <div class="finding-meta">
+                    <div class="finding-meta-item">
+                        <span class="finding-meta-label">Severity</span>
+                        <span class="finding-meta-value">{{ finding.severity|capitalize }} (CVSS {{ finding.cvss.score }})</span>
+                    </div>
+                    <div class="finding-meta-item">
+                        <span class="finding-meta-label">Finding Type</span>
+                        <span class="finding-meta-value">{{ finding.type|replace('_', ' ')|title }}</span>
+                    </div>
+                    <div class="finding-meta-item">
+                        <span class="finding-meta-label">Affected Component</span>
+                        <span class="finding-meta-value"><code>{{ finding.affected_component }}</code></span>
+                    </div>
+                    <div class="finding-meta-item">
+                        <span class="finding-meta-label">Status</span>
+                        <span class="finding-meta-value">Open</span>
+                    </div>
+                </div>
+                
+                <div class="finding-section">
+                    <div class="finding-section-title">Description</div>
+                    <p>{{ finding.description }}</p>
+                </div>
+                
+                {% if finding.details %}
+                <div class="finding-section">
+                    <div class="finding-section-title">Technical Details</div>
+                    {% for key, value in finding.details.items() %}
+                    {% if key not in ['ip', 'target'] %}
+                    <p><strong>{{ key|replace('_', ' ')|title }}:</strong> 
+                        {% if value is iterable and value is not string %}
+                            {% if value|length > 1 %}
+                                <ul>
+                                {% for item in value %}
+                                    <li><code>{{ item }}</code></li>
+                                {% endfor %}
+                                </ul>
+                            {% else %}
+                                <code>{{ value[0] if value else 'N/A' }}</code>
+                            {% endif %}
+                        {% else %}
+                            <code>{{ value }}</code>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="finding-section">
+                    <div class="finding-section-title">Recommendation</div>
+                    <p>{{ finding.recommendation }}</p>
+                </div>
+            </div>
+        </div>
+        {% if not loop.last and loop.index % 2 == 0 %}
+        <div class="page-break"></div>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+        
+        <div class="page-break"></div>
+        
+        <!-- Recommendations -->
+        <h1 id="recommendations">Recommendations</h1>
+        
+        {% if finding_stats.total == 0 %}
+        <h2>Maintain Current Security Posture</h2>
+        <p>Continue following security best practices:</p>
+        <ul>
+            <li>Keep all software and systems updated with the latest security patches</li>
+            <li>Regularly review and audit access controls</li>
+            <li>Maintain backups of critical data</li>
+            <li>Monitor system logs for suspicious activity</li>
+            <li>Conduct periodic security assessments</li>
+        </ul>
+        {% else %}
+        <h2>Immediate Actions Required</h2>
+        {% if finding_stats.critical > 0 %}
+        <div class="alert alert-warning">
+            <strong>Priority 1 - Critical Findings ({{ finding_stats.critical }})</strong>
+            <p>Address these vulnerabilities immediately. These pose the highest risk to your security.</p>
+        </div>
+        {% endif %}
+        
+        {% if finding_stats.high > 0 %}
+        <div class="alert alert-warning">
+            <strong>Priority 2 - High Findings ({{ finding_stats.high }})</strong>
+            <p>Schedule remediation within the next 7-14 days.</p>
+        </div>
+        {% endif %}
+        
+        {% if finding_stats.medium > 0 %}
+        <div class="alert alert-info">
+            <strong>Priority 3 - Medium Findings ({{ finding_stats.medium }})</strong>
+            <p>Plan remediation within 30 days as part of regular maintenance.</p>
+        </div>
+        {% endif %}
+        
+        <h2>General Security Recommendations</h2>
+        <ol>
+            <li><strong>Patch Management:</strong> Implement a systematic patch management process to keep all systems up to date</li>
+            <li><strong>Access Controls:</strong> Review and strengthen access controls using principle of least privilege</li>
+            <li><strong>Network Segmentation:</strong> Implement network segmentation to limit lateral movement</li>
+            <li><strong>Monitoring:</strong> Deploy security monitoring and logging solutions</li>
+            <li><strong>Incident Response:</strong> Develop and test an incident response plan</li>
+            <li><strong>Security Training:</strong> Provide regular security awareness training for all users</li>
+            <li><strong>Regular Assessments:</strong> Schedule periodic security assessments to identify new vulnerabilities</li>
+        </ol>
+        {% endif %}
+        
+        <div class="page-break"></div>
+        
+        <!-- Appendix -->
+        <h1 id="appendix">Appendix</h1>
+        
+        <h2>Severity Classification</h2>
+        <table>
+            <tr>
+                <th style="width: 20%;">Severity</th>
+                <th style="width: 20%;">CVSS Score</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><span class="badge critical">Critical</span></td>
+                <td>9.0 - 10.0</td>
+                <td>Vulnerabilities that can be easily exploited and lead to complete system compromise</td>
+            </tr>
+            <tr>
+                <td><span class="badge high">High</span></td>
+                <td>7.0 - 8.9</td>
+                <td>Vulnerabilities that could lead to significant security breaches requiring skilled exploitation</td>
+            </tr>
+            <tr>
+                <td><span class="badge medium">Medium</span></td>
+                <td>4.0 - 6.9</td>
+                <td>Vulnerabilities that pose moderate risk and should be addressed during regular maintenance</td>
+            </tr>
+            <tr>
+                <td><span class="badge low">Low</span></td>
+                <td>0.1 - 3.9</td>
+                <td>Vulnerabilities that pose minimal risk but should still be remediated when convenient</td>
+            </tr>
+            <tr>
+                <td><span class="badge info">Info</span></td>
+                <td>0.0</td>
+                <td>Informational findings that do not pose direct security risks but may aid in security hardening</td>
+            </tr>
+        </table>
+        
+        <h2>Contact Information</h2>
+        <p>For questions or assistance regarding this report, please contact Cyber Clinic:</p>
+        <ul>
+            <li><strong>Email:</strong> {{ contact_email }}</li>
+            <li><strong>Organization:</strong> {{ client_name }}</li>
+            <li><strong>Website:</strong> <a href="https://github.com/VanessaMedinaUNR/CyberClinic">github.com/VanessaMedinaUNR/CyberClinic</a></li>
+        </ul>
+        
+        <h2>Disclaimer</h2>
+        <p>
+            This security assessment report is provided "as is" for informational purposes. While every effort 
+            has been made to ensure accuracy, Cyber Clinic makes no warranties regarding the completeness or 
+            accuracy of the information contained herein. The findings in this report reflect the state of 
+            security at the time of the assessment and may not account for vulnerabilities discovered after 
+            the scan date.
+        </p>
+        <p>
+            This report should be treated as confidential and shared only with authorized personnel responsible 
+            for security remediation.
+        </p>
+        
+        <!-- Footer -->
+        <div class="report-footer">
+            <div class="report-footer-logo">🛡️ CYBER CLINIC</div>
+            <p>University of Nevada, Reno • Department of Computer Science & Engineering</p>
+            <p>CS 425 Software Engineering • Team 13</p>
+            <p style="margin-top: 1em; font-size: 0.9em;">
+                Generated on {{ report_date }} • Report Version 1.0
+            </p>
+        </div>
+    </div>
+</body>
+</html>
