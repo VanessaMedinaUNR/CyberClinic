@@ -19,7 +19,7 @@
 **Team Number:** 13
 **Team Name:** Cyberr Clinc 
 **Team Members:**
-- *(Leslie Becerra Austin Finch,Vanessa Medina, Manuel Morales-Marroquin)*
+** Leslie Becerra Austin Finch,Vanessa Medina, Manuel Morales-Marroquin
 
 ---
 ## Intructors & Exteral Advisors 
