@@ -19,17 +19,16 @@
 **Team Number:** 13
 **Team Name:** Cyberr Clinc 
 **Team Members:**
-- Leslie Becerra
-- *(Austin Finch,Vanessa Medina, Manuel Morales-Marroquin)*
+- Leslie Becerra Austin Finch,Vanessa Medina, Manuel Morales-Marroquin
 
 ---
 ## Intructors & Exteral Advisors 
 
 **Instructors:**
--*(Dave Feil-Seifer, Vinh Le, Stosh Peterson, & Richie White)* - Computer Science & Engineering, University of Nevada, Reno 
+-*Dave Feil-Seifer, Vinh Le, Stosh Peterson, & Richie White * - Computer Science & Engineering, University of Nevada, Reno 
 
 **External Advisors:**
-- *( Dr. Bill Doherty & Dr. Shamik Sengupta)* - Cybersecuirty Center, University of Nevada, Reno
+- * Dr. Bill Doherty & Dr. Shamik Sengupta* - Cybersecuirty Center, University of Nevada, Reno
 ---
 ## Project Title
 **Cyber Clinic Web Application: Accessible Cybersecurity for small organizations** This website documents our **CS 426 Senior Prokject in Computer Science (Spring 2026)** at the **Inoversity of Nevada,Reno - Deparment of Computer Science & Engineering**
