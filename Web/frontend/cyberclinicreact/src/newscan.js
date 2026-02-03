@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-const axios = require("axios");
+import axios from 'axios';
 
 function NewScan () {
 
@@ -11,19 +11,9 @@ function NewScan () {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(process.env.REACT_APP_BACKEND_SERVER + "/api/target/list-targets", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                client_id: getCookie("client_id"), // Default client for development
-                user_id: getCookie("user_id")   // Default user for development
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            const target_list = JSON.parse(data.target_list)
+        axios.get(process.env.REACT_APP_BACKEND_SERVER + "/api/target/list-targets")
+        .then(function (response) { 
+            const target_list = JSON.parse(response.data.target_list);
             setTargets(target_list.map((item) => ({ value: item, label: item })));
         })
         .catch(err => console.error('Error fetching data:', err))
@@ -39,29 +29,30 @@ function NewScan () {
 
     async function handleSubmit(e) {
         e.preventDefault();
-        console.log("Target: " + selectedTarget + "\tType: " + scanType)
 
-        const response = await fetch(process.env.REACT_APP_BACKEND_SERVER + "/api/scans/submit", {
-            method: "POST",
+        const scanTarget = JSON.stringify({
+                target_name: selectedTarget,
+                scan_type: scanType,
+                jwt_token: getCookie("jwt_token") //Migrate to jwt token for auth
+            })
+
+        axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/scans/submit", scanTarget, {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                target_name: selectedTarget,
-                scan_type: scanType,
-                client_id: getCookie("client_id"), // Default client for development
-                user_id: getCookie("user_id")   // Default user for development
-            })
-        });
-
-        const result = await response.json();
-        console.log(result);
-    
-        if (response.ok) {
+        }).then(function (response) {
+            alert(response.data.message);
             navigate("/dashboard")
-        } else {
-            alert(result.error || "Scan failed.");
-        }
+        }).catch(function (error) {
+            if (!error.response)
+            {
+                alert("Connection error: Please try again later");
+            }
+            else
+            {  
+                alert("Scan failed: " + error.response.data.error);
+            }
+        });
     }
 
     return( 

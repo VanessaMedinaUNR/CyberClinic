@@ -15,8 +15,6 @@ function getCookie(name) {
     if (parts.length === 2) return parts.pop().split(';').shift();
 
     }
-    console.log("client_id: " + getCookie("client_id"));
-    console.log("user_id: " + getCookie("user_id"));
 
     return (
         <div id="bounding_box">

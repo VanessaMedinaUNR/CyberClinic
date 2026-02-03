@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
+import axios from 'axios';
+import { setAuthToken } from './App';
 
 //useState: render changes on website 
 //useNavigate: have access to change pages 
@@ -27,29 +29,42 @@ function Login() {
     'use server';
     e.preventDefault();
 
-    const response = await fetch(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/login", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            email: email,
-            password: password
-        })
+    const userAuth = JSON.stringify({
+        email: email,
+        password: password
+    })
+
+    await axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/login", userAuth, {
+        headers: { 'Content-Type': 'application/json' }
+    }).then(function (response) {
+        const jwt_token = response.data.access_token;
+        localStorage.setItem("access_token", jwt_token); //Add JWT token to local storage
+        setAuthToken(jwt_token); //Update axios Authorization header
+        navigate("./dashboard");
+    }).catch(function (error) {
+        if (!error.response)
+            {
+                alert("Connection error: Please try again later");
+            }
+        else
+            {    
+                alert("Login failed: " + error.response.data.error);
+            }
     });
     
+/*
     const result = await response.json();
       if (response.ok) {
-          const client_id = result.user.client_id;
-          const user_id = result.user.user_id;
-          setCookie("client_id", client_id, 5);
-          setCookie("user_id", user_id, 5);
-          navigate("./dashboard");
+        const jwt_token = result.access_token;
+        localStorage.setItem("access_token", jwt_token);
+        setAuthToken(result.access_token); //Migrate to jwt token for auth
+        navigate("./dashboard");
       } else {
-          alert(result.error || "Login failed.");
+          
       }
+*/    
     }
-    
+
   return (
     <div id = "bounding_box">
         <h1>Welcome to CyberClinic</h1>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from 'axios';
 
 
 function Signup() {
@@ -16,51 +16,32 @@ function Signup() {
     async function handleSubmit(e) {
         e.preventDefault();
 
-/*
-        axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/register", {
+        const userData = JSON.stringify({
+            email: email,
+            password: password,
+            organization: organization,
+            phone: phone
+        })
+
+        axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/register", userData, {
             headers: {
                 "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                email: email,
-                password: password,
-                organization: organization,
-                phone: phone
-            })
+            }
         })
-        .then(response => response.json())
-        .then((data) => {
-            console.log(data);
-            setUser(data);
-            navigate("/login")
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-            alert(error || "Signup failed.");
-        });
-*/
-
-        const response = await fetch(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/register", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                email: email,
-                password: password,
-                organization: organization,
-                phone: phone
-            })
-        });
-
-        const result = await response.json();
-        console.log(result);
-    
-        if (response.ok) {
+        .then(function (response) {
+            alert(response.data.message);
             navigate("/")
-        } else {
-            alert(result.error || "Registration failed.");
-        }
+        })
+        .catch(function (error) {
+            if (!error.response)
+            {
+                alert("Connection error: Please try again later");
+            }
+            else
+            {  
+                alert("Registration failed: " + error.response.data.error);
+            }
+        });
     }
 
     return (

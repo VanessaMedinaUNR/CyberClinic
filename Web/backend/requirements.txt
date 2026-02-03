@@ -10,6 +10,7 @@ Django==5.2.8
 dotenv==0.9.9
 Flask==3.1.2
 flask-cors==6.0.1
+Flask-JWT-Extended==4.7.1
 idna==3.11
 ipaddress==1.0.23
 itsdangerous==2.2.0
@@ -22,6 +23,7 @@ ping3==5.1.5
 psycopg2-binary==2.9.11
 pycparser==2.23
 Pygments==2.19.2
+PyJWT==2.11.0
 python-dotenv==1.2.1
 python-nmap==0.7.1
 PyYAML==6.0.3

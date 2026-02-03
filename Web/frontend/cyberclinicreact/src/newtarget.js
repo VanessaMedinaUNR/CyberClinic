@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 function NewTarget () {
 
@@ -19,29 +20,31 @@ function NewTarget () {
     async function handleSubmit(e) {
         e.preventDefault();
 
-        const response = await fetch(process.env.REACT_APP_BACKEND_SERVER + "/api/target/add-target", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
+        const target = JSON.stringify({
                 target_name: targetName,
                 target_type: targetType,
                 target_value: targetValue,
                 public_facing: targetPublic,
-                client_id: getCookie("client_id"), // Default client for development
-                user_id: getCookie("user_id")   // Default user for development
             })
-        });
-    
-        const result = await response.json();
-        console.log(result);
-    
-        if (response.ok) {
+
+        axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/target/add-target", target, {
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+        .then(function (response) {
+            alert(response.data.message);
             navigate("/dashboard")
-        } else {
-            alert(result.error || "Adding target failed.");
-        }
+        }).catch(function (error){
+            if (!error.response)
+            {
+                alert("Connection error: Please try again later");
+            }
+            else
+            {  
+                alert("Fetching targets failed: " + error.response.data.error)
+            }
+        });
     }
 
     return( 

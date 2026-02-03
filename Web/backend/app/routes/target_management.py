@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import re
 import json
 import socket
@@ -46,6 +47,7 @@ def validate_ip_range(ip_range):
 
 
 @targets_bp.route('/add-target', methods=['POST'])
+@jwt_required()
 def add_target():
     try:
         db = get_db()
@@ -53,9 +55,18 @@ def add_target():
         data = request.get_json()
 
         #get client_id from session (placeholder - will integrate with frontend auth later)
-        client_id = data.get('client_id', 1)
-        if not client_id:
+        user_id = get_jwt_identity()
+        logger.info(user_id)
+        if not user_id:
             return jsonify({'error': 'Authentication required'}), 400
+    
+        client = db.execute_single(
+            """SELECT client_id FROM client_users WHERE user_id = %s""",
+            (user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 400
+        client_id = client["client_id"]
 
         #validate required fields  
         required_fields = ['target_name', 'target_type', 'target_value', 'public_facing']
@@ -126,14 +137,23 @@ def add_target():
         logger.error(f"Target submission failed: {e}")
         return jsonify({'error': 'Internal server error'}), 500
     
-@targets_bp.route('/list-targets', methods=['POST'])
+@targets_bp.route('/list-targets', methods=['GET'])
+@jwt_required()
 def list_targets():
     try:
         db = get_db()
 
-        data = request.get_json()
-        user_id = data.get('user_id', 1)
-        client_id = data.get('client_id', 1)
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 400
+    
+        client = db.execute_single(
+            """SELECT client_id FROM client_users WHERE user_id = %s""",
+            (user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 400
+        client_id = client["client_id"]
 
         valid_user = db.execute_single(
             """SELECT * FROM client_users WHERE user_id = %s AND client_id = %s""",
