@@ -2,7 +2,7 @@
 
 # 🛡️ Cyber Clinic Web Application 🛡️
 
-### *CS 425 Software Engineering Project - Team 13*
+### *CS 426 Software Engineering Project - Team 13*
 
 [![University](https://img.shields.io/badge/University-Nevada%2C%20Reno-blue.svg)](https://www.unr.edu/)
 [![Course](https://img.shields.io/badge/Course-CS%20425-green.svg)](https://catalog.unr.edu/preview_course_nopop.php?catoid=58&coid=1093494&print)
@@ -19,7 +19,11 @@
 
 ## 🎯 Project Vision
 
-We're building **Cyber Clinic** - a web application that will bridge the cybersecurity gap for small businesses, tribal agencies, and local organizations who can't afford commercial security tools that cost $1,000+. Our goal is to provide professional-grade vulnerability scanning with human expert support.
+Team 13 is proposing the Cyber Clinic Web Application, an affordable and simple alternative to commercial vulnerability scanners that can cost more than $1,000. The project supports the mission of the Cyber Clinic, a student-led nonprofit founded at the University of Nevada, Las Vegas (UNLV), which is now opening a chapter at the University of Nevada, Reno (UNR) to help small businesses, tribal agencies, and local governments address cybersecurity risks. Our prototype includes functional user authentication, a working dashboard, and integrated scanning for public domains/IPs using open-source tools such as Nmap and Nikto. The system produces readable reports that translates technical scanner output into plain English with clear suggested fixes, giving non-technical users a clear first assessment and a direct path to contact Cyber Clinic for further remediation and education. 
+
+## 🎯 Project Description
+
+The Cyber Clinic Web Application is designed to provide an affordable and straightforward alternative to expensive commercial vulnerability scanners. Our objective is to automate vulnerability tests and show the result in  a way that is easy for non technical users to help them understand and how to act upon the results. By simplifying these complicated processes, we want to help organizations reduce their cybersecurity risk without the high licensing cost. 
 
 > **Note:** This project is currently in early development as part of our CS 425 Software Engineering course.
 
