@@ -40,7 +40,7 @@
  - Dr. Shamik Sengupta - Cybersecuirty Center, University of Nevada, Reno
 ---
 ## Project Title
-**Cyber Clinic Web Application: Accessible Cybersecurity for small organizations** This website documents our **CS 426 Senior Prokject in Computer Science (Spring 2026)** at the **Inoversity of Nevada,Reno - Deparment of Computer Science & Engineering**
+**Cyber Clinic Web Application: Accessible Cybersecurity for small organizations** This website documents our **CS 426 Senior Project in Computer Science (Spring 2026)** at the **Inoversity of Nevada,Reno - Deparment of Computer Science & Engineering**
 
 ---
 ## Project Description
