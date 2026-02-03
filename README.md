@@ -80,11 +80,11 @@ Team 13 is proposing the Cyber Clinic Web Application, an affordable and simple 
 ### **What We're Building**
 
 Our application will provide:
-- **💰 Affordable scanning** - Free alternative to expensive commercial tools
-- **🔒 Secure architecture** - Local scanning to protect sensitive data  
-- **📝 Clear reporting** - Plain-English vulnerability summaries
-- **📞 Expert support** - Direct connection to cybersecurity analysts
-- **🏢 Small org focus** - Built specifically for resource constrained organizations
+- **Affordable scanning** - Free alternative to expensive commercial tools
+- **Secure architecture** - Local scanning to protect sensitive data  
+- **Clear reporting** - Plain-English vulnerability summaries
+- **Expert support** - Direct connection to cybersecurity analysts
+- **Small org focus** - Built specifically for resource constrained organizations
 
 
 
@@ -194,6 +194,6 @@ python -m  PyInstaller --distpath /dist/{Your Distribution} -n CyberClinic --noc
 
 ---
 
-** Project Timeline:** Fall 2026 | **Team 13** | **🚧 In Development**
+** Project Timeline:** Spring 2026 | **Team 13** | **🚧 In Development**
 
 </div>
