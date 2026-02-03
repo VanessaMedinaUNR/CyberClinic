@@ -30,7 +30,8 @@
 
 **Instructors:**
 - Dave Feil-Seifer - Computer Science & Engineering, University of Nevada, Reno 
-- Vinh Le Stosh Peterson - Computer Science & Engineering, University of Nevada, Reno 
+- Vinh Le - Computer Science & Engineering, University of Nevada, Reno 
+- Stosh Peterson - Computer Science & Engineering, University of Nevada, Reno 
 -  Richie White  - Computer Science & Engineering, University of Nevada, Reno 
 
 **External Advisors:**
@@ -92,10 +93,10 @@ Our application will provide:
 ## Getting Started (For Development)
 
 ### Prerequisites
-- 📦 Docker
-- 🐍 Python 3.10+
-- 🔧 Git
-- 🌐 Modern browser (Chrome, Edge, Firefox)
+- Docker
+- Python 3.10+
+- Git
+- Modern browser (Chrome, Edge, Firefox)
 
 ### Current Setup
 
@@ -145,7 +146,7 @@ python -m  PyInstaller --distpath /dist/{Your Distribution} -n CyberClinic --noc
 
 ---
 
-## 👥 Team Members
+## Team Members
 
 <div align="center">
 
@@ -180,15 +181,12 @@ python -m  PyInstaller --distpath /dist/{Your Distribution} -n CyberClinic --noc
 
 </div>
 
-### 🎓 **Academic Support**
-- **Instructors:** Dr. Dave Feil-Seifer, Vinh Le, Stosh Peterson, Richie White
-- **External Advisors:** Dr. Bill Doherty, Dr. Shamik Sengupta
 
 ---
 
 <div align="center">
 
-### 🛡️ **Building the Future of Accessible Cybersecurity** 🛡️
+###  **Building the Future of Accessible Cybersecurity** 
 
 *A CS 425 Software Engineering Project*
 
@@ -196,6 +194,6 @@ python -m  PyInstaller --distpath /dist/{Your Distribution} -n CyberClinic --noc
 
 ---
 
-**📅 Project Timeline:** Fall 2025 | **👥 Team 13** | **🚧 In Development**
+** Project Timeline:** Fall 2026 | **Team 13** | **🚧 In Development**
 
 </div>
