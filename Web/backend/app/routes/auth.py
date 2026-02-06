@@ -4,11 +4,13 @@
 from flask import Blueprint, request, jsonify
 import re
 import uuid
-import hashlib
 import secrets
-import phonenumbers
 import logging
+import hashlib
+import phonenumbers
 from app.database import get_db
+from flask_jwt_extended import create_access_token
+from datetime import datetime, timezone, timedelta
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -78,10 +80,6 @@ def register():
         if len(password) < 6:
             return jsonify({'error': 'password must be at least 6 characters'}), 400
         
-        #generate unique user ID
-        user_id = str(uuid.uuid4())
-        client_id = str(uuid.uuid4())
-        
         try:
             #use database when available
             db = get_db()
@@ -94,6 +92,7 @@ def register():
             if existing_user:
                 return jsonify({'error': 'email already registered'}), 409
             
+            client_id: str
             client = db.execute_single(
                 "SELECT client_id FROM client WHERE client_name = %s", (client_name,)
             )
@@ -104,20 +103,24 @@ def register():
             if not client:
                 print("Creating client")
                 client_admin = True # First user to a client is admin by default
-                db.execute_command(
-                     """INSERT INTO client (client_id, client_name)
-                     VALUES (%s, %s)""",
-                     (client_id, client_name)
-                )
+                client_id = db.execute_single(
+                     """INSERT INTO client (client_name)
+                     VALUES (%s)
+                     RETURNING client_id""",
+                     (client_name,)
+                )["client_id"]
+            else:
+                client_id = client["client_id"]
                 
             
             #insert new user into database
             #password hashing will be done by PostgreSQL pgcrypto
-            db.execute_command(
-                """INSERT INTO users (user_id, email, password_hash, client_admin, phone_number)
-                VALUES (%s, %s, crypt(%s, gen_salt('bf')), %s, %s)""",
-                (user_id, email, password, client_admin, formatted_phone)
-            )
+            user_id = db.execute_single(
+                """INSERT INTO users (email, password_hash, client_admin, phone_number)
+                VALUES (%s, crypt(%s, gen_salt('bf')), %s, %s)
+                RETURNING user_id""",
+                (email, password, client_admin, formatted_phone,)
+            )["user_id"]
             db.execute_command(
                 """INSERT INTO client_users (user_id, client_id)
                 VALUES (%s, %s)""",
@@ -136,37 +139,12 @@ def register():
             }), 201
             
         except Exception as db_error:
-            #fallback to temporary storage for development
-            #check if email is already registered in temp storage
-            for temp_user_data in users_db.values():
-                if temp_user_data['email'] == email:
-                    logger.error(str(db_error))
-                    return jsonify({'error': 'Temporarily Unavailable'}), 409
-            
-            #create new user in temporary storage with secure password hashing
-            password_hash = hash_password(password)
-            user_data = {
-                'user_id': user_id,
-                'email': email,
-                'password_hash': password_hash, 
-                'organization': client_name,
-                'phone_number': phone_number,
-                'created_at': '2025-12-03',
-            }
-            
-            #save to temporary storage using email as key since no username
-            users_db[email] = user_data
-            
-            #send back success message
+            #Database connection error
+            logger.warning(db_error)
             return jsonify({
-                'message': 'user registered successfully (temp storage)',
-                'user': {
-                    'user_id': user_id,
-                    'email': email,
-                    'organization': client_name,
-                    'phone_number': phone_number
-                }
-            }), 201
+                'error': 'Connection Error',
+                'details': 'Please try again later'
+            }), 500
         
     except Exception as e:
         #handle any unexpected errors that might happen
@@ -203,51 +181,31 @@ def login():
                 (email, password)
             )
 
+            if not user_data:
+                logger.warning(f'Failed login for {email}')
+                return jsonify({'error': 'invalid credentials'}), 401
+            
             client = db.execute_single(
                 """SELECT * FROM client WHERE client_id = %s""",
                 (user_data['client_id'],)
             )
             
-            if not user_data:
-                logger.warning(f'Failed login for {email}')
-                return jsonify({'error': 'invalid credentials'}), 401
-            
+            #Generate JWT Token
+            token = create_access_token(identity=user_data["user_id"])
+
             #login successful
             return jsonify({
                 'message': 'login successful',
-                'user': {
-                    'user_id': user_data['user_id'],
-                    'client_id': client['client_id'],
-                    'email': user_data['email'],
-                    'client_name': client['client_name'],
-                    'phone_number': user_data['phone_number']
-                },
-                'session': 'temporary-session-token'
+                'access_token': token
             }), 200
             
         except Exception as db_error:
-            #fallback to temporary storage for development
-            if email not in users_db:
-                return jsonify({'error': 'invalid credentials'}), 401
-            
-            user_data = users_db[email]
-            
-            #check if password matches using secure verification
-            if not verify_password(password, user_data['password_hash']):
-                return jsonify({'error': 'invalid credentials'}), 401
-            
-            #login successful
+            #Database connection error
+            logger.warning(db_error)
             return jsonify({
-                'message': 'login successful (temp storage)',
-                'user': {
-                    'user_id': user_data['user_id'],
-                    'client_id': client['client_id'],
-                    'email': user_data['email'],
-                    'client_name': client['client_name'],
-                    'phone_number': user_data['phone_number']
-                },
-                'session': 'temporary-session-token'
-            }), 200
+                'error': 'Connection Error',
+                'details': 'Please try again later'
+            }), 500
         
     except Exception as e:
         #handle any unexpected errors during login

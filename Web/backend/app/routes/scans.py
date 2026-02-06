@@ -3,6 +3,7 @@
 from flask import Blueprint, request, jsonify
 import re
 import socket
+from flask_jwt_extended import jwt_required, get_jwt_identity
 import ipaddress
 from datetime import datetime
 import logging
@@ -45,6 +46,7 @@ def validate_ip_range(ip_range):
         return False
 
 @scans_bp.route('/submit', methods=['POST'])
+@jwt_required()
 def submit_scan():
     #submit a new scan request
     #creates network target, validates it, and creates scan job
@@ -52,9 +54,19 @@ def submit_scan():
         db = get_db()
         data = request.get_json()
         #get client_id from session (placeholder - will integrate with frontend auth later)
-        client_id = data.get('client_id', 1)
-        if not client_id:
+        user_id = get_jwt_identity()
+        if not user_id:
             return jsonify({'error': 'Authentication required'}), 400
+    
+        client = db.execute_single(
+            """SELECT client_id FROM client_users WHERE user_id = %s""",
+            (user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 400
+        client_id = client["client_id"]
+            
+
         
         #validate required fields  
         required_fields = ['target_name', 'scan_type']
@@ -223,13 +235,14 @@ def get_scan_status(scan_id):
         return jsonify({'error': 'Internal server error'}), 500
 
 @scans_bp.route('/list', methods=['GET'])
+@jwt_required()
 def list_scans():
     #list all scan jobs with optional filtering
     #supports filtering by status, user, scan type
     try:
         #get query parameters for filtering
         status_filter = request.args.get('status')
-        user_filter = request.args.get('user_id')
+        user_filter = get_jwt_identity()
         scan_type_filter = request.args.get('scan_type')
         limit = int(request.args.get('limit', 50))
         offset = int(request.args.get('offset', 0))

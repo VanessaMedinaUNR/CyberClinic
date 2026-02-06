@@ -8,24 +8,21 @@ services:
   frontend:
     container_name: cyberclinic-frontend
     environment:
-      - NGINX_SERVER=${FRONTEND_SERVER}
-      - NGINX_PORT=${FRONTEND_PORT}
-      - FLASK_SERVER=${BACKEND_SERVER}
-      - FLASK_PORT=${BACKEND_PORT}
-      - DOLLAR=$
+      - REACT_APP_FRONTEND_SERVER=${FRONTEND_SERVER}
+      - REACT_APP_FRONTEND_PORT=${FRONTEND_PORT}
+      - REACT_APP_BACKEND_SERVER=http://${HOST}:${BACKEND_PORT}
     ports:
       - ${FRONTEND_PORT}:${FRONTEND_PORT}
     build:
       context: frontend
       dockerfile: Dockerfile
-    command: sleep infinity
-    # run the following in the container to begin the frontend
-    #   envsubst < /etc/nginx/conf.d/cyberclinic.template > /etc/nginx/conf.d/default.conf
-    #   nginx
     depends_on:
       - ${BACKEND_SERVER}
     networks:
       - frontend
+    command: sleep infinity
+    # run the following in the container to begin the frontend
+    #   npm start
 
   backend:
     container_name: cyberclinic-backend
@@ -79,7 +76,7 @@ services:
       target: builder
     environment:
     #Web-related Variables
-      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_SERVER=0.0.0.0
       - FLASK_PORT=${BACKEND_PORT}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
@@ -98,6 +95,8 @@ services:
       - REPTOR_API_TOKEN=${REPTOR_API_TOKEN}
     volumes:
       - ./backend:/src
+    expose:
+      - ${BACKEND_PORT}
     ports:
       - ${BACKEND_PORT}:${BACKEND_PORT}
       - ${VPN_PORT}:${VPN_PORT}
@@ -122,6 +121,8 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     expose:
       - ${DB_PORT}
+    ports:
+      - ${DB_PORT}:${DB_PORT}
     networks:
       - backend
     healthcheck:

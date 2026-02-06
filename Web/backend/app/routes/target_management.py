@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import re
+import json
 import socket
 import ipaddress
 from datetime import datetime
@@ -45,6 +47,7 @@ def validate_ip_range(ip_range):
 
 
 @targets_bp.route('/add-target', methods=['POST'])
+@jwt_required()
 def add_target():
     try:
         db = get_db()
@@ -52,14 +55,24 @@ def add_target():
         data = request.get_json()
 
         #get client_id from session (placeholder - will integrate with frontend auth later)
-        client_id = data.get('client_id', 1)
-        if not client_id:
+        user_id = get_jwt_identity()
+        logger.info(user_id)
+        if not user_id:
             return jsonify({'error': 'Authentication required'}), 400
+    
+        client = db.execute_single(
+            """SELECT client_id FROM client_users WHERE user_id = %s""",
+            (user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 400
+        client_id = client["client_id"]
 
         #validate required fields  
         required_fields = ['target_name', 'target_type', 'target_value', 'public_facing']
         for field in required_fields:
             if not data.get(field):
+                logger.warning(data)
                 return jsonify({'error': f'Missing required field: {field}'}), 400
 
         target_name = data['target_name'].strip()
@@ -120,6 +133,53 @@ def add_target():
             'target_id': target_name,
             'message': 'Target submitted successfully'
         }), 201
+    except Exception as e:
+        logger.error(f"Target submission failed: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+    
+@targets_bp.route('/list-targets', methods=['GET'])
+@jwt_required()
+def list_targets():
+    try:
+        db = get_db()
+
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 400
+    
+        client = db.execute_single(
+            """SELECT client_id FROM client_users WHERE user_id = %s""",
+            (user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 400
+        client_id = client["client_id"]
+
+        valid_user = db.execute_single(
+            """SELECT * FROM client_users WHERE user_id = %s AND client_id = %s""",
+            (user_id, client_id)
+        )
+
+        if valid_user:
+            subnets = db.execute_query(
+                """SELECT subnet_name FROM network WHERE client_id = %s""",
+                (client_id,)
+            )
+            subnet_list = []
+            for row in subnets:
+                subnet_list.append(row['subnet_name'])
+            return jsonify({
+                'success': True,
+                'client_id': client_id,
+                'target_list': json.dumps(subnet_list),
+                'message': 'Targets fetched successfully'
+            }), 201
+        else:
+            logger.error(f"Target submission failed: {e}")
+            return jsonify({'error': 'Authentication Required'}), 400
+
+
+
     except Exception as e:
         logger.error(f"Target submission failed: {e}")
         return jsonify({'error': 'Internal server error'}), 500

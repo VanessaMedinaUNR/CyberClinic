@@ -1,6 +1,7 @@
 #Cyber Clinic backend - Main entry point
 
 from flask import Flask, jsonify, request
+from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 import os
 import atexit
@@ -64,7 +65,9 @@ if __name__ == '__main__':
     #this runs when we start the file directly (not imported)
     #starts up our web server so people can connect to it
     app = create_app()
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    app.config['JWT_SECRET_KEY'] = os.environ.get('SECRET_KEY')
+    JWTManager(app)
     #start the background scan worker
     print("Starting background scan worker...")
     start_scan_worker()

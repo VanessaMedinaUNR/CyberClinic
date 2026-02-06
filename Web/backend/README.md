@@ -33,9 +33,10 @@ POST /api/auth/register
 Content-Type: application/json
 
 {
-  "username": "manuel",
   "email": "manuel@example.com", 
-  "password": "securePassword123"
+  "password": "securePassword123",
+  "organization": "Example Org",
+  "phone": "123-456-7890"
 }
 ```
 Response: `201 Created` with user data, or `409 Conflict` if user exists.
@@ -52,19 +53,38 @@ Content-Type: application/json
 ```
 Response: `200 OK` with user session, or `401 Unauthorized`.
 
+### Target Management
+
+**Create Target**
+```http
+POST /api/target/add-target
+Content-Type: application/json
+Authorization: Bearer [JWT Token]
+{
+  "target_name": "Example Target"
+  "target_type": domain
+  "target_value": scanme.nmap.org
+  "public_facing": True
+}
+```
+
+**List Targets**
+```http
+GET /api/targets/list-targets
+Content-Type: application/json
+Authorization: Bearer [JWT Token]
+```
+
 ### 🔍 Security Scans
 
 **Submit Scan**
 ```http
 POST /api/scans/submit
 Content-Type: application/json
-
+Authorization: Bearer [JWT Token]
 {
-  "target_name": "My Website",
-  "target_type": "domain",
-  "target_value": "example.com",
-  "scan_type": "nmap",
-  "user_id": 1
+  "target_name": "Example Target",
+  "scan_type": "nikto",
 }
 ```
 Response: `201 Created` with `scan_job_id`.
@@ -77,7 +97,8 @@ Response: Scan details with status (`pending`, `running`, `completed`, `failed`)
 
 **List user's scans**
 ```http
-GET /api/scans/list?user_id=1&status=completed&limit=10
+Authorization: Bearer [JWT Token]
+GET /api/scans/list?status=completed&limit=10
 ```
 Response: Array of scan jobs.
 
@@ -96,6 +117,7 @@ Response: `201 Created` with download URL.
 
 **Download report**
 ```http
+Authorization: Bearer [JWT Token]
 GET /api/reports/download/{scan_id}
 ```
 Response: File download (PDF/HTML).
@@ -122,7 +144,7 @@ async function registerUser(username, email, password) {
   const response = await fetch('http://localhost:5000/api/auth/register', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({ username, email, password })
   });
@@ -140,18 +162,18 @@ async function registerUser(username, email, password) {
 
 **Submit security scan**
 ```javascript
-async function submitScan(targetName, targetType, targetValue, scanType, userId) {
+async function submitScan(targetName, targetType, targetValue, scanType, jwtToken) {
   const response = await fetch('http://localhost:5000/api/scans/submit', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + jwtToken
     },
     body: JSON.stringify({
       target_name: targetName,
       target_type: targetType,
       target_value: targetValue,
       scan_type: scanType,
-      user_id: userId
     })
   });
   
@@ -201,11 +223,11 @@ curl http://localhost:5000/
 
 #Test user registration
 curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json, Authorization: Bearer [JWT Token]" \
   -d '{"username": "testuser", "email": "test@example.com", "password": "testpass123"}'
 
 #Test scan submission
 curl -X POST http://localhost:5000/api/scans/submit \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json, Authorization: Bearer [JWT Token]" \
   -d '{"target_name": "Test", "target_type": "domain", "target_value": "example.com", "scan_type": "nmap", "user_id": 1}'
 ```
