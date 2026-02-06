@@ -5,9 +5,9 @@ import axios from 'axios';
 function NewScan () {
 
     const navigate = useNavigate();
-    const[ selectedTarget, setSelectedTarget ] = useState("");
-    const [ scanType, setScanType ]  = useState("");
-    const [ targets, setTargets] = useState([]);
+    const[ selectedTarget, setSelectedTarget ] = useState("None");
+    const [ scanType, setScanType ]  = useState("None");
+    const [ targets, setTargets ] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -16,7 +16,11 @@ function NewScan () {
             const target_list = JSON.parse(response.data.target_list);
             setTargets(target_list.map((item) => ({ value: item, label: item })));
         })
-        .catch(err => console.error('Error fetching data:', err))
+        .catch(function (error) {
+            console.error('Error fetching data:', error)
+            alert("Scan failed: " + error.response.data.error);
+            if (error.response.status === 401){ navigate('/') }
+        })
         .finally(() => setLoading(false));
     }, []);
     
@@ -33,7 +37,6 @@ function NewScan () {
         const scanTarget = JSON.stringify({
                 target_name: selectedTarget,
                 scan_type: scanType,
-                jwt_token: getCookie("jwt_token") //Migrate to jwt token for auth
             })
 
         axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/scans/submit", scanTarget, {
@@ -51,6 +54,7 @@ function NewScan () {
             else
             {  
                 alert("Scan failed: " + error.response.data.error);
+                if (error.response.status === 401){ navigate('/') }
             }
         });
     }
@@ -63,7 +67,7 @@ function NewScan () {
                 <div>
                     <label htmlFor="target_name">Select your target: </label>
                     <select disabled={loading} name="target_name" id="target_name" value = { selectedTarget } onChange= {(e) => setSelectedTarget(e.target.value)}required>
-                        <option key="None" value="None">Select a target</option>
+                        <option key="None" value="None" disabled>Select a target</option>
                         {targets.map((item) => (
                             <option key={item.value} value={item.value}>
                             {item.label}
@@ -74,7 +78,7 @@ function NewScan () {
                 <div>
                     <label htmlFor="scan_type">Select scan type:</label>
                     <select name="scan_type" id="scan_type" value = { scanType } onChange = {(e) => setScanType(e.target.value)}required>
-                        <option value="None">NMAP/Nikto/Full</option>
+                        <option value="None" disabled>NMAP/Nikto/Full</option>
                         <option value="nmap">NMAP (Network/Port Scan)</option>
                         <option value="nikto">Nikto (Web Vulnerability Scan)</option>
                         <option value="full">Full</option>

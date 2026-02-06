@@ -67,7 +67,25 @@ if __name__ == '__main__':
     app = create_app()
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     app.config['JWT_SECRET_KEY'] = os.environ.get('SECRET_KEY')
-    JWTManager(app)
+    jwt = JWTManager(app)
+
+    @jwt.unauthorized_loader
+    def handle_unauthorized(error):
+        return jsonify({
+            "error": "Missing or invalid token",
+            "code": "authorization_required"
+        }), 401
+
+
+    @jwt.expired_token_loader
+    def handle_expired_token(jwt_header, jwt_payload):
+        return jsonify({"error": "Session has expired"}), 401
+
+
+    @jwt.invalid_token_loader
+    def handle_invalid_token(error):
+        return jsonify({"error": "Invalid session"}), 401
+    
     #start the background scan worker
     print("Starting background scan worker...")
     start_scan_worker()

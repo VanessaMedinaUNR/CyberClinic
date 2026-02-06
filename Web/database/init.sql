@@ -20,7 +20,7 @@ CREATE TABLE application
 
 CREATE TABLE client
 (
-  client_id      varchar(36) NOT NULL,
+  client_id      varchar(36) DEFAULT gen_random_uuid(),
   client_name    varchar     NOT NULL,
   scan_frequency int         NOT NULL DEFAULT -1,
   last_scheduled date        NOT NULL DEFAULT '4713-01-01',
@@ -82,7 +82,7 @@ CREATE TABLE scan_jobs
 
 CREATE TABLE users
 (
-  user_id       varchar(36) NOT NULL,
+  user_id       varchar(36) DEFAULT gen_random_uuid(),
   email         email       NOT NULL,
   password_hash text        NOT NULL,
   client_admin  boolean     NOT NULL,
