@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from './api';
 
 function NewScan () {
 
@@ -11,15 +11,22 @@ function NewScan () {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        axios.get(process.env.REACT_APP_BACKEND_SERVER + "/api/target/list-targets")
+        api.get("/target/list-targets")
         .then(function (response) { 
             const target_list = JSON.parse(response.data.target_list);
             setTargets(target_list.map((item) => ({ value: item, label: item })));
         })
         .catch(function (error) {
-            console.error('Error fetching data:', error)
-            alert("Scan failed: " + error.response.data.error);
-            if (error.response.status === 401){ navigate('/') }
+            if (!error.response)
+            {
+                alert("Connection error: Please try again later");
+            }
+            else 
+            {
+                console.error('Error fetching data:', error)
+                alert("Scan failed: " + error.response.data.error);
+                if (error.response.status === 401){ navigate('/') }
+            }
         })
         .finally(() => setLoading(false));
     }, []);
@@ -39,7 +46,7 @@ function NewScan () {
                 scan_type: scanType,
             })
 
-        axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/scans/submit", scanTarget, {
+        await api.post("/scans/submit", scanTarget, {
             headers: {
                 "Content-Type": "application/json"
             },

@@ -91,6 +91,7 @@ class DatabaseManager:
         with self.get_cursor() as cursor:
             cursor.execute(query, params)
             return cursor.rowcount
+        
 
 #create global database manager instance
 db_manager = DatabaseManager()
@@ -105,5 +106,18 @@ def init_db():
 def get_db():
     #get database manager instance for use in routes
     return db_manager
+
+def block_jwt(jti):
+    #Block jwt token
+    db = get_db()
+    blocked = db.execute_single(
+        """INSERT INTO blocked_jwt (jti) VALUES (%s) RETURNING id""",
+        (jti,)
+    )
+
+    if blocked:
+        return True
+    else:
+        return False
 
 # Done by Morales-Marroquin and Austin Finch

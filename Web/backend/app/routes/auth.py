@@ -8,9 +8,9 @@ import secrets
 import logging
 import hashlib
 import phonenumbers
-from app.database import get_db
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from datetime import datetime, timezone, timedelta
+from app.database import get_db, block_jwt
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token, get_jwt
+from datetime import timedelta
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -192,18 +192,15 @@ def login():
                 logger.warning(f'Failed login for {email}')
                 return jsonify({'error': 'invalid credentials'}), 401
             
-            client = db.execute_single(
-                """SELECT * FROM client WHERE client_id = %s""",
-                (user_data['client_id'],)
-            )
-            
             #Generate JWT Token
-            token = create_access_token(identity=user_data["user_id"])
+            token = create_access_token(identity=user_data["user_id"], expires_delta=timedelta(minutes=5), fresh=True)
+            refresh_token = create_refresh_token(user_data["user_id"], expires_delta=timedelta(minutes=30))
 
             #login successful
             return jsonify({
                 'message': 'login successful',
-                'access_token': token
+                'access_token': token,
+                'refresh_token': refresh_token
             }), 200
             
         except Exception as db_error:
@@ -217,6 +214,13 @@ def login():
     except Exception as e:
         #handle any unexpected errors during login
         return jsonify({'error': 'login failed', 'details': str(e)}), 500
+
+@auth_bp.route('/refresh', methods = ['POST'])
+@jwt_required(refresh=True)
+def refresh_token():
+    current_user = get_jwt_identity()
+    new_token = create_access_token(identity=current_user, fresh=False, expires_delta=timedelta(minutes=10))
+    return {"access_token": new_token}, 200
 
 @auth_bp.route('/user', methods=['GET'])
 @jwt_required()
@@ -253,10 +257,11 @@ def get_user():
         }), 500
 
 @auth_bp.route('/user', methods=['POST'])
-@jwt_required()
+@jwt_required(fresh=True)
 def update_user():
     user_id = get_jwt_identity()
-
+    access_token = get_jwt()
+    refresh_token = create_refresh_token(identity=user_id, expires_delta=timedelta(minutes=30))
     try:
         data = request.get_json()
         email = data.get('email')
@@ -304,6 +309,11 @@ def update_user():
                     """UPDATE users SET password_hash = crypt(%s, gen_salt('bf')) WHERE user_id = %s""",
                     (new, user_id,)
                 )
+
+                #give user a new fresh token
+                blocked = block_jwt(access_token["jti"])
+                if blocked:
+                    access_token = create_access_token(identity=user_id, fresh=True, expires_delta=timedelta(minutes=5))
                 updated = True
                 logger.info(f"{user_id}: Password updated.")
             else:
@@ -331,7 +341,9 @@ def update_user():
             }), 500
 
         return jsonify({
-            'message': 'User updated sucessfully!'
+            'message': 'User updated sucessfully!',
+            'access_token': access_token,
+            'refresh_token': refresh_token
         }), 200
 
     except Exception as e:

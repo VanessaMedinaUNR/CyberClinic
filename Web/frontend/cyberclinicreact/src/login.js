@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
-import axios from 'axios';
-import { setAuthToken } from './App';
+import api from './api';
 
 //useState: render changes on website 
 //useNavigate: have access to change pages 
@@ -26,43 +25,31 @@ function Login() {
   }
 
   async function handleSubmit(e) {
-    'use server';
-    e.preventDefault();
+        e.preventDefault();
 
-    const userAuth = JSON.stringify({
-        email: email,
-        password: password
-    })
+        const userAuth = JSON.stringify({
+            email: email,
+            password: password
+        })
 
-    await axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/login", userAuth, {
-        headers: { 'Content-Type': 'application/json' }
-    }).then(function (response) {
-        const jwt_token = response.data.access_token;
-        localStorage.setItem("access_token", jwt_token); //Add JWT token to local storage
-        setAuthToken(jwt_token); //Update axios Authorization header
-        navigate("./dashboard");
-    }).catch(function (error) {
-        if (!error.response)
-            {
-                alert("Connection error: Please try again later");
-            }
-        else
-            {    
-                alert("Login failed: " + error.response.data.error);
-            }
-    });
-    
-/*
-    const result = await response.json();
-      if (response.ok) {
-        const jwt_token = result.access_token;
-        localStorage.setItem("access_token", jwt_token);
-        setAuthToken(result.access_token); //Migrate to jwt token for auth
-        navigate("./dashboard");
-      } else {
-          
-      }
-*/    
+        api.post("/auth/login", userAuth, {
+            headers: { 'Content-Type': 'application/json' }
+        }).then(function (response) {
+            const jwt_token = response.data.access_token;
+            const refresh_token = response.data.refresh_token;
+            localStorage.setItem("access_token", jwt_token); //Add JWT token to local storage
+            localStorage.setItem("refresh_token", refresh_token); //Add JWT refresh token to local storage
+            navigate("./dashboard");
+        }).catch(function (error) {
+            if (!error.response)
+                {
+                    alert("Connection error: Please try again later");
+                }
+            else
+                {    
+                    alert("Login failed: " + error.response.data.error);
+                }
+        }); 
     }
 
   return (

@@ -5,6 +5,8 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 import os
 import atexit
+import logging
+from app.database import get_db
 from app.routes.auth import auth_bp
 from app.routes.scans import scans_bp
 from app.routes.reports import reports_bp
@@ -69,6 +71,24 @@ if __name__ == '__main__':
     app.config['JWT_SECRET_KEY'] = os.environ.get('SECRET_KEY')
     jwt = JWTManager(app)
 
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    @jwt.token_in_blocklist_loader
+    def check_revoked(jwt_header, jwt_payload: dict):
+        jti = jwt_payload['jti']
+        
+        try:
+            db = get_db()
+            blocked = db.execute_single(
+                """SELECT id FROM blocked_jwt WHERE jti = %s""",
+                (jti,)
+            )
+        except Exception as e:
+            logger.error(e)
+            return True
+        return blocked is not None
+
     @jwt.unauthorized_loader
     def handle_unauthorized(error):
         return jsonify({
@@ -79,12 +99,24 @@ if __name__ == '__main__':
 
     @jwt.expired_token_loader
     def handle_expired_token(jwt_header, jwt_payload):
-        return jsonify({"error": "Session has expired"}), 401
+        return jsonify({"error": "Session has expired", "code": "session_expired"}), 401
 
 
     @jwt.invalid_token_loader
     def handle_invalid_token(error):
-        return jsonify({"error": "Invalid session"}), 401
+        return jsonify({"error": "Invalid session", "code": "session_invalid"}), 401
+    
+    @jwt.needs_fresh_token_loader
+    def token_not_fresh_callback(jwt_header, jwt_payload):
+        return (
+        jsonify(
+            {
+                "error": "Please sign in again.",
+                "code": "fresh_token_required"
+            }
+        ),
+        401,
+    )
     
     #start the background scan worker
     print("Starting background scan worker...")

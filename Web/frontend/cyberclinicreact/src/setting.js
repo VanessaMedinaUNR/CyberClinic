@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import './setting.css';
-import axios from 'axios';
+import api from './api';
 
 function Setting() {
     const navigate = useNavigate();
@@ -20,7 +20,7 @@ function Setting() {
     });
 
   useEffect(() => {
-    axios.get(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/user")
+    api.get("/auth/user")
     .then(function (response) {
         const user = response.data
         setUserData({
@@ -31,19 +31,28 @@ function Setting() {
         });
     })
     .catch(function (error) {
-        console.error('Error fetching data: Authentication Required');
-        if (error.response.status === 401){ navigate('/') }
+        if (!error.response)
+        {
+            alert("Connection error: Please try again later");
+        }
+        else    
+        {
+            console.log('Error fetching data: ' + error);
+            if (error.response.status === 401){ navigate('/') }
+        }
     });
   }, [navigate]);
 
     function updateUser(newDetails){
-        axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/user", newDetails, {
+        api.post("/auth/user", newDetails, {
             headers: {
                 "Content-Type": "application/json"
             },
         })
         .then(function (response) {
             alert(response.data.message);
+            localStorage.setItem('access_token', response.data.access_token)
+            localStorage.setItem('refresh_token', response.data.refresh_token)
             window.location.reload();
         })
         .catch(function (error) {
@@ -73,8 +82,6 @@ function Setting() {
         e.preventDefault();
         
         if (userData.new_password === userData.confirm_password) {
-            const form = e.target;
-            const formData = new FormData(form);
             const passwordUpdate = JSON.stringify({
                 old_password: userData.old_password,
                 new_password: userData.new_password,

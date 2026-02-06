@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import axios from 'axios';
+import api from './api';
 
 
 function Signup() {
@@ -23,7 +23,7 @@ function Signup() {
             phone: phone
         })
 
-        axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/register", userData, {
+        await api.post("/auth/register", userData, {
             headers: {
                 "Content-Type": "application/json"
             }

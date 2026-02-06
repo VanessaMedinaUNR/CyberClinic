@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from './api';
 
 function NewTarget () {
 
@@ -27,7 +27,7 @@ function NewTarget () {
                 public_facing: targetPublic,
             })
 
-        axios.post(process.env.REACT_APP_BACKEND_SERVER + "/api/target/add-target", target, {
+        await api.post("/target/add-target", target, {
             headers: {
                 "Content-Type": "application/json"
             }
@@ -42,7 +42,7 @@ function NewTarget () {
             }
             else
             {  
-                alert("Fetching targets failed: " + error.response.data.error)
+                alert("Failed to add target: " + error.response.data.error)
                 if (error.response.status === 401){ navigate('/') }
             }
         });
