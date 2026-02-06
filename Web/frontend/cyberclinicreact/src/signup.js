@@ -46,31 +46,31 @@ function Signup() {
 
     return (
         <div id = "bounding_box">
-        <h1>Welcome to CyberClinic</h1>
-        <h2>University of Nevada Reno</h2>
-        <form id="signup" onSubmit={handleSubmit}>
-            <div>
-                <label htmlFor="email">Enter your email:</label>
-                <input type="email" name="email" id="email" value = {email} onChange = {(e) => setEmail(e.target.value)}required/>
-            </div>
-            <div>
-                <label htmlFor="password">Enter your password:</label>
-                <input type="text" name="password" id="password" value = {password} onChange = {(e) => setPassword(e.target.value)} required/>
-            </div>
-            <div>
-                <label htmlFor="phone">Enter your phone number:</label>
-                <input type="tel" name="phone" id="phone" value = {phone} onChange = {(e) => setPhone(e.target.value)}required/>
-            </div>
-            <div>
-                <label htmlFor="organization">Enter your organization name:</label>
-                <input type="text" name="organization" id="organization" value ={organization} onChange = {(e) => setOrganization(e.target.value)}required/>
-            </div>
+            <h1>Welcome to CyberClinic</h1>
+            <h2>University of Nevada Reno</h2>
+            <form id="signup" onSubmit={handleSubmit}>
+                <div>
+                    <label htmlFor="email">Enter your email:</label>
+                    <input type="email" name="email" id="email" value = {email} onChange = {(e) => setEmail(e.target.value)}required/>
+                </div>
+                <div>
+                    <label htmlFor="password">Enter your password:</label>
+                    <input type="text" name="password" id="password" value = {password} onChange = {(e) => setPassword(e.target.value)} required/>
+                </div>
+                <div>
+                    <label htmlFor="phone">Enter your phone number:</label>
+                    <input type="tel" name="phone" id="phone" value = {phone} onChange = {(e) => setPhone(e.target.value)}required/>
+                </div>
+                <div>
+                    <label htmlFor="organization">Enter your organization name:</label>
+                    <input type="text" name="organization" id="organization" value ={organization} onChange = {(e) => setOrganization(e.target.value)}required/>
+                </div>
 
-            <div>
-                <button id="submit" type="submit">Submit</button>
-            </div>
-        </form>
-   </div> 
+                <div>
+                    <button id="submit" type="submit">Submit</button>
+                </div>
+            </form>
+        </div> 
     );
 }
 

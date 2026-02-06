@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Toolbar from './toolbar';
 import api from './api';
 
 function NewScan () {
@@ -66,10 +67,11 @@ function NewScan () {
         });
     }
 
-    return( 
+    return(
         <div id = "bounding_box">
-        <h1>Generate a New Scan!</h1>
-        <h4>Please select your target and what type of scan</h4>
+            <Toolbar/> 
+            <h1>Generate a New Scan!</h1>
+            <h4>Please select your target and what type of scan</h4>
             <form id="newScanForm" onSubmit={handleSubmit}>
                 <div>
                     <label htmlFor="target_name">Select your target: </label>

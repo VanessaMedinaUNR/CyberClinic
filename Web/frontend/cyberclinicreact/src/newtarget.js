@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from './api';
+import Toolbar from './toolbar';
 
 function NewTarget () {
 
@@ -50,6 +51,7 @@ function NewTarget () {
 
     return( 
         <div id = "bounding_box">
+            <Toolbar/>
             <h1>Create a New Target!</h1>
             <h4>Please enter a name for your target, select target type; ip, domain, or range, if it is public facing, and it's target value!</h4>
             <form id="newTargetForm" onSubmit={handleSubmit}>
