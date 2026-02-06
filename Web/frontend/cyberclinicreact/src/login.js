@@ -72,11 +72,11 @@ function Login() {
 
         <form id="loginForm" onSubmit={handleSubmit}>
             <div>
-                <label for="email">Enter your email:</label>
+                <label htmlFor="email">Enter your email:</label>
                 <input type="email" name="email" id="email" value = {email} onChange={(e) => setEmail(e.target.value)} required/>
             </div>
             <div>
-                <label for="password">Enter your password</label>
+                <label htmlFor="password">Enter your password</label>
                 <input type="text" name="password" id="password" value = {password} onChange={(e) => setPassword(e.target.value)}required />
             </div>
             <div>

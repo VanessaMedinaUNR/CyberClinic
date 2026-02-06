@@ -14,25 +14,23 @@ function Setting() {
     const navigate = useNavigate();
     const [userData, setUserData] = useState({
         email: '',
+        admin: false,
         phone: '',
-        old_password: '',
-        new_password: '',
-        confirm_password: '',
         scan_frequency: -1
     });
 
   useEffect(() => {
     axios.get(process.env.REACT_APP_BACKEND_SERVER + "/api/auth/user")
-      .then(function (response) {
+    .then(function (response) {
         const user = response.data
         setUserData({
           email: user.email,
+          admin: user.admin,
           phone: user.phone,
           scan_frequency: user.scan_frequency
         });
-        console.log(user);
-      })
-      .catch(function (error) {
+    })
+    .catch(function (error) {
         console.error('Error fetching data: Authentication Required');
         if (error.response.status === 401){ navigate('/') }
     });
@@ -46,7 +44,7 @@ function Setting() {
         })
         .then(function (response) {
             alert(response.data.message);
-            //window.location.reload();
+            window.location.reload();
         })
         .catch(function (error) {
             if (!error.response)
@@ -75,6 +73,8 @@ function Setting() {
         e.preventDefault();
         
         if (userData.new_password === userData.confirm_password) {
+            const form = e.target;
+            const formData = new FormData(form);
             const passwordUpdate = JSON.stringify({
                 old_password: userData.old_password,
                 new_password: userData.new_password,
@@ -127,38 +127,40 @@ return(
             </div>
             <div className="form-group">
                 <label className="form-label"> Old Password </label>
-                <input type="password" className="form-input" placeholder="......." value={ userData.old_password } onChange={ (e) => setUserData({ ...userData, old_password: e.target.value })}/>
+                <input type="password" className="form-input" value={ userData.old_password } onChange={ (e) => setUserData({ ...userData, old_password: e.target.value })}/>
             </div>
             <div className ="form-group" >
                 <label className="form-label"> New Password </label>
-                <input type="password" className="form-input" placeholder="" value={ userData.new_password } onChange={ (e) => setUserData({ ...userData, new_password: e.target.value })}/>
+                <input type="password" className="form-input" value={ userData.new_password } onChange={ (e) => setUserData({ ...userData, new_password: e.target.value })}/>
             </div>
             <div className ="form-group" >
                 <label className="form-label"> Confirm New Password </label>
-                <input type="password" className="form-input" placeholder="" value={ userData.confirm_password } onChange={ (e) => setUserData({ ...userData, confirm_password: e.target.value })}/>
-        </div>
-        <button className="btn-action" onClick = { handleChangePassword }>
-            Change Password
-        </button>
-    </div>
-    <div className="setting-card">
-        <div className="card-header">
-            <h3>Client Information</h3>
-            <p>Manage your organization settings</p>
-        </div>
-        <div className="form-group">
-            <label className="form-label"> Automated Scan Frequency </label>
-            <select className="form-input" value={ userData.scan_frequency } onChange = {(e) => setUserData({...userData, scan_frequency: e.target.value})}>
-                <option value="-1">None</option>
-                <option value="1">Daily</option>
-                <option value="2">Weekly</option>
-                <option value="3">Monthly</option>
-            </select>
+                <input type="password" className="form-input" value={ userData.confirm_password } onChange={ (e) => setUserData({ ...userData, confirm_password: e.target.value })}/>
             </div>
-        <button className="btn-action" onClick = { handleSaveClientSettings }>Save Client Settings</button>
+            <button className="btn-action" onClick = { handleChangePassword }>
+                Change Password
+            </button>
+        </div>
+        {userData.admin === true &&    
+            <div className="setting-card">
+                <div className="card-header">
+                    <h3>Client Information</h3>
+                    <p>Manage your organization settings</p>
+                </div>
+                <div className="form-group">
+                    <label className="form-label"> Automated Scan Frequency </label>
+                    <select className="form-input" value={ userData.scan_frequency } onChange = {(e) => setUserData({...userData, scan_frequency: e.target.value})}>
+                        <option value="-1">None</option>
+                        <option value="1">Daily</option>
+                        <option value="2">Weekly</option>
+                        <option value="3">Monthly</option>
+                    </select>
+                    </div>
+                <button className="btn-action" onClick = { handleSaveClientSettings }>Save Client Settings</button>
+            </div>
+        }
+        <div className="help-icon">?</div>
     </div>
-<div className="help-icon">?</div>
-</div>
     );
 }
 export default Setting;

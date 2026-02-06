@@ -231,12 +231,20 @@ def get_user():
             (user_id,)
         )
 
-        return jsonify({
-            'email': user['email'],
-            'phone': user['phone_number'],
-            'admin': user['client_admin'],
-            'scan_frequency': user['scan_frequency']
-        }), 200
+        admin = bool(user['client_admin'])
+        if admin:
+            return jsonify({
+                'email': user['email'],
+                'phone': user['phone_number'],
+                'admin': admin,
+                'scan_frequency': user['scan_frequency']
+            }), 200
+        else:
+            return jsonify({
+                'email': user['email'],
+                'phone': user['phone_number'],
+                'admin': admin,
+            }), 200
     except Exception as e:
         logger.error(e)
         return jsonify({
