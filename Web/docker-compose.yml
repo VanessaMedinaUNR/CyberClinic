@@ -20,7 +20,7 @@ services:
       - ${BACKEND_SERVER}
     networks:
       - frontend
-    command: sleep infinity
+    command: npm start
     # run the following in the container to begin the frontend
     #   npm start
 
@@ -34,7 +34,7 @@ services:
       - ./backend:/src
     environment:
     #Web-related Variables
-      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_SERVER=0.0.0.0
       - FLASK_PORT=${BACKEND_PORT}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
@@ -52,6 +52,7 @@ services:
       - ${BACKEND_PORT}
     ports:
       - ${VPN_PORT}:${VPN_PORT}
+      - ${BACKEND_PORT}:${BACKEND_PORT}
     command: python3 main.py
     depends_on:
       app:
@@ -131,24 +132,6 @@ services:
       timeout: 30s
       start_period: 30s
       retries: 3
-
-
-#  reptor:
-#    image: syslifters/sysreptor:latest
-#    restart: unless-stopped
-#    ports:
-#      - ${REPTOR_PORT}:${REPTOR_PORT}
-#    environment:
-#      - ALLOWED_HOSTS=${REPTOR_ALLOWED_HOSTS}
-#      - REPTOR_TOKEN=${REPTOR_API_TOKEN}
-#    networks:
-#      - backend
-#    healthcheck:
-#      test: ["CMD-SHELL", "curl", "-f", "http://${REPTOR_SERVER}:${REPTOR_PORT}/"]
-#      interval: 30s
-#      timeout: 30s
-#      retries: 5
-#      start_period: 5s
 
 networks:
   backend:
