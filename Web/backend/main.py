@@ -6,7 +6,7 @@ from flask_cors import CORS
 import os
 import atexit
 import logging
-from app.database import get_db
+from app.database import get_db, block_jwt
 from app.routes.auth import auth_bp
 from app.routes.scans import scans_bp
 from app.routes.reports import reports_bp
@@ -108,6 +108,7 @@ if __name__ == '__main__':
     
     @jwt.needs_fresh_token_loader
     def token_not_fresh_callback(jwt_header, jwt_payload):
+        block_jwt(jwt_payload["jti"])
         return (
         jsonify(
             {

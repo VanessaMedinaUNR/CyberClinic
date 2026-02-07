@@ -23,7 +23,9 @@ api.interceptors.response.use(
         const origConf = error.config;
         if (origConf.url !== "/auth/login" && error.response) {
             console.log(error.response)
-            if (error.response.data.code === 'fresh_token_required') { 
+            if (error.response.data.code === 'fresh_token_required') {
+                localStorage.setItem('access_token', '');
+                localStorage.setItem('refresh_token', '') 
                 return Promise.reject(error);
              }
             if (error.response.status === 401 && !origConf._retry) {

@@ -220,6 +220,8 @@ def login():
 def refresh_token():
     current_user = get_jwt_identity()
     new_token = create_access_token(identity=current_user, fresh=False, expires_delta=timedelta(minutes=10))
+    old = get_jwt()['jti']
+    block_jwt(old)
     return {"access_token": new_token}, 200
 
 @auth_bp.route('/user', methods=['GET'])

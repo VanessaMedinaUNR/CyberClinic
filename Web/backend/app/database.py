@@ -114,6 +114,7 @@ def block_jwt(jti):
         """INSERT INTO blocked_jwt (jti) VALUES (%s) RETURNING id""",
         (jti,)
     )
+    logger.info(f'jwt blocked: {jti}')
 
     if blocked:
         return True
