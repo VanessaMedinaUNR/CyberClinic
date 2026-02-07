@@ -47,7 +47,7 @@ def validate_ip_range(ip_range):
 
 
 @targets_bp.route('/add-target', methods=['POST'])
-@jwt_required()
+@jwt_required(fresh=True)
 def add_target():
     try:
         db = get_db()

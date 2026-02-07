@@ -3,14 +3,14 @@
 
 from flask import Blueprint, request, jsonify
 import re
-import uuid
+import bcrypt
 import secrets
 import logging
 import hashlib
 import phonenumbers
-from app.database import get_db
-from flask_jwt_extended import create_access_token
-from datetime import datetime, timezone, timedelta
+from app.database import get_db, block_jwt
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token, get_jwt
+from datetime import timedelta
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,6 +25,18 @@ def is_valid_email(email):
     """Validate email format using regex pattern"""
     pattern = r'^\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,3}$'
     return bool(re.match(pattern, email))
+
+def validate_and_format_phone(phone_number):
+    #validate phone number format
+    try:
+        parsed_phone = phonenumbers.parse(phone_number, "US")
+    except Exception:
+        return jsonify({'error': 'invalid phone number format'}), 400
+    if not phonenumbers.is_valid_number(parsed_phone):
+        return jsonify({'error': 'invalid phone number'}), 400
+    formatted_phone = phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.NATIONAL)
+    return(formatted_phone)
+
 
 #password hashing for fallback storage
 def hash_password(password):
@@ -67,18 +79,13 @@ def register():
         if not is_valid_email(email):
             return jsonify({'error': 'invalid email format'}), 400
         
-        #validate phone number format
-        try:
-            parsed_phone = phonenumbers.parse(phone_number, "US")
-        except Exception:
-            return jsonify({'error': 'invalid phone number format'}), 400
-        if not phonenumbers.is_valid_number(parsed_phone):
-            return jsonify({'error': 'invalid phone number'}), 400
-        formatted_phone = phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.NATIONAL)
-        logger.info(f'Formatted Phone: {formatted_phone}')
+        #validate and format phone number
+        formatted_phone = validate_and_format_phone(phone_number)
+        
         #make sure password is long enough to be secure
         if len(password) < 6:
             return jsonify({'error': 'password must be at least 6 characters'}), 400
+        
         
         try:
             #use database when available
@@ -185,18 +192,15 @@ def login():
                 logger.warning(f'Failed login for {email}')
                 return jsonify({'error': 'invalid credentials'}), 401
             
-            client = db.execute_single(
-                """SELECT * FROM client WHERE client_id = %s""",
-                (user_data['client_id'],)
-            )
-            
             #Generate JWT Token
-            token = create_access_token(identity=user_data["user_id"])
+            token = create_access_token(identity=user_data["user_id"], expires_delta=timedelta(minutes=5), fresh=True)
+            refresh_token = create_refresh_token(user_data["user_id"], expires_delta=timedelta(minutes=30))
 
             #login successful
             return jsonify({
                 'message': 'login successful',
-                'access_token': token
+                'access_token': token,
+                'refresh_token': refresh_token
             }), 200
             
         except Exception as db_error:
@@ -210,5 +214,145 @@ def login():
     except Exception as e:
         #handle any unexpected errors during login
         return jsonify({'error': 'login failed', 'details': str(e)}), 500
+
+@auth_bp.route('/refresh', methods = ['POST'])
+@jwt_required(refresh=True)
+def refresh_token():
+    current_user = get_jwt_identity()
+    new_token = create_access_token(identity=current_user, fresh=False, expires_delta=timedelta(minutes=10))
+    old = get_jwt()['jti']
+    block_jwt(old)
+    return {"access_token": new_token}, 200
+
+@auth_bp.route('/user', methods=['GET'])
+@jwt_required()
+def get_user():
+    user_id = get_jwt_identity()
+
+    try:
+        db = get_db()
+
+        user = db.execute_single(
+            """SELECT * FROM users NATURAL JOIN (client_users NATURAL JOIN client) WHERE user_id = %s""",
+            (user_id,)
+        )
+
+        admin = bool(user['client_admin'])
+        if admin:
+            return jsonify({
+                'email': user['email'],
+                'phone': user['phone_number'],
+                'admin': admin,
+                'scan_frequency': user['scan_frequency']
+            }), 200
+        else:
+            return jsonify({
+                'email': user['email'],
+                'phone': user['phone_number'],
+                'admin': admin,
+            }), 200
+    except Exception as e:
+        logger.error(e)
+        return jsonify({
+            'error': 'Connection Error',
+            'details': 'Please try again later'
+        }), 500
+
+@auth_bp.route('/user', methods=['POST'])
+@jwt_required(fresh=True)
+def update_user():
+    user_id = get_jwt_identity()
+    access_token = get_jwt()
+    refresh_token = create_refresh_token(identity=user_id, expires_delta=timedelta(minutes=30))
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        phone = data.get('phone')
+        old = data.get('old_password')
+        new = data.get('new_password')
+        scan_frequency = data.get('scan_frequency')
+
+        updated = False
+
+        if email:
+            #validate email format
+            if not is_valid_email(email):
+                return jsonify({'error': 'invalid email format'}), 400
+            db = get_db()
+            db.execute_command(
+                """UPDATE users SET email = %s WHERE user_id = %s""",
+                (email, user_id,)
+            )
+            updated = True
+            logger.info(f'{user_id}: email updated.')
+        if phone: 
+            #validate and format phone number
+            formatted_phone = validate_and_format_phone(phone)
+            db = get_db()
+            db.execute_command(
+                """UPDATE users SET phone_number = %s WHERE user_id = %s""",
+                (formatted_phone, user_id,)
+            )
+            updated = True
+            logger.info(f'{user_id}: phone number updated.')
+        if new and old:
+            db = get_db()
+            check = db.execute_single(
+                """SELECT password_hash FROM users WHERE user_id = %s AND password_hash = crypt(%s, password_hash)""",
+                (user_id, old,)
+            )["password_hash"]
+            if check:
+                if bcrypt.checkpw(bytes(new, encoding="utf-8"), bytes(check, encoding="utf-8")):
+                    return jsonify({
+                        'error': 'New password cannot be the same as old password',
+                        'details': 'Please try again'
+                    }), 406
+                db.execute_command(
+                    """UPDATE users SET password_hash = crypt(%s, gen_salt('bf')) WHERE user_id = %s""",
+                    (new, user_id,)
+                )
+
+                #give user a new fresh token
+                blocked = block_jwt(access_token["jti"])
+                if blocked:
+                    access_token = create_access_token(identity=user_id, fresh=True, expires_delta=timedelta(minutes=5))
+                updated = True
+                logger.info(f"{user_id}: Password updated.")
+            else:
+                return jsonify({
+                    'error': 'Invalid Password',
+                    'details': 'Please try again'
+                }), 406
+        if scan_frequency:
+            db = get_db()
+            client_id = db.execute_single(
+                """SELECT client_id FROM client_users WHERE user_id = %s""",
+                (user_id,)
+            )['client_id']
+            db.execute_command(
+                """UPDATE client SET scan_frequency = %s WHERE client_id = %s""",
+                (scan_frequency, client_id,)
+            )
+            updated = True
+            logger.info(f'{client_id}: Scan frequency updated.')
+
+        if not updated:
+            return jsonify({
+                'error': 'User Not Updated',
+                'details': 'Please try again later'
+            }), 500
+
+        return jsonify({
+            'message': 'User updated sucessfully!',
+            'access_token': access_token,
+            'refresh_token': refresh_token
+        }), 200
+
+    except Exception as e:
+        logger.error(e)
+        return jsonify({
+            'error': 'Format Error',
+            'details': 'Please try again'
+        }), 500
 
 # Done by Morales-Marroquin and Austin Finch

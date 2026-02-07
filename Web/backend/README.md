@@ -91,6 +91,7 @@ Response: `201 Created` with `scan_job_id`.
 
 **Check Scan Status**
 ```http
+Authorization: Bearer [JWT Token]
 GET /api/scans/status/{scan_id}
 ```
 Response: Scan details with status (`pending`, `running`, `completed`, `failed`).
@@ -140,59 +141,70 @@ GET /api/info
 
 **User Registration**
 ```javascript
-async function registerUser(username, email, password) {
-  const response = await fetch('http://localhost:5000/api/auth/register', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ username, email, password })
+async function registerUser(email, password, organization, phone) {
+  const userData = JSON.stringify({
+    'email': email,
+    'password': password,
+    'organization': organization,
+    'phone': phone
   });
-  
-  if (response.ok) {
-    const user = await response.json();
-    console.log('User registered:', user);
-    return user;
-  } else {
-    const error = await response.json();
-    console.error('Registration failed:', error);
-  }
+  await api.post("/auth/register", userData, {
+      headers: {
+          "Content-Type": "application/json"
+      }
+  })
+  .then(function (response) {
+      alert(response.data.message);
+      navigate("/")
+  }).catch(function (error) {
+    if (!error.response)
+    {
+        alert("Connection error: Please try again later");
+    }
+    else
+    {  
+        alert("Registration failed: " + error.response.data.error);
+    }
+  });
 }
 ```
 
 **Submit security scan**
 ```javascript
-async function submitScan(targetName, targetType, targetValue, scanType, jwtToken) {
-  const response = await fetch('http://localhost:5000/api/scans/submit', {
-    method: 'POST',
+async function submitScan(targetName, scanType) {
+  const scanData = JSON.stringify({
+    'target_name': targetName,
+    'scan_type': scanType
+  })
+  await api.post('/scans/submit', scanData {
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + jwtToken
-    },
-    body: JSON.stringify({
-      target_name: targetName,
-      target_type: targetType,
-      target_value: targetValue,
-      scan_type: scanType,
-    })
+    }
+  }).then(function (response) {
+    alert(response.data.message);
+      navigate("/dashboard")
+  }).catch(function (error) {
+    if (!error.response)
+    {
+        alert("Connection error: Please try again later");
+    }
+    else
+    {  
+        alert("Scan failed: " + error.response.data.error);
+        if (error.response.status === 401){ navigate('/') }
+    }
   });
-  
-  if (response.ok) {
-    const result = await response.json();
-    console.log('Scan submitted:', result);
-    return result.scan_job_id;
-  }
 }
 ```
 
 **Check scan progress**
 ```javascript
 async function checkScanStatus(scanId) {
-  const response = await fetch(`http://localhost:5000/api/scans/status/${scanId}`);
-  const scan = await response.json();
-  
-  console.log(`Scan ${scanId} status: ${scan.status}`);
-  return scan;
+  await api.get(`/scans/status/${scanId}`)
+  .then(function (response) {
+    console.log(`Scan ${scanId} status: ${response.data.status}`);
+    return scan;
+  });
 }
 ```
 

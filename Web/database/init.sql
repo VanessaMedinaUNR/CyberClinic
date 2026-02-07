@@ -92,6 +92,13 @@ CREATE TABLE users
   PRIMARY KEY (user_id)
 );
 
+CREATE TABLE blocked_jwt
+(
+  id  INT         GENERATED ALWAYS AS IDENTITY,
+  jti varchar(36) NOT NULL,
+  PRIMARY KEY (id)
+);
+
 ALTER TABLE client_users
   ADD CONSTRAINT FK_user_TO_client_users
     FOREIGN KEY (user_id)
@@ -130,5 +137,6 @@ ALTER TABLE scan_jobs
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status);
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_client_id ON scan_jobs(client_id);
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_created_at ON scan_jobs(created_at);
+CREATE INDEX IF NOT EXISTS idx_blocked_jwt_jti ON blocked_jwt(jti);
 
 -- Done by Austin Finch
