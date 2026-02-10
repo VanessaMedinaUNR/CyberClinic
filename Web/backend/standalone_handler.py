@@ -1,5 +1,5 @@
+import atexit
 from app.database import get_db
-import psycopg2
 import os
 from dotenv import load_dotenv
 import socket
@@ -44,61 +44,92 @@ def authenticate_client_credentials(auth_string):
         logger.error(f"VPN authentication error: {e}")
         return False, None, f"Authentication failed: {e}"
 
-def start_vpn_server(host, port, cert, key):
-    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+
+def start_auth_tunnel(host, port, cert, key, bindsocket):
+    logger.info(f'loading {cert}')
+    logger.info(f'loading {key}')
+
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(certfile=cert, keyfile=key)
-    bindsocket = socket.socket()
-    bindsocket.bind((host, port))
-    bindsocket.listen(5)
-    print(f"VPN server listening on {host}:{port}")
+    print(f"Auth tunnel listening on {host}:{port}")
     while True:
         newsocket, fromaddr = bindsocket.accept()
         print(f"Connection from {fromaddr}")
         conn = context.wrap_socket(newsocket, server_side=True)
-        try:
-            data = conn.recv(1024)
-            auth_string = data.decode('latin-1').strip()
-            print(f"Received authentication: {auth_string[:20]}...")
-            
-            #authenticate using Austin's format
-            success, user_data, message = authenticate_client_credentials(auth_string)
-            
-            if success:
-                #send success response
-                response = f"AUTH_SUCCESS:{user_data['client_id']}:{user_data['email']}"
-                conn.sendall(response.encode('latin-1'))
-                logger.info(f"VPN client authenticated: {user_data['client_id']}")
+        authenticate_standalone_client(conn, fromaddr)
+        
 
-                subnet_names = db.execute_single(
-                    """SELECT subnet_name FROM network WHERE client_id = %s""",
-                    (user_data['client_id'],)
-                )
-                if not subnet_names:
-                    response = f"SUBNET_INVALID:"
-                    conn.sendall(response.encode('latin-1'))
-                else:
-                    logger.info(f'Client Subnet List: {subnet_names}')
-                    response = f"SUBNET_LIST"
-                    for name in subnet_names:
-                        response += f':{name}'
-                    conn.sendall(response.encode('latin-1'))
-            else:
-                #send failure response
-                conn.sendall(f"AUTH_FAILED:{message}".encode('latin-1'))
-                logger.warning(f"VPN authentication failed from {fromaddr}: {message}")
+def authenticate_standalone_client(conn, fromaddr):
+    try:
+        data = conn.recv(1024)
+        auth_string = data.decode('latin-1').strip()
+        print(f"Received authentication: {auth_string[:20]}...")
+        
+        #authenticate using Austin's format
+        success, user_data, message = authenticate_client_credentials(auth_string)
+        
+        if success:
+            #send success response
+            response = f"AUTH_SUCCESS"
+            conn.sendall(response.encode('latin-1'))
+            client_id = user_data['client_id']
+            logger.info(f"Client authenticated: {client_id}")
+
+            valid, key = validate_subnet(conn, client_id)
+            if not valid:
+                return
+        else:
+            #send failure response
+            conn.sendall(f"AUTH_FAILED:{message}".encode('latin-1'))
+            logger.warning(f"Tunnel authentication failed from {fromaddr}: {message}")
                 
-        except Exception as e:
-            logger.error(f"VPN server error: {e}")
-            try:
-                conn.sendall(b"AUTH_FAILED:Server error")
-            except:
-                pass
-        finally:
-            try:
-                conn.shutdown(socket.SHUT_RDWR)
-            except OSError as e:
-                print(f"Error during shutdown: {e}")
-            conn.close()
+    except Exception as e:
+        logger.error(f"Auth tunnel error: {e}")
+        try:
+            conn.sendall(b"AUTH_FAILED:Server error")
+        except:
+            pass
+    finally:
+        try:
+            conn.shutdown(socket.SHUT_RDWR)
+        except OSError as e:
+            print(f"Error during shutdown: {e}")
+        conn.close()
+
+def validate_subnet(conn, client_id):
+    try:
+        db = get_db()
+        subnet_list = db.execute_query(
+            """SELECT subnet_name FROM network WHERE client_id = %s AND public_facing = FALSE""",
+            (client_id,)
+        )
+        if not subnet_list:
+            response = f"SUBNET_INVALID"
+            conn.sendall(response.encode('latin-1'))
+        else:
+            logger.info(f'Client Subnet List: {subnet_list}')
+            response = f"SUBNET_LIST"
+            for subnet in subnet_list:
+                name = subnet['subnet_name']
+                response += f':{name}'
+            conn.sendall(response.encode('latin-1'))
+
+            data = conn.recv(1024)
+            subnet = data.decode('latin-1').strip()
+            response = f"SUBNET_INVALID"
+            for check in subnet_list:
+                name = check["subnet_name"]
+                logger.info(f"{name} : {subnet}")
+                if name == subnet:
+                    response = f"SUBNET_VALID"
+                    break
+            conn.sendall(response.encode('latin-1'))
+    except ConnectionError:
+        logger.info(f'Standalone client reset the connection')
+        return False, None
+    except Exception as e:
+        logger.warning(f"Unhandled server error {e}")
+        return False, None
 
 
 def get_user_by_email(email):
@@ -135,7 +166,13 @@ if __name__ == '__main__':
     vpn_port = int(os.getenv('VPN_PORT', 6666))
     cert = os.getenv('VPN_CRT', '/src/certs/server.crt')
     key = os.getenv('VPN_KEY', '/src/certs/server.key')
+    vpn_pass = os.getenv('VPN_PASS', 'cyberclinicdev')
 
-    start_vpn_server(hostname, vpn_port, cert, key)
+    bindsocket = socket.socket()
+    bindsocket.bind(('0.0.0.0', vpn_port))
+    bindsocket.listen(5)
+    atexit.register(bindsocket.close)
+
+    start_auth_tunnel(hostname, vpn_port, cert, key, bindsocket)
 
 # Done by Austin Finch and Morales-Marroquin

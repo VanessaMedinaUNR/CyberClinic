@@ -73,7 +73,6 @@ services:
 
   backend-dev:
     container_name: cyberclinic-backend
-    image: python:latest
     build:
       context: backend
       target: builder
