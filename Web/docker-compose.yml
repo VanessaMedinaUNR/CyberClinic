@@ -105,7 +105,7 @@ services:
       - frontend
     depends_on:
       - database
-
+  
   database:
     container_name: cyberclinic-database
     image: bitnami/postgresql:latest
