@@ -1,4 +1,4 @@
-<div align="center">
+
 
 # Cyber Clinic Web Application 
 
@@ -11,7 +11,7 @@
 [![Team](https://img.shields.io/badge/Team-13-purple.svg)](#)
 
 
-</div>
+
 
 ---
 ## Team Information 
