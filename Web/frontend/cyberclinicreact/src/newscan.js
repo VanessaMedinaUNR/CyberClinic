@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Toolbar from './toolbar';
+import Toolbar from './Components/toolbar';
 import api from './api';
 
 function NewScan () {
@@ -9,7 +9,7 @@ function NewScan () {
     const[ selectedTarget, setSelectedTarget ] = useState("None");
     const [ scanType, setScanType ]  = useState("None");
     const [ targets, setTargets ] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [ loading, setLoading ] = useState(true);
 
     useEffect(() => {
         api.get("/target/list-targets")

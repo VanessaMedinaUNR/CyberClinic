@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from './api';
-import Toolbar from './toolbar';
+import Toolbar from './Components/toolbar';
 
 function NewTarget () {
 
