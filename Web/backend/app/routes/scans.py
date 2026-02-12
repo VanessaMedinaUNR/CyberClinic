@@ -436,7 +436,7 @@ def get_scan_results(scan_id):
                 'message': 'Scan must be completed to view results'
             }), 400
         
-        # Parse results from database
+        #parse results from database
         results = {}
         if scan_details['results']:
             try:
@@ -467,7 +467,7 @@ def scan_dashboard():
     try:
         db = get_db()
         
-        # Get status summary
+        #get status summary
         status_summary = db.execute_query(
             """SELECT status, COUNT(*) as count
                FROM scan_jobs
@@ -476,7 +476,7 @@ def scan_dashboard():
             ()
         )
         
-        # Get recent scans
+        #get recent scans
         recent_scans = db.execute_query(
             """SELECT sj.id, sj.status, sj.scan_type, sj.created_at,
                       n.subnet_name as target_name, nd.domain
@@ -503,4 +503,4 @@ def scan_dashboard():
         logger.error(f"Dashboard query failed: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
-# Done by Morales-Marroquin and Austin Finch
+# Done by Manuel Morales-Marroquin and Austin Finch

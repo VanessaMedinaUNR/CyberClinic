@@ -25,13 +25,16 @@ services:
     #   npm start
 
   backend:
+  #changed from python:latest to cyberclinic-backend to work on Mac environment, otherwise revert
     container_name: cyberclinic-backend
-    image: python:latest
+    image: cyberclinic-backend
     build:
       context: backend
       target: builder
     volumes:
       - ./backend:/src
+    #added working_dir to work on Mac environment, otherwise comment out
+    working_dir: /src
     environment:
     #Web-related Variables
       - FLASK_SERVER=0.0.0.0
@@ -53,7 +56,8 @@ services:
     ports:
       - ${VPN_PORT}:${VPN_PORT}
       - ${BACKEND_PORT}:${BACKEND_PORT}
-    command: python3 main.py
+    #changed from python3 main.py to python3 /src/main.py to work on Mac environment, otherwise revert
+    command: python3 /src/main.py
     depends_on:
       app:
         condition: service_healthy
@@ -70,8 +74,10 @@ services:
       start_period: 30s
 
   backend-dev:
-    container_name: cyberclinic-backend
-    image: python:latest
+  #changed from container_name: cyberclinic-backend & image: python:latest to container_name: cyberclinic-backend-dev & image: cyberclinic-backend-dev
+  #to work on Mac environment, otherwise revert
+    container_name: cyberclinic-backend-dev
+    image: cyberclinic-backend-dev
     build:
       context: backend
       target: builder
@@ -96,12 +102,12 @@ services:
       - REPTOR_API_TOKEN=${REPTOR_API_TOKEN}
     volumes:
       - ./backend:/src
+    working_dir: /src
     expose:
       - ${BACKEND_PORT}
-    ports:
-      - ${BACKEND_PORT}:${BACKEND_PORT}
-      - ${VPN_PORT}:${VPN_PORT}
     command: sleep infinity
+    #removed ports: - ${BACKEND_PORT}:${BACKEND_PORT} & - ${VPN_PORT}:${VPN_PORT}
+    #to work on Mac environment, otherwise revert
     networks:
       - backend
       - frontend
@@ -117,7 +123,7 @@ services:
       - POSTGRESQL_USERNAME=${DB_USER}
       - POSTGRESQL_PASSWORD=${DB_PASS}
       - POSTGRESQL_PORT_NUMBER=${DB_PORT}
-      - POSTGRESQL_MAX_CONNECTIONS=100 #performance settings for handling multiple connections
+      - POSTGRESQL_MAX_CONNECTIONS=100
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     expose:

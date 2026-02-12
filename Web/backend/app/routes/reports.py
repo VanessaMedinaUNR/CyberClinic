@@ -7,6 +7,9 @@ from datetime import datetime
 import logging
 import ipaddress
 
+#import custom report generator
+from app.report_generator import CustomReportGenerator
+
 #import reptor client for report generation
 try:
     from reptor import Reptor
@@ -27,7 +30,7 @@ class ReportGenerator:
     #creates professional cybersecurity reports from scan results
     def __init__(self):
         self.reptor_client = None
-        # Use relative path that works both locally and in docker
+        #use relative path that works both locally and in docker
         self.reports_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'reports')
         
         #ensure reports directory exists
@@ -293,30 +296,126 @@ class ReportGenerator:
         
         return html_content
 
-#create global report generator instance
+#create global report generator instances
 report_generator = ReportGenerator()
+custom_generator = CustomReportGenerator()
+
+def _extract_results_map(results_path):
+    if not results_path:
+        return {}
+    if isinstance(results_path, dict):
+        return results_path
+    if isinstance(results_path, str):
+        try:
+            parsed = json.loads(results_path)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+def _extract_results_paths(results_path):
+    results_map = _extract_results_map(results_path)
+    if not results_map:
+        return [], {}
+    output_paths = [value for value in results_map.values() if isinstance(value, str)]
+    return output_paths, results_map
+
+def _get_report_path(results_path):
+    if isinstance(results_path, str) and results_path.strip().startswith('{'):
+        results_map = _extract_results_map(results_path)
+        return results_map.get('report')
+    if isinstance(results_path, dict):
+        return results_path.get('report')
+    return results_path
 
 @reports_bp.route('/generate/<int:scan_id>', methods=['POST'])
 def generate_report(scan_id):
     #generate a report for a completed scan job
-    #accepts format parameter (pdf, html, json)
+    #accepts format parameter (json)
     try:
         data = request.get_json() or {}
-        report_format = data.get('format', 'html').lower()
+        report_format = data.get('format', 'json').lower()
         
         #validate format
-        valid_formats = ['pdf', 'html', 'json']
+        valid_formats = ['json', 'csv']
         if report_format not in valid_formats:
-            return jsonify({'error': f'Invalid format. Must be one of: {", ".join(valid_formats)}'}), 400
-        
-        #generate report
-        report_path = report_generator.generate_report(scan_id, report_format)
-        
-        #update database with report path
+            return jsonify({'error': 'Invalid format. Must be json or csv'}), 400
+
         db = get_db()
+        scan_data = db.execute_single(
+            """SELECT sj.*, nt.subnet_name, nt.subnet_netmask, nt.subnet_ip, c.client_name, c.client_id
+               FROM scan_jobs sj 
+               JOIN network nt ON sj.client_id = nt.client_id AND sj.subnet_name = nt.subnet_name
+               JOIN client c ON sj.client_id = c.client_id
+               WHERE sj.id = %s AND sj.status = 'completed'""",
+            (scan_id,)
+        )
+
+        if not scan_data:
+            return jsonify({'error': f'Completed scan job {scan_id} not found'}), 404
+
+        admin_email = db.execute_single(
+            """SELECT u.email
+            FROM users u
+            JOIN client_users cu ON cu.client_id = %s
+            WHERE u.client_admin = TRUE LIMIT 1""",
+            (scan_data['client_id'],)
+        )
+
+        target_type = None
+        target_value = None
+        domain = db.execute_single(
+            """SELECT domain
+            FROM network_domains
+            WHERE client_id = %s AND subnet_name = %s""",
+            (scan_data['client_id'], scan_data['subnet_name'])
+        )
+        if domain:
+            target_type = "domain"
+            target_value = domain['domain']
+        else:
+            if scan_data["subnet_netmask"] == "255.255.255.255":
+                target_type = "ip"
+                target_value = scan_data["subnet_ip"]
+            else:
+                target_type = "range"
+                subnet_ip = scan_data['subnet_ip']
+                subnet_netmask = scan_data['subnet_netmask']
+                target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
+
+        results_paths, results_map = _extract_results_paths(scan_data.get('results_path'))
+
+        report_data = {
+            'scan_id': scan_data['id'],
+            'scan_type': scan_data['scan_type'],
+            'target': {
+                'value': target_value,
+                'name': scan_data['subnet_name'],
+                'type': target_type
+            },
+            'client': {
+                'name': scan_data['client_name'],
+                'email': admin_email['email'] if admin_email else 'contact@cyberclinic.unr.edu'
+            },
+            'timestamps': {
+                'started': scan_data['started_at'].isoformat() if scan_data['started_at'] else None,
+                'completed': scan_data['completed_at'].isoformat() if scan_data['completed_at'] else None
+            },
+            'results_paths': results_paths
+        }
+
+        report_path = custom_generator.generate_report(report_data, output_format=report_format)
+
+        if results_map:
+            results_map['report'] = report_path
+            results_path_value = json.dumps(results_map)
+        else:
+            results_path_value = json.dumps({'report': report_path})
+
         db.execute_command(
             "UPDATE scan_jobs SET results_path = %s WHERE id = %s",
-            (report_path, scan_id)
+            (results_path_value, scan_id)
         )
         
         return jsonify({
@@ -346,7 +445,7 @@ def download_report(scan_id):
         if not scan_data or not scan_data['results_path']:
             return jsonify({'error': 'Report not found'}), 404
         
-        report_path = scan_data['results_path']
+        report_path = _get_report_path(scan_data['results_path'])
         
         if not os.path.exists(report_path):
             return jsonify({'error': 'Report file not found'}), 404
@@ -384,10 +483,11 @@ def list_reports():
         
         query = f"""
             SELECT sj.id, sj.scan_type, sj.completed_at, sj.results_path,
-                   nt.subnet_name, nt.subnet_ip, nt.subnet_netmask, c.client_id c.client_name
+                   nt.subnet_name AS target_name, nt.subnet_ip, nt.subnet_netmask,
+                   c.client_id, c.client_name
             FROM scan_jobs sj 
             JOIN network nt ON sj.subnet_name = nt.subnet_name AND sj.client_id = nt.client_id
-            JOIN users u ON sj.user_id = u.id
+            JOIN client c ON sj.client_id = c.client_id
             {where_clause}
             ORDER BY sj.completed_at DESC
             LIMIT %s OFFSET %s
@@ -395,31 +495,32 @@ def list_reports():
         
         reports = db.execute_query(query, params)
         
-        target_value = None
-        target_type = None
-        #determine target value and type
-        domain = db.execute_single(
-            """SELECT domain
-            FROM network_domains
-            WHERE client_id = %s, subnet_name = %s""",
-            (reports['client_id'], reports['subnet_name'])
-            )
-        if domain:
-            target_type = "domain"
-            target_value = domain
-        else:
-            if reports["subnet_netmask"] == "255.255.255.255":
-                target_type = "ip"
-                target_value = reports["subnet_ip"]
-            else:
-                target_type = "range"
-                subnet_ip = reports['subnet_ip']
-                subnet_netmask = reports['subnet_netmask']
-                target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
-
         #format report list
         report_list = []
         for report in reports:
+            report_path = _get_report_path(report.get('results_path'))
+
+            target_type = None
+            target_value = None
+            domain = db.execute_single(
+                """SELECT domain
+                FROM network_domains
+                WHERE client_id = %s AND subnet_name = %s""",
+                (report['client_id'], report['target_name'])
+            )
+            if domain:
+                target_type = "domain"
+                target_value = domain['domain']
+            else:
+                if report["subnet_netmask"] == "255.255.255.255":
+                    target_type = "ip"
+                    target_value = report["subnet_ip"]
+                else:
+                    target_type = "range"
+                    subnet_ip = report['subnet_ip']
+                    subnet_netmask = report['subnet_netmask']
+                    target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
+
             report_list.append({
                 'scan_id': report['id'],
                 'scan_type': report['scan_type'],
@@ -430,8 +531,8 @@ def list_reports():
                 },
                 'client_name': report['client_name'],
                 'completed_at': report['completed_at'].isoformat(),
-                'has_report': bool(report['results_path']),
-                'download_url': f'/api/reports/download/{report["id"]}'
+                'has_report': bool(report_path),
+                'download_url': f'/api/reports/download/{report["id"]}' if report_path else None
             })
         
         return jsonify({
@@ -449,7 +550,7 @@ def list_reports():
 def debug_reptor():
     #debug endpoint to test SysReptor initialization and connection
     try:
-        # Test if reptor module is available
+        #tests if reptor module is available
         if not REPTOR_AVAILABLE:
             return jsonify({
                 'status': 'error',
@@ -457,7 +558,7 @@ def debug_reptor():
                 'reptor_available': False
             })
         
-        # Test initialization
+        #tests initialization
         server_url = os.environ.get('REPTOR_SERVER_URL', 'http://reptor:8000')
         token = os.environ.get('REPTOR_API_TOKEN', 'dev-token')
         
@@ -468,7 +569,7 @@ def debug_reptor():
             'initialization_attempts': []
         }
         
-        # Try different initialization methods
+        #try different initialization methods
         methods = [
             ('server_token', lambda: Reptor(server=server_url, token=token)),
             ('serverurl_token', lambda: Reptor(serverurl=server_url, token=token)),
@@ -484,9 +585,9 @@ def debug_reptor():
                     'status': 'success',
                     'client_type': str(type(client))
                 })
-                # Test connection if possible
+                #test connection if possible
                 try:
-                    # Try to call a simple method if available
+                    #try to call a simple method if available
                     if hasattr(client, 'get_projects'):
                         projects = client.get_projects()
                         debug_info['initialization_attempts'][-1]['connection_test'] = 'success'
@@ -494,7 +595,7 @@ def debug_reptor():
                         debug_info['initialization_attempts'][-1]['connection_test'] = 'no_test_method'
                 except Exception as conn_e:
                     debug_info['initialization_attempts'][-1]['connection_test'] = f'failed: {str(conn_e)}'
-                break  # Use first successful method
+                break  
             except Exception as e:
                 debug_info['initialization_attempts'].append({
                     'method': method_name,
@@ -513,4 +614,4 @@ def debug_reptor():
             'error_type': type(e).__name__
         }), 500
 
-# Done by Morales-Marroquin and Austin Finch
+# Done by MManuel Morales-Marroquin and Austin Finch

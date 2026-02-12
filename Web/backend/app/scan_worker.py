@@ -6,6 +6,7 @@ import logging
 import threading
 import json
 import ipaddress
+import socket
 from datetime import datetime
 from app.database import get_db
 from app.scan_executor import ScanExecutor
@@ -52,7 +53,7 @@ class ScanWorker:
         #check for pending scans and process them
         db = get_db()
         
-        # Get pending scan jobs
+        #get pending scan jobs
         pending_scans = db.execute_query(
             """SELECT sj.*, nt.subnet_name, nt.subnet_ip, nt.subnet_netmask
                FROM scan_jobs sj
@@ -69,6 +70,106 @@ class ScanWorker:
             except Exception as e:
                 logger.error(f"Failed to process scan job {scan['id']}: {e}")
                 self._mark_scan_failed(scan['id'], str(e))
+    
+    def _dedupe_tools(self, tools_list):
+        #preserve order, remove duplicates, normalize lower case names
+        seen = set()
+        out = []
+        if not tools_list:
+            return []
+        for t in tools_list:
+            if not t:
+                continue
+            key = str(t).strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                out.append(str(t).strip())
+        return out
+
+    def _dedupe_findings(self, findings):
+        #remove duplicate findings by key fields
+        if not findings:
+            return []
+        seen = set()
+        out = []
+        for f in findings:
+            try:
+                title = (f.get('title') or '').strip()
+                affected = (f.get('affected_component') or f.get('affected') or '').strip()
+                src = (f.get('source') or f.get('tool') or '').strip()
+                fid = (title + '|' + affected + '|' + src).lower()
+            except Exception:
+                fid = str(f).lower()
+            if fid in seen:
+                continue
+            seen.add(fid)
+            out.append(f)
+        return out
+
+    def _unique_output_files(self, output_files):
+        #output_files might be dict or list, return a normalized dict with unique paths
+        if not output_files:
+            return {}
+        result = {}
+        if isinstance(output_files, dict):
+            for k, v in output_files.items():
+                if isinstance(v, list):
+                    uniq = []
+                    seen = set()
+                    for p in v:
+                        pstr = str(p)
+                        if pstr not in seen:
+                            seen.add(pstr)
+                            uniq.append(pstr)
+                    result[k] = uniq
+                else:
+                    result[k] = v
+        elif isinstance(output_files, list):
+            seen = set(); uniq = []
+            for p in output_files:
+                pstr = str(p)
+                if pstr not in seen:
+                    seen.add(pstr); uniq.append(pstr)
+            result['files'] = uniq
+        else:
+            result['files'] = [str(output_files)]
+        return result
+
+    def _build_host_map(self, scan_result, target_value=None):
+        #build mapping domain/ip -> ip and hostnames
+        host_map = {}
+        #prefer nmap parsed data if present
+        nmap_data = scan_result.get('nmap') if isinstance(scan_result, dict) else None
+        if nmap_data and isinstance(nmap_data, dict):
+            hosts = nmap_data.get('hosts') or []
+            for h in hosts:
+                ip = None
+                if isinstance(h, dict):
+                    ip = h.get('ip') or h.get('address') or (h.get('addresses') or [{}])[0].get('addr') if h.get('addresses') else None
+                    names = []
+                    if h.get('hostnames'):
+                        try:
+                            if isinstance(h.get('hostnames'), list):
+                                names = [str(x) for x in h.get('hostnames') if x]
+                            else:
+                                names = [str(h.get('hostnames'))]
+                        except Exception:
+                            names = []
+                    if ip:
+                        host_map[ip] = {'hostnames': names}
+        #if nothing from nmap, try to resolve provided domain
+        if not host_map and target_value:
+            try:
+                resolved = socket.gethostbyname_ex(target_value)
+                #resolved -> (name, aliaslist, ipaddrlist)
+                if resolved and len(resolved) >= 3:
+                    ips = resolved[2]
+                    for ip in ips:
+                        host_map[ip] = {'hostnames': [resolved[0]]}
+            except Exception:
+                #ignore resolve errors
+                pass
+        return host_map
     
     def _execute_scan_job(self, scan_job):
         #execute a single scan job
@@ -123,12 +224,47 @@ class ScanWorker:
                 scan_options=scan_config.get('scan_options', {})
             )
             
+            if isinstance(scan_result, dict):
+                #normalize tools/scan_tools
+                tools_candidates = scan_result.get('scan_tools') or scan_result.get('tools_used') or scan_result.get('tools') or []
+                scan_result['scan_tools'] = self._dedupe_tools(tools_candidates)
+
+                #dedupe findings at top level
+                if 'findings' in scan_result and isinstance(scan_result['findings'], list):
+                    scan_result['findings'] = self._dedupe_findings(scan_result['findings'])
+
+                #dedupe any per_host_findings lists
+                ph = scan_result.get('per_host_findings') or {}
+                if isinstance(ph, dict):
+                    for hostk, flist in list(ph.items()):
+                        if isinstance(flist, list):
+                            ph[hostk] = self._dedupe_findings(flist)
+                    scan_result['per_host_findings'] = ph
+
+                #normalize output files
+                output_files = scan_result.get('output_files') or scan_result.get('results_files') or {}
+                scan_result['output_files'] = self._unique_output_files(output_files)
+
+                #build host map (domain->ip, hostnames)
+                host_map = self._build_host_map(scan_result, target_value)
+                scan_result['host_map'] = host_map
+
+                #if the scan was initiated with a domain but host_map empty, attempt resolution
+                if target_type == 'domain' and not host_map:
+                    try:
+                        resolved_ip = socket.gethostbyname(target_value)
+                        scan_result.setdefault('host_map', {})[resolved_ip] = {'hostnames': [target_value]}
+                    except Exception:
+                        pass
+
             #update database with results
-            if scan_result['success']:
+            if isinstance(scan_result, dict) and scan_result.get('success'):
                 self._mark_scan_completed(scan_id, scan_result)
             else:
-                self._mark_scan_failed(scan_id, scan_result.get('error', 'Unknown error'))
-                
+                #scan_result may be dict with error or a falsy result, ensure message
+                error_msg = scan_result.get('error') if isinstance(scan_result, dict) else None
+                self._mark_scan_failed(scan_id, error_msg or 'Unknown error')
+
         except Exception as e:
             logger.error(f"Error executing scan job {scan_id}: {e}")
             self._mark_scan_failed(scan_id, str(e))
@@ -186,5 +322,5 @@ def stop_scan_worker():
     if scan_worker:
         scan_worker.stop()
         scan_worker = None
-
-# Done by Morales-Marroquin and Austin Finch
+        
+# Done by Manuel Morales-Marroquin

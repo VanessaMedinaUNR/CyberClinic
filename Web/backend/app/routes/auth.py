@@ -104,12 +104,12 @@ def register():
                 "SELECT client_id FROM client WHERE client_name = %s", (client_name,)
             )
 
-            client_admin = False # User not admin by default
+            client_admin = False 
 
-            # Create new client if it does not already exist
+            #creates new client if it does not already exist
             if not client:
                 print("Creating client")
-                client_admin = True # First user to a client is admin by default
+                client_admin = True 
                 client_id = db.execute_single(
                      """INSERT INTO client (client_name)
                      VALUES (%s)
@@ -146,7 +146,7 @@ def register():
             }), 201
             
         except Exception as db_error:
-            #Database connection error
+            #database connection error
             logger.warning(db_error)
             return jsonify({
                 'error': 'Connection Error',
@@ -192,7 +192,7 @@ def login():
                 logger.warning(f'Failed login for {email}')
                 return jsonify({'error': 'invalid credentials'}), 401
             
-            #Generate JWT Token
+            #generate JWT Token
             token = create_access_token(identity=user_data["user_id"], expires_delta=timedelta(minutes=5), fresh=True)
             refresh_token = create_refresh_token(user_data["user_id"], expires_delta=timedelta(minutes=30))
 
@@ -204,7 +204,7 @@ def login():
             }), 200
             
         except Exception as db_error:
-            #Database connection error
+            #database connection error
             logger.warning(db_error)
             return jsonify({
                 'error': 'Connection Error',
@@ -355,4 +355,4 @@ def update_user():
             'details': 'Please try again'
         }), 500
 
-# Done by Morales-Marroquin and Austin Finch
+# Done by Manuel Morales-Marroquin and Austin Finch

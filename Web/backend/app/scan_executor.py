@@ -26,10 +26,14 @@ class ScanExecutor:
         logger.info(f"Starting {scan_type} scan for job {scan_job_id} against {target_value}")
         
         try:
-            if scan_type.lower() == 'nmap':
+            st = scan_type.lower()
+            if st == 'nmap':
                 return self._execute_nmap_scan(scan_job_id, target_value, target_type, scan_options or {})
-            elif scan_type.lower() == 'nikto':
+            elif st == 'nikto':
                 return self._execute_nikto_scan(scan_job_id, target_value, target_type, scan_options or {})
+            elif st in ('full', 'comprehensive'):
+                # run Nmap then run Nikto against discovered web hosts (if any)
+                return self._execute_full_scan(scan_job_id, target_value, target_type, scan_options or {})
             else:
                 raise ValueError(f"Unsupported scan type: {scan_type}")
                 
@@ -46,7 +50,9 @@ class ScanExecutor:
         #base Nmap command
         cmd = ['nmap']
         #add common options
-        cmd.extend(['-v', '-sV', '-sC', '--script=default'])
+        cmd.extend(['-v', '-sS', '-sV', '--script=default,vuln', '--reason', '--open'])
+        if options.get('os_detect', True):
+            cmd.append('-O')
         #output formats
         output_base = f"{self.results_dir}/nmap_scan_{scan_job_id}"
         cmd.extend(['-oA', output_base])  
@@ -58,7 +64,9 @@ class ScanExecutor:
             cmd.extend(['-sn']) 
             
         #custom options from scan_options
-        if options.get('port_range'):
+        if options.get('full_ports') is True:
+            cmd.append('-p-')
+        elif options.get('port_range'):
             cmd.extend(['-p', options['port_range']])
         else:
             cmd.extend(['-p', '1-1000'])
@@ -127,12 +135,16 @@ class ScanExecutor:
         #base Nikto command
         cmd = ['nikto']
         #output file
-        output_file = f"{self.results_dir}/nikto_scan_{scan_job_id}.txt"
+        suffix = options.get('output_suffix') if isinstance(options, dict) else None
+        if suffix:
+            output_file = f"{self.results_dir}/nikto_scan_{scan_job_id}_{suffix}.json"
+        else:
+            output_file = f"{self.results_dir}/nikto_scan_{scan_job_id}.json"
         cmd.extend(['-output', output_file])
         #target
         cmd.extend(['-h', target])
         #additional options
-        cmd.extend(['-Format', 'txt'])
+        cmd.extend(['-Format', 'json', '-Tuning', 'x', '-C', 'all', '-usecookies'])
         
         #custom options from scan_options
         #note: dont use -p (port) option with full URIs as Nikto doesn't allow it
@@ -174,7 +186,7 @@ class ScanExecutor:
                 'stderr': result.stderr,
                 'results': scan_results,
                 'output_files': {
-                    'txt': output_file
+                    'json': output_file
                 }
             }
             
@@ -185,6 +197,48 @@ class ScanExecutor:
                 'error': 'Scan timed out after 30 minutes',
                 'scan_job_id': scan_job_id
             }
+    
+    def _execute_full_scan(self, scan_job_id: int, target: str, target_type: str, options: Dict) -> Dict[str, Any]:
+        #run Nmap first, then run Nikto against discovered web hosts 
+        nmap_result = self._execute_nmap_scan(scan_job_id, target, target_type, options)
+        nikto_results = []
+
+        try:
+            parsed = nmap_result.get('results', {}) or {}
+            hosts = parsed.get('hosts', [])
+            web_hosts = []
+            for h in hosts:
+                #check ports for http/https signatures
+                for p in h.get('ports', []):
+                    service = p.get('service', {}) or {}
+                    name = (service.get('name') or '').lower()
+                    if name in ('http', 'https') or str(p.get('port')) in ('80', '443'):
+                        #pick address
+                        addr = None
+                        for a in h.get('addresses', []):
+                            if a.get('addr'):
+                                addr = a.get('addr')
+                                break
+                        if addr and addr not in web_hosts:
+                            web_hosts.append(addr)
+            #run nikto per web_host
+            for idx, wh in enumerate(web_hosts):
+                opts = dict(options or {})
+                opts['output_suffix'] = idx
+                #ensure nikto target is host (will add http:// if missing)
+                nikto_res = self._execute_nikto_scan(scan_job_id, wh, 'ip', opts)
+                nikto_results.append(nikto_res)
+        except Exception:
+            logger.exception('Failed running per-host Nikto scans')
+
+        return {
+            'success': nmap_result.get('success', False),
+            'scan_job_id': scan_job_id,
+            'scan_type': 'full',
+            'target': target,
+            'nmap': nmap_result,
+            'nikto': nikto_results
+        }
     
     def _parse_nmap_results(self, output_base: str, subprocess_result) -> Dict[str, Any]:
         #parse Nmap XML output to extract structured results
@@ -304,3 +358,5 @@ class ScanExecutor:
         except Exception as e:
             logger.error(f"Error parsing Nikto results: {e}")
             return {'raw_output': subprocess_result.stdout, 'parse_error': str(e)}
+
+# Done by Manuel Morales-Marroquin
