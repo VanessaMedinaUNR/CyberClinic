@@ -119,8 +119,8 @@ def register():
 
                     client_admin = True # First user to a client is admin by default
                     client_id = db.execute_single(
-                        """INSERT INTO client (client_name, province, city)
-                        VALUES (%s, %s, %s)
+                        """INSERT INTO client (client_name, country, province, city)
+                        VALUES (%s, %s, %s, %s)
                         RETURNING client_id""",
                         (client_name, country, province, city)
                     )["client_id"]

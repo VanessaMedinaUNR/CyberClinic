@@ -23,8 +23,8 @@ CREATE TABLE client
   client_id      varchar(36) DEFAULT gen_random_uuid(),
   client_name    varchar     NOT NULL,
   country        varchar(2)  NOT NULL,
-  province       varchar(2)  NOT NULL,
-  city           varchar(2)  NOT NULL,
+  province       varchar     NOT NULL,
+  city           varchar     NOT NULL,
   scan_frequency int         NOT NULL DEFAULT -1,
   last_scheduled date        NOT NULL DEFAULT '4713-01-01',
   PRIMARY KEY (client_id)

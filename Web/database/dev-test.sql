@@ -6,8 +6,8 @@ WITH u AS
 	RETURNING user_id
 ), c AS
 (
-	INSERT INTO client (client_name)
-	VALUES ('Development Client')
+	INSERT INTO client (client_name, country, provice, city)
+	VALUES ('Development Client', 'US', 'Nevada', 'Reno')
 	RETURNING client_id
 )
 
