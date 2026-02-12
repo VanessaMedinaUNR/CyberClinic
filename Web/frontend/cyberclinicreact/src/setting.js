@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import Toolbar from './toolbar';
+import Toolbar from './Components/toolbar';
 import './setting.css';
 import api from './api';
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Toolbar from './toolbar';
+import Toolbar from './Components/toolbar';
 //class is the link between your HTML and CSS
 import './dashboard.css';
 

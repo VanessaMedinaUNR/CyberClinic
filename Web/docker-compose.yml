@@ -21,8 +21,6 @@ services:
     networks:
       - frontend
     command: npm start
-    # run the following in the container to begin the frontend
-    #   npm start
 
   backend:
     container_name: cyberclinic-backend

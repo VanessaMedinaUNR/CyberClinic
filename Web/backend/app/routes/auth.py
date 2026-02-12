@@ -62,11 +62,14 @@ def register():
     try:
         #get the user information from the request
         data = request.get_json()
+        logger.info(data)
         
         email = data.get('email', '').strip().lower()
         password = data.get('password', '')
         client_name = data.get('organization', '').strip()
-        phone_number = data.get('phone', '').strip() 
+        phone_number = data.get('phone', '').strip()
+
+        location = data.get('location', None)
         
         #make sure they provided the required information
         if not email or not password or not client_name or not phone_number:
@@ -108,14 +111,23 @@ def register():
 
             # Create new client if it does not already exist
             if not client:
-                print("Creating client")
-                client_admin = True # First user to a client is admin by default
-                client_id = db.execute_single(
-                     """INSERT INTO client (client_name)
-                     VALUES (%s)
-                     RETURNING client_id""",
-                     (client_name,)
-                )["client_id"]
+                if location:
+                    country = location.get('country')
+                    province = location.get('state')
+                    city = location.get('city')
+                    logger.info(f"{country}, {province}, {city}")
+
+                    client_admin = True # First user to a client is admin by default
+                    client_id = db.execute_single(
+                        """INSERT INTO client (client_name, province, city)
+                        VALUES (%s, %s, %s)
+                        RETURNING client_id""",
+                        (client_name, country, province, city)
+                    )["client_id"]
+                else:
+                    return jsonify({
+                        'message': f'Welcome {client_name}! Please enter the following registration information'
+                    }), 202
             else:
                 client_id = client["client_id"]
                 
@@ -136,7 +148,7 @@ def register():
             
             #send back success message without showing password
             return jsonify({
-                'message': 'user registered successfully',
+                'message': 'User registered successfully',
                 'user': {
                     'user_id': user_id,
                     'email': email,
@@ -156,7 +168,7 @@ def register():
     except Exception as e:
         #handle any unexpected errors that might happen
         logger.error(str(e))
-        return jsonify({'error': 'registration failed'}), 500
+        return jsonify({'error': 'Registration failed'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
