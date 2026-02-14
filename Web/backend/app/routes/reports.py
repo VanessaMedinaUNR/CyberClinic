@@ -1,6 +1,7 @@
 #Cyber Clinic backend - Report generation and SysReptor integration
 
 from flask import Blueprint, request, jsonify, send_file
+from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
 import json
 from datetime import datetime
@@ -430,6 +431,13 @@ def generate_report(scan_id):
     except Exception as e:
         logger.error(f"Report generation failed for scan {scan_id}: {e}")
         return jsonify({'error': 'Report generation failed'}), 500
+
+@reports_bp.route('/<int:report_id>', methods=["GET"])
+#@jwt_required()
+def fetch_report(report_id):
+    with open (f'reports/report_{report_id}.json') as file:
+        data = json.load(file)
+    return jsonify(data), 200
 
 @reports_bp.route('/download/<int:scan_id>', methods=['GET'])
 def download_report(scan_id):

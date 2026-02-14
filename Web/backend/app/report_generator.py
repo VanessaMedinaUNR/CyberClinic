@@ -102,10 +102,7 @@ class CustomReportGenerator:
                     'is_draft': False,
                     'client_name': scan_data.get('client', {}).get('name', 'Unknown Organization'),
                     'contact_email': scan_data.get('client', {}).get('email', 'contact@cyberclinic.unr.edu'),
-                    'target_value': scan_data.get('target', {}).get('value', ''),
-                    'target_type': scan_data.get('target', {}).get('type', 'unknown'),
-                    'target_name': scan_data.get('target', {}).get('name', ''),
-                    'scan_type': scan_data.get('scan_type', 'unknown'),
+                    'targets': scan_data.get('targets', {}),
                     'scan_type_display': self._get_scan_type_display(scan_data.get('scan_type', 'unknown')),
                     'scan_types_used': ([ 'nmap' ] if (merged_nmap_hosts or merged_nmap_findings) else []) + ([ 'nikto' ] if nikto_files else []) ,
                     'scan_duration': scan_duration,
@@ -119,13 +116,13 @@ class CustomReportGenerator:
                     'overall_risk_class': 'risk-unknown',
                     'nmap_data': {'hosts': merged_nmap_hosts, 'findings': merged_nmap_findings},
                     'nikto_data': {'findings': merged_nikto_findings},
-                    'per_host_findings': self._group_findings_by_host(sorted_findings, {'hosts': merged_nmap_hosts}),
-                    'services_summary': self._aggregate_services({'hosts': merged_nmap_hosts}),
-                    'tool_versions': self._collect_tool_versions({'scan_info': {}}, {'scan_info': {}}),
-                    'default_tool_versions': {
-                        'nmap': '7.98',
-                        'nikto': '2.1.6'
-                    },
+                    #'per_host_findings': self._group_findings_by_host(sorted_findings, {'hosts': merged_nmap_hosts}),
+                    #'services_summary': self._aggregate_services({'hosts': merged_nmap_hosts}),
+                    #'tool_versions': self._collect_tool_versions({'scan_info': {}}, {'scan_info': {}}),
+                    'default_tool_versions': [
+                        {'name': 'nmap', 'version': '7.98'},
+                        {'name': 'nikto', 'version': '2.1.6'}
+                    ],
                     'scan_warning': 'Surface-level automated scans (Nmap/Nikto) can miss issues. Further manual testing recommended.',
                     'generated_by': self.generated_by,
                     'confidentiality_notice': 'CONFIDENTIAL. This report contains sensitive security information and should be handled accordingly.'
@@ -221,7 +218,7 @@ class CustomReportGenerator:
     def _prepare_report_data(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
         scan_id = scan_data.get('scan_id')
         scan_type = scan_data.get('scan_type', 'unknown')
-        target_info = scan_data.get('target', {})
+        target_info = scan_data.get('targets', {})
         client_info = scan_data.get('client', {})
         timestamps = scan_data.get('timestamps', {})
         results_paths = scan_data.get('results_paths', [])
@@ -232,8 +229,8 @@ class CustomReportGenerator:
         nikto_data = {}
 
         #determine/normalize target type if not provided
-        if not target_info.get('type'):
-            target_info['type'] = self._detect_target_type(target_info.get('value', ''))
+        #if not target_info.get('type'):
+        #    target_info['type'] = self._detect_target_type(target_info.get('value', ''))
 
         #ensure results_paths is a list
         if isinstance(results_paths, str):
@@ -351,15 +348,16 @@ class CustomReportGenerator:
 
         #build preliminary report_data so later sections can attach hosts info
         report_data = {
-            'report_title': f"Security Assessment - {target_info.get('name', 'Unknown Target')}",
+            'report_title': f"Security Assessment - {client_info.get('name', '')}",
             'report_date': datetime.now().strftime('%B %d, %Y'),
             'scan_date': timestamps.get('completed', '') or datetime.now().strftime('%Y-%m-%d'),
             'is_draft': False,
             'client_name': client_info.get('name', 'Unknown Organization'),
             'contact_email': client_info.get('email', 'contact@cyberclinic.unr.edu'),
-            'target_value': target_info.get('value', 'Unknown'),
-            'target_type': target_info.get('type', 'unknown'),
-            'target_name': target_info.get('name', 'Unknown'),
+            'targets': target_info,
+            #'target_value': target_info.get('value', 'Unknown'),
+            #'target_type': target_info.get('type', 'unknown'),
+            #'target_name': target_info.get('name', 'Unknown'),
             'scan_type': actual_scan_type,
             'scan_type_display': scan_type_display,
             'scan_types_used': normalized_tools,
@@ -377,10 +375,10 @@ class CustomReportGenerator:
             'per_host_findings': per_host_findings,
             'services_summary': self._aggregate_services(nmap_data),
             'tool_versions': {},
-            'default_tool_versions': {
-                'nmap': '7.98',
-                'nikto': '2.1.6'
-            },
+            'default_tool_versions': [
+                {'name': 'nmap', 'version': '7.98'},
+                {'name': 'nikto', 'version': '2.1.6'}
+            ],
             'scan_warning': 'Surface-level automated scans (Nmap/Nikto) can miss issues. Further manual testing recommended.',
             'generated_by': self.generated_by,
             'confidentiality_notice': 'CONFIDENTIAL. This report contains sensitive security information and should be handled accordingly.'
@@ -621,12 +619,13 @@ class CustomReportGenerator:
             report_data['tool_versions'] = self._collect_tool_versions(nmap_data, nikto_data) or {}
 
             #add fallback default tool versions so template can show versions even if tool_versions is missing
-            report_data['default_tool_versions'] = {
-                'nmap': '7.98',
-                'nikto': '2.1.6'
-            }
+            report_data['default_tool_versions'] = [
+                {'name': 'nmap', 'version': '7.98'},
+                {'name': 'nikto', 'version': '2.1.6'}
+            ]
 
             #ensure tool_versions contains sensible defaults when a tool was run but its version couldn't be detected
+            '''
             try:
                 if 'nmap' not in report_data['tool_versions'] and (
                     'nmap' in report_data.get('scan_types_used', []) or nmap_data.get('hosts') or nmap_data.get('findings')
@@ -639,6 +638,7 @@ class CustomReportGenerator:
                     report_data['tool_versions']['nikto'] = report_data['default_tool_versions']['nikto']
             except Exception:
                 pass
+            '''
 
             #detect which scan types were actually used across findings and hosts
             scan_types_used = set()
@@ -1064,14 +1064,18 @@ class CustomReportGenerator:
             counts[finding_type] = counts.get(finding_type, 0) + 1
         return counts
 
-    def _collect_tool_versions(self, nmap_data: Dict[str, Any], nikto_data: Dict[str, Any]) -> Dict[str, str]:
-        versions = {}
+    def _collect_tool_versions(self, nmap_data: Dict[str, Any], nikto_data: Dict[str, Any]) -> List[Dict[str, str]]:
+        versions = []
         nmap_info = nmap_data.get('scan_info', {}) or {}
         #try common keys first
         if nmap_info.get('version'):
-            versions['nmap'] = nmap_info['version']
+            v = nmap_info['version']
+            versions.append({'name': 'nmap', 'version': v})
+            print(f'nmap version: {v}')
         elif nmap_info.get('nmap_version'):
-            versions['nmap'] = nmap_info['nmap_version']
+            v = nmap_info['nmap_version']
+            versions.append({'name': 'nmap', 'version': v})
+            print(f'nmap version: {v}')
         else:
             #fallback to attempt to detect nmap version from environment
             try:
@@ -1086,10 +1090,11 @@ class CustomReportGenerator:
                     output = (proc.stdout or '') + '\n' + (proc.stderr or '')
                     m = re.search(r'nmap\s+([0-9]+(?:\.[0-9]+)+)', output, re.IGNORECASE)
                     if m:
-                        versions['nmap'] = m.group(1)
+                        versions.append({'name': 'nmap', 'version': m.group(1)})
             except Exception:
                 pass
         #if still missing, try to search any scan_info values for a version pattern
+        '''
         if 'nmap' not in versions and nmap_info:
             try:
                 for v in (nmap_info.values()):
@@ -1100,10 +1105,11 @@ class CustomReportGenerator:
                             break
             except Exception:
                 pass
-
+        '''
+        print(versions)
         nikto_info = nikto_data.get('scan_info', {}) or {}
         if nikto_info.get('version'):
-            versions['nikto'] = nikto_info['version']
+            versions.append({'name': 'nikto', 'version': nikto_info['version']})
         else:
             #fallback to try to detect nikto installed in the environment
             try:
@@ -1123,11 +1129,11 @@ class CustomReportGenerator:
                     if not m:
                         m = re.search(r'([0-9]+(?:\.[0-9]+)+)', output)
                     if m:
-                        versions['nikto'] = m.group(1)
+                        versions.append({'name': 'nikto', 'version': m.group(1)})
             except Exception:
                 #best effort only, do not fail report generation
                 pass
-
+        print(versions)
         return versions
 
     def _build_host_map(self, nmap_hosts: List[Dict[str, Any]]) -> Dict[str, List[str]]:

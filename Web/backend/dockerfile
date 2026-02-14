@@ -1,8 +1,5 @@
 FROM python:3.11-slim AS builder
 
-ARG PORT
-ENV PORT=$PORT
-
 WORKDIR /src
 
 #install system dependencies and scanning tools

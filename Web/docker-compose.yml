@@ -103,6 +103,8 @@ services:
     volumes:
       - ./backend:/src
     working_dir: /src
+    ports:
+      - ${BACKEND_PORT}:${BACKEND_PORT}
     expose:
       - ${BACKEND_PORT}
     command: sleep infinity
