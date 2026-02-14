@@ -17,7 +17,8 @@ services:
       context: frontend
       dockerfile: Dockerfile
     depends_on:
-      - ${BACKEND_SERVER}
+      ${BACKEND_SERVER:-backend}:
+        condition: service_healthy
     networks:
       - frontend
     command: npm start

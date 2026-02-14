@@ -57,9 +57,10 @@ CREATE TABLE network_domains
 
 CREATE TABLE report
 (
-  report_id   varchar(36) NOT NULL,
-  client_id   varchar(36) NOT NULL,
-  report_time timestamp   NOT NULL,
+  report_id       varchar(36) DEFAULT gen_random_uuid(),
+  client_id       varchar(36) NOT NULL,
+  report_time     timestamp   NOT NULL,
+  encryption_key  varchar     NOT NULL
   PRIMARY KEY (report_id)
 );
 

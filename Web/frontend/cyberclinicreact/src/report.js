@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, Link } from 'react-router-dom'
-import Frame from 'react-frame-component';
+import jsPDF from 'jspdf';
 import api from './api';
 import './report.css';
 import Toolbar from './toolbar';
@@ -8,6 +8,9 @@ import { TargetList, TargetTable } from './Components/Report/target';
 export default function ReportViewer () {
     const { hash } = useLocation();
     const sectionRef = useRef(null);
+    const reportRef = useRef(null);
+    const [ loading, setLoading ] = useState(true);
+    const [ success, setSuccess ] = useState(false);
 
     const [ reportData, setReportData ] = useState({
         report_title: '',
@@ -37,7 +40,17 @@ export default function ReportViewer () {
     const report_id = location.state
 
     useEffect(() =>{
-        loadReport();
+        try
+        {
+            loadReport();
+            setLoading(false);
+            setSuccess(true);
+        }
+        catch(error) {
+            console.log(error);
+            setLoading(false);
+            setSuccess(false);
+        }
     }, [])
 
     useEffect(() => {
@@ -78,22 +91,36 @@ export default function ReportViewer () {
                 per_host_findings: response.data.per_host_findings,
                 findings: response.data.findings
             });
-            for (const host in response.data.per_host_findings)
-            {
-                console.log(host);
-            }
         })
-        .catch(function (error) {
-            console.log(error)
-            return(
-                <div id="bounding_box">
-                    <Toolbar/>
-                    <h1>Failed Fetching Report Data</h1>
-                </div>
-            )
+        .catch(error => {
+            console.log(error);
+            setSuccess(false);
         });
     }
-
+    
+    const handleGeneratePDF = () => {
+        const doc = new jsPDF({
+            format: 'letter',
+            unit: 'px',
+        });
+        doc.setFont('Inter-Regular', 'normal');
+        doc.html(reportRef.current, {
+            html2canvas: {scale: 0.5 },
+            callback: () => doc.save(reportData.report_title)
+        });
+    }
+    if (loading) return (
+        <div id = "bounding_box" style={{ alignItems: 'center'}}>
+            <Toolbar/>
+            <h2>Loading...</h2>
+        </div>
+    )
+    if (success === false) return (
+        <div id = "bounding_box" style={{ alignItems: 'center'}}>
+            <Toolbar/>
+            <h1>Failed Fetching Report Data</h1>
+        </div>
+    )
     return(
         <div id = "bounding_box" style={{ alignItems: 'center'}}>
             <Toolbar/>
@@ -103,11 +130,29 @@ export default function ReportViewer () {
                     width: '90%',
                     border: '2px solid #919191',
                     marginLeft: 'auto',
-                    marginRight: 'auto',
-                    padding: '1em 5em 0 5em'
+                    marginRight: 'auto'
                 }}
-                //head={<link rel="stylesheet" href="./report.css" />}
             >
+                <div style={{textAlign: 'right', padding: '1em'}}>
+                    <button className="btn-black" onClick={handleGeneratePDF}>
+                        Download PDF
+                    </button>
+                </div>
+                <ReportTemplate reportData={reportData} reportRef={reportRef} sectionRef={sectionRef} location={location} />
+            </div>
+            {/* Blue end footer matching cover accent */}
+            <div className="page-end-footer">Generated on { reportData.report_date } • Report Version 1.0</div>
+        </div>
+    )
+}
+
+function ReportTemplate({reportData, reportRef, sectionRef, location})  {
+    return(        
+            <div 
+                style={{size: 'letter', margin: '2cm'}}
+                ref={reportRef}
+            >
+                
                 <div className="cover-page">
                     <div className="cover-header">
                         <div className="cover-logo">Cyber Clinic</div>
@@ -538,11 +583,7 @@ export default function ReportViewer () {
                             <p style={{marginTop: '0.8em'}}>This report should be treated as confidential and shared only with authorized personnel responsible for security remediation.</p>
                         </div>
                     </div>
-
-                    {/* Blue end footer matching cover accent */}
                 </div>
             </div>
-            <div className="page-end-footer">Generated on { reportData.report_date } • Report Version 1.0</div>
-        </div>
     )
 };
