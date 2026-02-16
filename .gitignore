@@ -37,11 +37,10 @@ Cyberclinic.spec
 *.log
 *.sqlite
 *.db
-VPN_config
-Application/src/server.crt
+Web/backend/certs/*
 Web/backend/results
 Web/backend/reports
-server.crt
+!Web/backend/certs/example.*
 
 # Development and testing
 test_results.json

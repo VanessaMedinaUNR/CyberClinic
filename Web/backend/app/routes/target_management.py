@@ -52,22 +52,26 @@ def add_target():
         data = request.get_json()
 
         #get client_id from session (placeholder - will integrate with frontend auth later)
-        client_id = data.get('client_id', 1)
+        client_id = data.get('client_id', 'cf3f847e-0bd7-4fa5-9e7d-38e2a803f6cd')
         if not client_id:
             return jsonify({'error': 'Authentication required'}), 400
 
         #validate required fields  
-        required_fields = ['target_name', 'target_type', 'target_value', 'public_facing']
+        required_fields = ['target_name', 'target_type', 'target_value']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'Missing required field: {field}'}), 400
+            
 
         target_name = data['target_name'].strip()
         target_type = data['target_type'].lower()
-        target_value = data['target_value'].strip()
+        target_value = data['target_value']
         public_facing = data['public_facing']
         verified = False
         verified_date = None
+
+        if not public_facing == False and not public_facing == True :
+            return jsonify({'error': f'Missing required field: public_facing'}), 400
 
         ip: ipaddress.IPv4Network
 
@@ -113,6 +117,11 @@ def add_target():
             db.execute_command(
                 """INSERT INTO network_domains (domain, client_id, subnet_name) VALUES (%s, %s, %s)""",
                 (target_value, client_id, target_name)
+            )
+        if not public_facing:
+            db.execute_command(
+                """INSERT INTO network_keys (client_id, subnet_name) VALUES (%s, %s)""",
+                (client_id, target_name)
             )
         return jsonify({
             'success': True,

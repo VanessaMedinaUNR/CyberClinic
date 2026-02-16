@@ -26,3 +26,15 @@ class StorageHandler:
         if not os.path.exists(file):
             raise FileNotFoundError
         return file
+    
+    def save(self, relative_path, data):
+        file = os.path.join(self.base_path, relative_path)
+        parent = os.path.dirname(file)
+        os.makedirs(parent, exist_ok=True)
+
+        with open(file, 'w+') as f:
+            f.write(data)
+
+        if not os.path.exists(file):
+            return False
+        return True

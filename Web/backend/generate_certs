@@ -1,0 +1,15 @@
+#!/bin/bash
+# Server - Generate authentication tunnel cert
+openssl req -x509 -days 365 -newkey rsa:2048 -keyout ${AUTH_KEY} -out ${AUTH_CRT} -passout env:AUTH_PASS -config ${SERVER_CNF}
+# Server - Generate authenticated tunnel cert
+openssl req -x509 -days 365 -newkey rsa:2048 -keyout ${AUTHED_KEY} -out ${AUTHED_CRT} -passout env:AUTHED_PASS -config ${SERVER_CNF}
+
+#openssl req -new -passout env:AUTH_PASS -x509 -days 365 -newkey rsa:2048 -keyout certs/auth.key -out certs/auth.crt -config certs/server.cnf
+#openssl req -new -passout env:AUTHED_PASS -x509 -days 365 -newkey rsa:2048 -keyout certs/authed.key -out certs/authed.crt -config certs/server.cnf
+
+#Client - Generate private key
+#openssl genrsa -out client.key 2048
+
+#Server - Generate client public key
+#openssl req -new -key client.key -out client.csr -subj "/C=US/ST=State/L=City/O=Organization/CN={fromaddr}"
+#openssl x509 -req -days 1460 -in client.csr -CA server.crt -CAkey server.key -CAcreateserial -out client.crt   

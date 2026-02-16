@@ -1,8 +1,5 @@
 FROM python:3.11-slim AS builder
 
-ARG PORT
-ENV PORT=$PORT
-
 WORKDIR /src
 
 #install system dependencies and scanning tools
@@ -13,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     perl \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 #install Nikto from GitHub since it's not in main repos
@@ -33,6 +31,14 @@ RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /src
 USER app
 
-CMD python3 main.py
+RUN dos2unix generate_certs
+RUN chmod +x generate_certs
+
+ENTRYPOINT ["python", "main.py"]
+
+# Generate authentication tunnel cert
+#RUN openssl req -x509 -days 365 -newkey rsa:2048 -keyout $AUTH_KEY -out $AUTH_CRT -passout env:AUTH_PASS -config $SERVER_CNF
+# Generate authenticated tunnel cert
+#RUN openssl req -x509 -days 365 -newkey rsa:2048 -keyout $AUTHED_KEY -out $AUTHED_CRT -passout env:AUTHED_PASS -config $SERVER_CNF
 
 # Done by Morales-Marroquin and Austin Finch

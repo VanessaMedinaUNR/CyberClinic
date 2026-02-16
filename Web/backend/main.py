@@ -1,15 +1,17 @@
 #Cyber Clinic backend - Main entry point
-
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-import os
-import atexit
-from app.routes.auth import auth_bp
-from app.routes.scans import scans_bp
-from app.routes.reports import reports_bp
-from app.routes.standalone import standalone_bp
-from app.routes.target_management import targets_bp
 from app.scan_worker import start_scan_worker, stop_scan_worker
+from standalone_handler import start_standalone_handler
+from app.routes.target_management import targets_bp
+from app.routes.standalone import standalone_bp
+#from app.routes.reports import reports_bp
+from app.routes.scans import scans_bp
+from app.routes.auth import auth_bp
+from flask import Flask, jsonify
+from flask_cors import CORS
+import subprocess
+import atexit
+import os
+
 
 def create_app():
     #this creates our main flask web application
@@ -23,7 +25,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     #add additional routes for full CyberClinic functionality
     app.register_blueprint(scans_bp) 
-    app.register_blueprint(reports_bp)
+    #app.register_blueprint(reports_bp)
     app.register_blueprint(standalone_bp)
     app.register_blueprint(targets_bp)
     #create a simple health check endpoint at the root URL
@@ -62,6 +64,41 @@ def create_app():
 
 if __name__ == '__main__':
     #this runs when we start the file directly (not imported)
+    
+    #parse arguments
+    import argparse
+    parser = argparse.ArgumentParser(description="Main CyberClinic Backend Entrypoint")
+    parser.add_argument('--regen-certs', action='store_true', help='Regenerate keys and certificates')
+    args = parser.parse_args()
+    if args.regen_certs:
+        print("Generating keys and certificates...")
+        curdir = os.path.dirname(__file__)
+        result = subprocess.run([os.path.join(curdir, 'generate_certs')], capture_output=True, text=True)
+        print("Return code:", result.returncode)
+    #start standalone handler
+    print("Starting Standalone Handler...")
+
+    auth_port = int(os.getenv('AUTH_PORT', 9999))
+    auth_cert = os.getenv('AUTH_CRT', '/src/certs/auth.crt')
+    auth_key = os.getenv('AUTH_KEY', '/src/certs/auth.key')
+    auth_pass = os.getenv('AUTH_PASS', 'cyberclinicdev')
+
+    authed_port = int(os.getenv('AUTHED_PORT', 9999))
+    authed_cert = os.getenv('AUTHED_CRT', '/src/certs/authed.crt')
+    authed_key = os.getenv('AUTHED_KEY', '/src/certs/authed.key')
+    authed_pass = os.getenv('AUTHED_PASS', 'cyberclinicdev')
+    
+    start_standalone_handler(
+        auth_port=auth_port,
+        auth_cert=auth_cert,
+        auth_key=auth_key,
+        auth_pass=auth_pass,
+        authed_port=authed_port,
+        authed_cert=authed_cert,
+        authed_key=authed_key,
+        authed_pass=authed_pass
+    )
+    
     #starts up our web server so people can connect to it
     app = create_app()
     CORS(app)

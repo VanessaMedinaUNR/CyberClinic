@@ -54,10 +54,10 @@ class ScanWorker:
         
         # Get pending scan jobs
         pending_scans = db.execute_query(
-            """SELECT sj.*, nt.subnet_name, nt.subnet_ip, nt.subnet_netmask
+            """SELECT sj.*, nt.subnet_name, nt.subnet_ip, nt.subnet_netmask, nt.public_facing
                FROM scan_jobs sj
                LEFT JOIN network nt ON sj.subnet_name = nt.subnet_name AND sj.client_id = nt.client_id
-               WHERE sj.status = 'pending'
+               WHERE sj.status = 'pending' AND nt.public_facing = TRUE
                ORDER BY sj.created_at ASC
                LIMIT 5""",
             ()

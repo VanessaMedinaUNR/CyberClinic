@@ -20,8 +20,11 @@ CREATE TABLE application
 
 CREATE TABLE client
 (
-  client_id      varchar(36) NOT NULL,
+  client_id      varchar(36) DEFAULT gen_random_uuid(),
   client_name    varchar     NOT NULL,
+  country        varchar(2)  NOT NULL,
+  province       varchar     NOT NULL,
+  city           varchar     NOT NULL,
   scan_frequency int         NOT NULL DEFAULT -1,
   last_scheduled date        NOT NULL DEFAULT '4713-01-01',
   PRIMARY KEY (client_id)
@@ -44,6 +47,14 @@ CREATE TABLE network
   verified          bool        NOT NULL DEFAULT FALSE,
   verification_date timestamp  ,
   creation_date     timestamp   DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (client_id, subnet_name)
+);
+
+CREATE TABLE network_keys
+(
+  client_id   varchar(36) NOT NULL,
+  subnet_name varchar     NOT NULL,
+  public_key  text        ,
   PRIMARY KEY (client_id, subnet_name)
 );
 
@@ -82,7 +93,7 @@ CREATE TABLE scan_jobs
 
 CREATE TABLE users
 (
-  user_id       varchar(36) NOT NULL,
+  user_id       varchar(36) DEFAULT gen_random_uuid(),
   email         email       NOT NULL,
   password_hash text        NOT NULL,
   client_admin  boolean     NOT NULL,
@@ -111,6 +122,11 @@ ALTER TABLE report
   ADD CONSTRAINT FK_client_TO_report
     FOREIGN KEY (client_id)
     REFERENCES client (client_id);
+
+ALTER TABLE network_keys
+  ADD CONSTRAINT FK_network_TO_network_keys
+    FOREIGN KEY (client_id, subnet_name)
+    REFERENCES network (client_id, subnet_name);
 
 ALTER TABLE network_domains
   ADD CONSTRAINT FK_network_TO_network_domains

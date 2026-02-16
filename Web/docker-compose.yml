@@ -42,9 +42,15 @@ services:
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
-      - VPN_PORT=${VPN_PORT}
-      - VPN_CRT=${VPN_CRT}
-      - VPN_KEY=${VPN_KEY}
+      - SERVER_CNF=${SERVER_CNF}
+      - AUTH_PORT=${AUTH_PORT}
+      - AUTH_CRT=${AUTH_CRT}
+      - AUTH_KEY=${AUTH_KEY}
+      - AUTH_PASS=${AUTH_PASS}
+      - AUTHED_PORT=${AUTHED_PORT}
+      - AUTHED_CRT=${AUTHED_CRT}
+      - AUTHED_KEY=${AUTHED_KEY}
+      - AUTHED_PASS=${AUTHED_PASS}
     #Databse-related Variables
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}  
@@ -54,8 +60,9 @@ services:
     expose:
       - ${BACKEND_PORT}
     ports:
-      - ${VPN_PORT}:${VPN_PORT}
-    command: python3 main.py
+      - ${AUTH_PORT}:${AUTH_PORT}
+      - ${AUTHED_PORT}:${AUTHED_PORT}
+    command: ''
     depends_on:
       app:
         condition: service_healthy
@@ -83,9 +90,15 @@ services:
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
-      - VPN_PORT=${VPN_PORT}
-      - VPN_CRT=${VPN_CRT}
-      - VPN_KEY=${VPN_KEY}
+      - SERVER_CNF=${SERVER_CNF}
+      - AUTH_PORT=${AUTH_PORT}
+      - AUTH_CRT=${AUTH_CRT}
+      - AUTH_KEY=${AUTH_KEY}
+      - AUTH_PASS=${AUTH_PASS}
+      - AUTHED_PORT=${AUTHED_PORT}
+      - AUTHED_CRT=${AUTHED_CRT}
+      - AUTHED_KEY=${AUTHED_KEY}
+      - AUTHED_PASS=${AUTHED_PASS}
     #Databse-related Variables
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}  
@@ -99,13 +112,20 @@ services:
       - ./backend:/src
     ports:
       - ${BACKEND_PORT}:${BACKEND_PORT}
-      - ${VPN_PORT}:${VPN_PORT}
-    command: sleep infinity
+      - ${AUTH_PORT}:${AUTH_PORT}
+      - ${AUTHED_PORT}:${AUTHED_PORT}
+    command: ['--regen-certs']
     networks:
       - backend
       - frontend
     depends_on:
       - database
+    healthcheck:
+      test: curl -f http://localhost:$$BACKEND_PORT/
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
 
   database:
     container_name: cyberclinic-database
@@ -121,6 +141,8 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     expose:
       - ${DB_PORT}
+    ports:
+      - ${DB_PORT}:${DB_PORT}
     networks:
       - backend
     healthcheck:

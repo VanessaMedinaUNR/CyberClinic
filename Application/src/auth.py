@@ -5,10 +5,10 @@ import platform
 import subprocess
 from pathlib import Path
 from subnet_validation import Subnet_Form
-import keyring
 from tunnel import TunnelHandler
 from PyQt6.QtCore import pyqtSignal, QObject, QVariant
 from PyQt6.QtWidgets import (
+    QApplication,
     QLabel,
     QLineEdit,
     QDialog,
@@ -35,13 +35,13 @@ class User_Auth(QObject):
 
         print(f"hash: {self.apphash}\n")
         print(f"{self.email}: {self.passwd}")
-        send = f'{self.apphash}:{self.email}:{self.passwd}'
+        send = f'{self.apphash}|{self.email}|{self.passwd}'
 
         try:
-            auth_tunnel.conn.send(send.encode('latin-1'))
+            auth_tunnel.conn.send(send.encode())
             data = auth_tunnel.conn.recv(1024)
-
-            response = data.decode('latin-1').strip().split(':')
+            print(data)
+            response = data.decode().strip().split('|')
             success = response.pop(0)
             match success:
                 case "AUTH_FAILED":
@@ -56,7 +56,6 @@ class User_Auth(QObject):
 
                     self.form.l.setText("User verification success!")
                     self.form.app.processEvents()
-                    keyring.set_password("cyberclinic", self.email, self.passwd)
                     self.user_verified.emit({"success": True, "auth_tunnel": auth_tunnel})  
                 case _:
                     auth_tunnel.close_tunnel()
@@ -77,7 +76,7 @@ class User_Auth(QObject):
 
 class Auth_Form(QDialog):
 
-    def __init__(self, app, apphash, host, port, cert):
+    def __init__(self, app: QApplication, apphash, host, port, cert):
         self.app = app
         self.apphash = apphash
         self.vpn_host = host
@@ -121,7 +120,8 @@ class Auth_Form(QDialog):
 
         try:
             data = self.auth_tunnel.conn.recv(1024)
-            names = data.decode('latin-1').strip().split(':')
+            print(data)
+            names = data.decode().strip().split('|')
             response = names.pop(0)
             if response == "SUBNET_INVALID":
                 self.l.setText("Please add this subnet in the web portal first.")
@@ -130,9 +130,10 @@ class Auth_Form(QDialog):
             elif response == "SUBNET_LIST":
                 self.l.setText("Please enter your CyberClinic Email and Password.")
                 self.e.clear()
+                passwd = self.p.text()
                 self.p.clear()
                 self.hide()
-                validate_subnet = Subnet_Form(self, names, self.auth_tunnel)
+                validate_subnet = Subnet_Form(self, names, self.auth_tunnel, passwd)
                 validate_subnet.show()
 
         except Exception as e:
@@ -150,7 +151,6 @@ class Auth_Form(QDialog):
         self.app.processEvents()
         try:
             auth_tunnel = TunnelHandler(crt=self.vpn_crt, host=self.vpn_host, port=self.vpn_port)
-            print("Got here")
             self.auth.start(auth_tunnel)
         except TimeoutError as e:
             print(f'{e}')
