@@ -1,1 +1,0 @@
-# Cyber Clinic Backend App Package

@@ -22,7 +22,7 @@ class StandaloneAppHandler:
     
     def __init__(self):
         self.standalone_app_path = os.environ.get('STANDALONE_APP_PATH', '/src/standalone')
-        # Use relative path that works both locally and in docker
+        #use relative path that works both locally and in docker
         default_path = os.path.join(os.path.dirname(__file__), '..', '..', 'results')
         self.scan_results_path = os.environ.get('SCAN_RESULTS_PATH', default_path)
         
@@ -281,4 +281,4 @@ def standalone_status():
         logger.error(f"Standalone status check failed: {e}")
         return jsonify({'error': 'Status check failed'}), 500
 
-# Done by Morales-Marroquin
+# Done by Manuel Morales-Marroquin

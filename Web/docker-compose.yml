@@ -23,17 +23,22 @@ services:
     command: npm start
 
   backend:
+  #changed from python:latest to cyberclinic-backend to work on Mac environment, otherwise revert
     container_name: cyberclinic-backend
-    image: python:latest
+    image: cyberclinic-backend
     build:
       context: backend
       target: builder
     volumes:
       - ./backend:/src
+    #added working_dir to work on Mac environment, otherwise comment out
+    working_dir: /src
     environment:
+      - SCAN_DIR=${SCAN_DIR:-/src/scans}
+      - REPORT_DIR=${REPORT_DIR:-/src/reports}
     #Web-related Variables
       - FLASK_SERVER=0.0.0.0
-      - FLASK_PORT=${BACKEND_PORT}
+      - FLASK_PORT=${BACKEND_PORT:-5000}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
@@ -51,7 +56,8 @@ services:
     ports:
       - ${VPN_PORT}:${VPN_PORT}
       - ${BACKEND_PORT}:${BACKEND_PORT}
-    command: python3 main.py
+    #changed from python3 main.py to python3 /src/main.py to work on Mac environment, otherwise revert
+    command: # ['']
     depends_on:
       app:
         condition: service_healthy
@@ -68,15 +74,19 @@ services:
       start_period: 30s
 
   backend-dev:
-    container_name: cyberclinic-backend
-    image: python:latest
+  #changed from container_name: cyberclinic-backend & image: python:latest to container_name: cyberclinic-backend-dev & image: cyberclinic-backend-dev
+  #to work on Mac environment, otherwise revert
+    container_name: cyberclinic-backend-dev
+    image: cyberclinic-backend-dev
     build:
       context: backend
       target: builder
     environment:
+      - SCAN_DIR=${SCAN_DIR-/src/scans}
+      - REPORT_DIR=${REPORT_DIR:-/src/reports}
     #Web-related Variables
       - FLASK_SERVER=0.0.0.0
-      - FLASK_PORT=${BACKEND_PORT}
+      - FLASK_PORT=${BACKEND_PORT:-5000}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
@@ -94,18 +104,21 @@ services:
       - REPTOR_API_TOKEN=${REPTOR_API_TOKEN}
     volumes:
       - ./backend:/src
-    expose:
-      - ${BACKEND_PORT}
+    working_dir: /src
     ports:
-      - ${BACKEND_PORT}:${BACKEND_PORT}
-      - ${VPN_PORT}:${VPN_PORT}
-    command: sleep infinity
+      - ${BACKEND_PORT:-5000}:${BACKEND_PORT:-5000}
+    expose:
+      - ${BACKEND_PORT:-5000}
+    command: # ['']
+    #removed ports: - ${BACKEND_PORT}:${BACKEND_PORT} & - ${VPN_PORT}:${VPN_PORT}
+    #to work on Mac environment, otherwise revert
     networks:
       - backend
       - frontend
     depends_on:
-      - database
-  
+      database:
+        condition: service_healthy
+
   database:
     container_name: cyberclinic-database
     image: bitnami/postgresql:latest
@@ -115,7 +128,7 @@ services:
       - POSTGRESQL_USERNAME=${DB_USER}
       - POSTGRESQL_PASSWORD=${DB_PASS}
       - POSTGRESQL_PORT_NUMBER=${DB_PORT}
-      - POSTGRESQL_MAX_CONNECTIONS=100 #performance settings for handling multiple connections
+      - POSTGRESQL_MAX_CONNECTIONS=100
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     expose:

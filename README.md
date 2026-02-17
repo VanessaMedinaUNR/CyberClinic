@@ -1,38 +1,60 @@
 <div align="center">
 
-# 🛡️ Cyber Clinic Web Application 🛡️
+# Cyber Clinic Web Application 
 
-### *CS 425 Software Engineering Project - Team 13*
+### *CS 426 Senior Project*
+**Spring 2026 •University of Nevada,Reno• Department of Computer Science & Engineering**
 
 [![University](https://img.shields.io/badge/University-Nevada%2C%20Reno-blue.svg)](https://www.unr.edu/)
-[![Course](https://img.shields.io/badge/Course-CS%20425-green.svg)](https://catalog.unr.edu/preview_course_nopop.php?catoid=58&coid=1093494&print)
+[![Course](https://img.shields.io/badge/Course-CS%20426-green.svg)](#)
 [![Status](https://img.shields.io/badge/Status-In%20Development-orange.svg)](#)
 [![Team](https://img.shields.io/badge/Team-13-purple.svg)](#)
 
-*🚧 **Under Development** - Making cybersecurity accessible for small organizations*
-
-**Fall 2025 • Department of Computer Science & Engineering**
 
 </div>
 
 ---
+## Team Information 
 
-## 🎯 Project Vision
+**Team Number:** 13
 
-We're building **Cyber Clinic** - a web application that will bridge the cybersecurity gap for small businesses, tribal agencies, and local organizations who can't afford commercial security tools that cost $1,000+. Our goal is to provide professional-grade vulnerability scanning with human expert support.
+**Team Name:** Cyber Clinc 
 
-> **Note:** This project is currently in early development as part of our CS 425 Software Engineering course.
+**Team Members:** 
+- Leslie Becerra
+- Austin Finch
+- Vanessa Medina
+- Manuel Morales-Marroquin
 
-### 💡 **What We're Building**
+---
+## Intructors & Exteral Advisors 
 
-Our application will provide:
-- **💰 Affordable scanning** - Free alternative to expensive commercial tools
-- **🔒 Secure architecture** - Local scanning to protect sensitive data  
-- **📝 Clear reporting** - Plain-English vulnerability summaries
-- **📞 Expert support** - Direct connection to cybersecurity analysts
-- **🏢 Small org focus** - Built specifically for resource constrained organizations
+**Instructors:**
+- Dave Feil-Seifer - Computer Science & Engineering, University of Nevada, Reno 
+- Vinh Le - Computer Science & Engineering, University of Nevada, Reno 
+- Stosh Peterson - Computer Science & Engineering, University of Nevada, Reno 
+-  Richie White  - Computer Science & Engineering, University of Nevada, Reno 
 
-### 🎯 **Planned User Journey**
+**External Advisors:**
+ - Dr. Bill Doherty - Cybersecuirty Center, University of Nevada, Reno
+ - Dr. Shamik Sengupta - Cybersecuirty Center, University of Nevada, Reno
+---
+## Project Title
+**Cyber Clinic Web Application: Accessible Cybersecurity for small organizations** This website documents our **CS 426 Senior Project in Computer Science (Spring 2026)** at the **Inoversity of Nevada,Reno - Deparment of Computer Science & Engineering**
+
+---
+## Project Description
+
+Small organization such as lcal businesses, tribal agencies, and community nonprofits often lack the budget and technical expertise needed to preform regular cybersecuirty assessments. Commercual vulnerability scanners can cost hundreds r even thosands of dollars annually, crreatinf a barrier that leaves many organizations exposed to preventable risks. The *Cyber Web Application** is designed as an afforadable and easy to us alternative that helps non technical users understand their cybersecuirty posture.The system integrates trusted open source tools such as **Nmap** and **Nikto to preform vulerablity scans onpublic facing systems. Instead of presenting raw technical output, the platform translates scan results into **plain-language rports** with clear explanations and suggested remediation steps.The long-term goal of this project is to demonstrate how **automation, usability, and education ** can work together to make cybersecuirt more accessible.By lowering financial and techinal barrier, the Cyber Clinic Web Application aims to empower small organization to make proactive steps towars improving their secuirty. 
+
+---
+
+## Project Vision
+
+Team 13 is proposing the Cyber Clinic Web Application, an affordable and simple alternative to commercial vulnerability scanners that can cost more than $1,000. The project supports the mission of the Cyber Clinic, a student-led nonprofit founded at the University of Nevada, Las Vegas (UNLV), which is now opening a chapter at the University of Nevada, Reno (UNR) to help small businesses, tribal agencies, and local governments address cybersecurity risks. Our prototype includes functional user authentication, a working dashboard, and integrated scanning for public domains/IPs using open-source tools such as Nmap and Nikto. The system produces readable reports that translates technical scanner output into plain English with clear suggested fixes, giving non-technical users a clear first assessment and a direct path to contact Cyber Clinic for further remediation and education. 
+
+---
+### **Planned User Journey**
 
 1. **Register** → Users create secure accounts
 2. **Submit** → Enter domain/IP for assessment  
@@ -41,9 +63,11 @@ Our application will provide:
 5. **Report** → Receive actionable security insights
 6. **Connect** → Contact the Cyber Clinic for expert guidance
 
+> **Note:** This project is currently in early development as part of our CS 425 Software Engineering course.
+
 ---
 
-## 🏗️ Planned Technology Stack
+## Planned Technology Stack
 
 | Component | Technology | Status |
 |-----------|------------|--------|
@@ -54,15 +78,26 @@ Our application will provide:
 | **Reporting** | SysReptor | 📋 Planned |
 | **AI Analysis** | Ollama | 📋 Planned |
 
+### **What We're Building**
+
+Our application will provide:
+- **Affordable scanning** - Free alternative to expensive commercial tools
+- **Secure architecture** - Local scanning to protect sensitive data  
+- **Clear reporting** - Plain-English vulnerability summaries
+- **Expert support** - Direct connection to cybersecurity analysts
+- **Small org focus** - Built specifically for resource constrained organizations
+
+
+
 ---
 
-## 🚀 Getting Started (For Development)
+## Getting Started (For Development)
 
 ### Prerequisites
-- 📦 Docker
-- 🐍 Python 3.10+
-- 🔧 Git
-- 🌐 Modern browser (Chrome, Edge, Firefox)
+- Docker
+- Python 3.10+
+- Git
+- Modern browser (Chrome, Edge, Firefox)
 
 ### Current Setup
 
@@ -86,19 +121,18 @@ docker-compose up
 cd.. # back into ~/CyberClinic/
 cd Application
 python3 -m venv .venv
-source venv/bin/activate
+source .venv/bin/activate #On Windows: .venv\Scripts\activate
 
-#On Windows: venv\Scripts\activate
-
-
-#Note: requirements.txt will be added as we develop dependencies
+pip install -r requirements.txt
+cd src
+python -m  PyInstaller --distpath /dist/{Your Distribution} -n CyberClinic --noconfirm client_application.py
 ```
 
 > **Development Note:** Full installation instructions will be updated as we build out the application components.
 
 ---
 
-## 📚 Project Documentation
+## Project Documentation
 
 ### Academic Context
 - **Course:** CS 425 - Software Engineering
@@ -113,7 +147,7 @@ source venv/bin/activate
 
 ---
 
-## 👥 Team Members
+## Team Members
 
 <div align="center">
 
@@ -148,15 +182,12 @@ source venv/bin/activate
 
 </div>
 
-### 🎓 **Academic Support**
-- **Instructors:** Dr. Dave Feil-Seifer, Vinh Le, Stosh Peterson, Richie White
-- **External Advisors:** Dr. Bill Doherty, Dr. Shamik Sengupta
 
 ---
 
 <div align="center">
 
-### 🛡️ **Building the Future of Accessible Cybersecurity** 🛡️
+###  **Building the Future of Accessible Cybersecurity** 
 
 *A CS 425 Software Engineering Project*
 
@@ -164,6 +195,6 @@ source venv/bin/activate
 
 ---
 
-**📅 Project Timeline:** Fall 2025 | **👥 Team 13** | **🚧 In Development**
+** Project Timeline:** Spring 2026 | **Team 13** | **🚧 In Development**
 
 </div>

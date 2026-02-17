@@ -121,4 +121,4 @@ def block_jwt(jti):
     else:
         return False
 
-# Done by Morales-Marroquin and Austin Finch
+# Done by Manuel Morales-Marroquin and Austin Finch

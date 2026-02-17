@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Toolbar from './Components/toolbar';
 //class is the link between your HTML and CSS
 import './dashboard.css';
@@ -27,10 +27,13 @@ function getCookie(name) {
                 <button className="btn-black" id = "newScan" onClick={() => (navigate("/newScan"))}>+ Configure New Scan 
                 </button>
             </div>
+            
             <div className="content-card">
                 <div className="card-title-row">
                     <h2>Active scan & Reports</h2>
                 </div>
+                <button className="btn-black" id = "viewReport" onClick={() => (navigate("/report", {state: {id: 'example'}}))}>View Report
+                </button>
                 <table id="scans-table">
                     <thead>
                         <tr>

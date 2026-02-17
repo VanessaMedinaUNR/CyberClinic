@@ -1,3 +1,5 @@
+#Cyber Clinic backend -  Manage targets for validation, verification, and storing target/network records for scans
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import re
@@ -183,3 +185,5 @@ def list_targets():
     except Exception as e:
         logger.error(f"Target submission failed: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+    
+# Done by Manuel Morales-Marroquin

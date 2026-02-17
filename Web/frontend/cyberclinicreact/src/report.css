@@ -1,0 +1,384 @@
+/* Cyber Clinic Report Styling */
+@page {
+size: A4;
+margin: 2cm 1.5cm;
+@top-right {
+    content: "Cyber Clinic Report";
+    font-size: 10pt;
+    color: #0033A0;
+}
+@bottom-left {
+    content: "CONFIDENTIAL";
+    font-size: 9pt;
+    font-style: italic;
+    color: #666;
+}
+@bottom-center {
+    content: "Security Assessment";
+    font-size: 9pt;
+    color: #FFD966; /* old yellow accent */
+}
+@bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-size: 9pt;
+}
+}
+
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+
+body {
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+line-height: 1.6;
+color: #333;
+background: #fff;
+}
+
+.cover-page {
+page-break-after: always;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+min-height: 100vh;
+padding: 3cm 2cm;
+background: linear-gradient(135deg, #0033A0 0%, #003D82 50%, #002855 100%);
+color: white;
+border-bottom: 8px solid #0033A0; /* blue bottom border */
+}
+
+.cover-header {
+text-align: center;
+}
+
+.cover-logo {
+font-size: 3em;
+font-weight: bold;
+margin-bottom: 0.1em;
+letter-spacing: 2px;
+}
+
+.cover-subtitle {
+font-size: 0.9em;
+opacity: 0.9;
+margin-bottom: 0.8em;
+}
+
+.cover-title h1 {
+font-size: 2.4em;
+font-weight: 300;
+margin-bottom: 0.2em;
+text-transform: uppercase;
+letter-spacing: 3px;
+color: white;
+}
+
+.cover-title h2 {
+font-size: 1.4em;
+font-weight: 600;
+color: #FFD966; /* old yellow accent for scan title */
+}
+
+.cover-info {
+background: rgba(255, 255, 255, 0.06);
+padding: 2em;
+border-radius: 8px;
+}
+
+.cover-info-grid {
+display: grid;
+grid-template-columns: repeat(2, 1fr);
+gap: 1.5em;
+}
+
+.cover-info-label {
+font-size: 0.85em;
+opacity: 0.8;
+margin-bottom: 0.3em;
+text-transform: uppercase;
+letter-spacing: 1px;
+}
+
+.cover-info-value {
+font-size: 1.1em;
+font-weight: 600;
+}
+
+.content {
+max-width: 210mm;
+margin: 0 auto;
+padding: 20px;
+}
+
+h1 {
+color: #0033A0;
+font-size: 2.2em;
+margin: 1em 0 0.5em 0;
+padding-bottom: 0.3em;
+border-bottom: 3px solid #0033A0;
+}
+
+h2 {
+color: #003D82;
+font-size: 1.6em;
+margin: 1.2em 0 0.4em 0;
+padding-bottom: 0.2em;
+border-bottom: 2px solid #ddd;
+}
+
+h3 {
+color: #002855;
+font-size: 1.3em;
+margin: 1em 0 0.4em 0;
+}
+
+.executive-summary {
+background: #f8f9fa;
+padding: 1.5em;
+margin: 1.5em 0;
+border-left: 5px solid #0033A0;
+border-radius: 4px;
+position: relative;
+}
+
+.overall-risk-pill {
+display: inline-block;
+padding: 6px 12px;
+border-radius: 20px;
+color: #fff;
+font-weight: 700;
+margin-left: 1em;
+}
+
+.risk-critical { background: #8B0000; }
+.risk-high { background: #DC143C; }
+.risk-medium { background: #FF8C00; }
+.risk-low { background: #2E8B57; }
+.risk-minimal { background: #4682B4; }
+.risk-unknown { background: #6c757d; }
+
+.scan-warning {
+background: #fff3cd;
+border-left: 4px solid #ffd966;
+padding: 0.8em;
+margin: 1em 0;
+border-radius: 4px;
+color: #665c00;
+}
+
+.no-findings {
+background: #e6ffed;
+border-left: 4px solid #2e8b57;
+padding: 1em;
+border-radius: 6px;
+color: #155724;
+margin: 1em 0;
+}
+
+.stats-grid {
+display: grid;
+grid-template-columns: repeat(5, 1fr);
+gap: 1.2em;
+margin: 1.5em 0;
+}
+
+.section-grid {
+display: grid;
+grid-template-columns: repeat(2, 1fr);
+gap: 1.2em;
+margin: 1.2em 0;
+}
+
+.section-card {
+background: #f8f9fa;
+padding: 1em;
+border-radius: 6px;
+border: 1px solid #e1e1e1;
+}
+
+.section-card h4 {
+margin-bottom: 0.4em;
+color: #002855;
+}
+
+.stat-card {
+background: #fff;
+padding: 1.2em;
+border-radius: 8px;
+box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+text-align: center;
+border-top: 4px solid;
+}
+
+.stat-card.critical { border-top-color: #8B0000; }
+.stat-card.high { border-top-color: #DC143C; }
+.stat-card.medium { border-top-color: #FF8C00; }
+.stat-card.low { border-top-color: #2E8B57; }
+.stat-card.info { border-top-color: #4682B4; }
+
+.stat-number {
+font-size: 2.4em;
+font-weight: bold;
+margin: 0.2em 0;
+}
+
+.stat-label {
+font-size: 1em;
+color: #666;
+text-transform: uppercase;
+letter-spacing: 1px;
+}
+
+table {
+border-collapse: collapse;
+width: 100%;
+margin: 1em 0;
+}
+
+th, td {
+border: 1px solid #ddd;
+padding: 8px;
+text-align: left;
+}
+
+th {
+background-color: #f2f2f2;
+}
+
+.finding-card {
+border: 1px solid #ddd;
+border-radius: 6px;
+padding: 12px;
+margin: 10px 0;
+}
+
+.finding-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.severity-badge {
+padding: 6px 12px;
+border-radius: 12px;
+font-size: 0.95em;
+text-transform: uppercase;
+color: #fff;
+font-weight: 700;
+}
+
+.severity-critical { background: #8B0000; }
+.severity-high { background: #DC143C; }
+.severity-medium { background: #FF8C00; color:#222 }
+.severity-low { background: #2E8B57; }
+.severity-info { background: #4682B4; }
+
+.footer {
+margin-top: 2em;
+font-size: 0.85em;
+color: #666;
+text-align: center;
+}
+
+.confidential-banner {
+margin-top: 1em;
+padding: 0.6em 1em;
+background: rgba(255,255,255,0.06);
+border-radius: 6px;
+text-align: center;
+font-weight: 700;
+letter-spacing: 1px;
+}
+
+.report-footer {
+margin-top: 2em;
+padding: 1em;
+border-top: 2px solid #0033A0;
+text-align: center;
+font-size: 0.9em;
+color: #666;
+}
+
+/* Disclaimer spacing */
+.disclaimer p { margin-bottom: 1.2em; }
+
+.badge {
+display: inline-block;
+padding: 4px 8px;
+border-radius: 12px;
+color: #fff;
+font-weight: 600;
+text-transform: uppercase;
+font-size: 0.8em;
+}
+
+.badge.critical { background: #8B0000; }
+.badge.high { background: #DC143C; }
+.badge.medium { background: #FF8C00; }
+.badge.low { background: #2E8B57; }
+.badge.info { background: #4682B4; }
+
+/* Classification table layout */
+.classification-table {
+table-layout: fixed;
+width: 100%;
+}
+.classification-table th:nth-child(1) { width: 20%; }
+.classification-table th:nth-child(2) { width: 20%; }
+.classification-table th:nth-child(3) { width: 60%; }
+
+/* Page end footer */
+.page-end-footer {
+background: #0033A0;
+color: white;
+padding: 12px 20px;
+text-align: center;
+margin-top: 1.5em;
+/* Make footer span full viewport width (bleed) */
+width: 100vw;
+position: relative;
+left: 50%;
+right: 50%;
+margin-left: -50vw;
+margin-right: -50vw;
+}
+
+/* Make cover-footer text stand out on cover */
+.cover-footer {
+text-align: center;
+padding: 0.8em 0 0;
+color: rgba(255,255,255,0.9);
+font-weight: 600;
+}
+
+/* Host & multi-target layout */
+.toc {
+margin: 1em 0;
+padding: 0.8em;
+background: #f7f9fc;
+border-left: 4px solid #0033A0;
+border-radius: 6px;
+}
+.host-section {
+border: 1px solid #e6e9ef;
+padding: 14px;
+border-radius: 8px;
+background: #fff;
+box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+margin-bottom: 1em;
+page-break-inside: avoid; /* keep host blocks together when printing */
+max-width: 100%;
+}
+.host-header {
+display:flex;
+justify-content:space-between;
+gap:1em;
+align-items:center;
+}
+.host-meta { color:#666; font-size:0.95em; }
+.host-badge { background:#eaf3ff; color:#0033A0; padding:6px 10px; border-radius:14px; font-weight:700; }
+.service-host-link { color:#0033A0; text-decoration:underline; }
+.finding-source { font-style:italic; color:#444; font-size:0.95em; margin-top:0.4em; }
+.finding-card { overflow-wrap: anywhere; }

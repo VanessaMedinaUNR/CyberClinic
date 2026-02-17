@@ -30,15 +30,19 @@ Thumbs.db
 
 # Application specific
 _internal
-build
+build/
+Cyberclinic.spec
 /Web/backend/app/reports/
 /Web/backend/app/results/
 *.log
 *.sqlite
 *.db
 VPN_config
-Web/backend/results
-Web/backend/reports
+Application/src/server.crt
+Web/backend/scans
+Web/backend/reports/*
+!Web/backend/reports/report_example.json
+Web/backend/certs
 server.crt
 
 # Development and testing
