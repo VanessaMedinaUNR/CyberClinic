@@ -26,6 +26,8 @@ function getCookie(name) {
                 </button>
                 <button className="btn-black" id = "newScan" onClick={() => (navigate("/newScan"))}>+ Configure New Scan 
                 </button>
+                <button className="btn-black" id = "codeChecker" onClick={() => (navigate("/codechecker"))}>+ Check Code
+                </button>
             </div>
             <div className="content-card">
                 <div className="card-title-row">
