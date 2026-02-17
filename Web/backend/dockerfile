@@ -10,6 +10,13 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     perl \
+    libxml-writer-perl \ 
+    libnet-ssleay-perl \
+    openssl \
+    libauthen-pam-perl \
+    libio-pty-perl \
+    libjson-perl \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 #install Nikto from GitHub since it's not in main repos
@@ -28,8 +35,11 @@ COPY . .
 #create non-root user for security
 RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /src
+#Give scan executor privleges to run nmap and nikto scans
+RUN echo "app ALL=(ALL) NOPASSWD: /bin/nmap" | tee -a /etc/sudoers
+RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/nikto" | tee -a /etc/sudoers
 USER app
 
-CMD python3 main.py
+ENTRYPOINT [ "python3",  "main.py" ]
 
 # Done by Morales-Marroquin and Austin Finch

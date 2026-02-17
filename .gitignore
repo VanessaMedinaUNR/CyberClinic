@@ -39,8 +39,10 @@ Cyberclinic.spec
 *.db
 VPN_config
 Application/src/server.crt
-Web/backend/results
-Web/backend/reports
+Web/backend/scans
+Web/backend/reports/*
+!Web/backend/reports/report_example.json
+Web/backend/certs
 server.crt
 
 # Development and testing

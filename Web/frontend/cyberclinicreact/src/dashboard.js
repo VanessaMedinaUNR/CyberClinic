@@ -32,7 +32,7 @@ function getCookie(name) {
                 <div className="card-title-row">
                     <h2>Active scan & Reports</h2>
                 </div>
-                <button className="btn-black" id = "newScan" onClick={() => (navigate("/report", {state: {id: '1001'}}))}>View Report
+                <button className="btn-black" id = "viewReport" onClick={() => (navigate("/report", {state: {id: 'example'}}))}>View Report
                 </button>
                 <table id="scans-table">
                     <thead>

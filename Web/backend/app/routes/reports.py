@@ -432,7 +432,7 @@ def generate_report(scan_id):
         logger.error(f"Report generation failed for scan {scan_id}: {e}")
         return jsonify({'error': 'Report generation failed'}), 500
 
-@reports_bp.route('/<int:report_id>', methods=["GET"])
+@reports_bp.route('/<report_id>', methods=["GET"])
 #@jwt_required()
 def fetch_report(report_id):
     with open (f'reports/report_{report_id}.json') as file:

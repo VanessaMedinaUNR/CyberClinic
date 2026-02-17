@@ -85,6 +85,14 @@ def submit_scan():
         #get user_id from session (placeholder - will integrate with auth later)
         user_id = data.get('user_id', 1) 
         
+        report = db.execute_single(
+            """INSERT INTO report (client_id) VALUES (%s) RETURNING report_id""",
+            (client_id,)
+        )
+        if not report:
+            return jsonify({'error': f'Failed to add report'}), 500
+        report_id = report['report_id']
+
         #check if target already exists in network_targets table  
         target_type = None
         existing_target = db.execute_single(
@@ -120,9 +128,9 @@ def submit_scan():
             }
             
             nmap_scan_job_id = db.execute_single(
-                """INSERT INTO scan_jobs (client_id, subnet_name, scan_type, scan_config, status) 
-                VALUES (%s, %s, %s, %s, 'pending') RETURNING id""",
-                (client_id, target_name, 'nmap', str(nmap_scan_config))
+                """INSERT INTO scan_jobs (client_id, report_id, subnet_name, scan_type, scan_config, status) 
+                VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id""",
+                (client_id, report_id, target_name, 'nmap', str(nmap_scan_config))
             )['id']
             scan_job_ids.append(nmap_scan_job_id)
 
@@ -133,9 +141,9 @@ def submit_scan():
             }
             
             nikto_scan_job_id = db.execute_single(
-                """INSERT INTO scan_jobs (client_id, subnet_name, scan_type, scan_config, status) 
-                VALUES (%s, %s, %s, %s, 'pending') RETURNING id""",
-                (client_id, target_name, 'nikto', str(nikto_scan_config))
+                """INSERT INTO scan_jobs (client_id, report_id, subnet_name, scan_type, scan_config, status) 
+                VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id""",
+                (client_id, report_id, target_name, 'nikto', str(nikto_scan_config))
             )['id']
             scan_job_ids.append(nikto_scan_job_id)
         else:
@@ -146,19 +154,18 @@ def submit_scan():
             }
             
             scan_job_id = db.execute_single(
-                """INSERT INTO scan_jobs (client_id, subnet_name, scan_type, scan_config, status) 
-                VALUES (%s, %s, %s, %s, 'pending') RETURNING id""",
-                (client_id, target_name, scan_type, str(scan_config))
+                """INSERT INTO scan_jobs (client_id, report_id, subnet_name, scan_type, scan_config, status) 
+                VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id""",
+                (client_id, report_id, target_name, scan_type, str(scan_config))
             )['id']
             scan_job_ids.append(scan_job_id)
         
         for job_id in scan_job_ids:
             logger.info(f"Created scan job: {job_id} for target: {target_name}")
+
         
         return jsonify({
             'success': True,
-            'scan_job_ids': scan_job_ids,
-            'target_id': target_name,
             'status': 'pending',
             'message': 'Scan request submitted successfully'
         }), 201

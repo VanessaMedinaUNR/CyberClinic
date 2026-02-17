@@ -478,8 +478,8 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                                 ))}
 
                                 {/* Render global findings if present (primarily from web scans like Nikto) */}
-                                {'nikto' in reportData.scan_types_used ? <>
-                                    {Object.keys(reportData.per_host_findings).filter(([key]) => key === 'global').length() > 0 && <>
+                                {reportData.scan_types_used.includes('nikto') ? <>
+                                    {Object.keys(reportData.per_host_findings).filter(([key]) => key === 'global').length > 0 && <>
                                         <h2>Global / Shared Findings</h2>
                                         <p style={{fontStyle: 'italic', color: '#444'}}>These findings are at the site or application level and may apply across multiple hosts listed above.</p>
                                         {Object.keys(reportData.per_host_findings).filter(([key]) => key === 'global').map((finding) => (

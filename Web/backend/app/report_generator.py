@@ -26,7 +26,8 @@ except Exception:
 class CustomReportGenerator:
     #generate custom json/html/pdf security assessment reports
 
-    def __init__(self):
+    def __init__(self, reports_dir="/src/reports"):
+        self.reports_dir = reports_dir
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
         self.env = Environment(
             loader=FileSystemLoader(template_dir),
@@ -37,7 +38,6 @@ class CustomReportGenerator:
         self.nikto_parser = NiktoParser()
         self.severity_mapper = SeverityMapper()
 
-        self.reports_dir = os.path.join(os.path.dirname(__file__), '..', 'reports')
         os.makedirs(self.reports_dir, exist_ok=True)
 
         #friendly metadata for generated reports
@@ -147,7 +147,7 @@ class CustomReportGenerator:
 
             #always save a JSON copy of the report for frontend consumption (named report_<id>.json)
             try:
-                json_path = self._save_json_report(report_data, scan_data.get('scan_id'))
+                json_path = self._save_json_report(report_data, scan_data.get('report_id'))
                 logger.info(f"JSON report saved for frontend: {json_path}")
             except Exception:
                 logger.exception('Failed to save JSON report')
@@ -157,7 +157,7 @@ class CustomReportGenerator:
                 return json_path
 
             if output_format == 'csv':
-                csv_path = self._save_csv_report(report_data, scan_data.get('scan_id'))
+                csv_path = self._save_csv_report(report_data, scan_data.get('report_id'))
                 logger.info(f"Report generated successfully: {csv_path}")
                 return csv_path
 
@@ -968,19 +968,20 @@ class CustomReportGenerator:
         logger.info(f"HTML report saved: {filepath}")
         return filepath
 
-    def _save_json_report(self, report_data: Dict[str, Any], scan_id: int) -> str:
+
+    def _save_json_report(self, report_data: Dict[str, Any], report_id: str) -> str:
         #use consistent frontend friendly name: report_<id>.json
-        filename = f"report_{scan_id}.json"
+        filename = f"report_{report_id}.json"
         filepath = os.path.join(self.reports_dir, filename)
 
         with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(report_data, f, indent=2, ensure_ascii=True)
+            json.dump(report_data, f, indent=2, ensure_ascii=True, cls=DateTimeEncoder)
 
         logger.info(f"JSON report saved: {filepath}")
         return filepath
 
-    def _save_csv_report(self, report_data: Dict[str, Any], scan_id: int) -> str:
-        filename = f"{scan_id}.csv"
+    def _save_csv_report(self, report_data: Dict[str, Any], report_id: str) -> str:
+        filename = f"{report_id}.csv"
         filepath = os.path.join(self.reports_dir, filename)
 
         fieldnames = [
@@ -1175,5 +1176,10 @@ class CustomReportGenerator:
                         if n not in host_map[str(ip_val)]:
                             host_map[str(ip_val)].append(n)
         return host_map
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
-# Done by Manuel Morales-Marroquin
+# Done by Manuel Morales-Marroquin and Austin Finch

@@ -1,18 +1,19 @@
 #Cyber Clinic backend - Main entry point
-
-from flask import Flask, jsonify, request
-from flask_jwt_extended import JWTManager
-from flask_cors import CORS
-import os
-import atexit
-import logging
-from app.database import get_db, block_jwt
-from app.routes.auth import auth_bp
-from app.routes.scans import scans_bp
-from app.routes.reports import reports_bp
-from app.routes.standalone import standalone_bp
+from app.workers.report_worker import start_report_worker, stop_report_worker
+from app.workers.scan_worker import start_scan_worker, stop_scan_worker
 from app.routes.target_management import targets_bp
-from app.scan_worker import start_scan_worker, stop_scan_worker
+from app.routes.standalone import standalone_bp
+from app.database import get_db, block_jwt
+from app.routes.reports import reports_bp
+from flask_jwt_extended import JWTManager
+from app.routes.scans import scans_bp
+from app.routes.auth import auth_bp
+from flask import Flask, jsonify
+from flask_cors import CORS
+import logging
+import atexit
+import os
+
 
 def create_app():
     #this creates our main flask web application
@@ -121,9 +122,14 @@ if __name__ == '__main__':
     
     #start the background scan worker
     print("Starting background scan worker...")
-    start_scan_worker()
+    start_scan_worker(os.environ.get('SCAN_DIR'))
     #register cleanup function to stop worker on exit
     atexit.register(stop_scan_worker)
+    #start the background report worker
+    print("Starting background report worker...")
+    start_report_worker(os.environ.get('REPORT_DIR'))
+    #register cleanup function to stop worker on exit
+    atexit.register(stop_report_worker)
     #server settings for docker containers
     host = os.environ.get('FLASK_SERVER')
     port = os.environ.get('FLASK_PORT')

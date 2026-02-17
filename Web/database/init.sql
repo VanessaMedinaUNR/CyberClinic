@@ -24,6 +24,7 @@ CREATE TABLE client
   client_name    varchar     NOT NULL,
   scan_frequency int         NOT NULL DEFAULT -1,
   last_scheduled date        NOT NULL DEFAULT '4713-01-01',
+---default_report_encryption_key  varchar     NOT NULL,
   PRIMARY KEY (client_id)
 );
 
@@ -42,7 +43,7 @@ CREATE TABLE network
   subnet_netmask    inet        NOT NULL,
   public_facing     bool        NOT NULL,
   verified          bool        NOT NULL DEFAULT FALSE,
-  verification_date timestamp  ,
+  verification_date timestamp   ,
   creation_date     timestamp   DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (client_id, subnet_name)
 );
@@ -59,8 +60,10 @@ CREATE TABLE report
 (
   report_id       varchar(36) DEFAULT gen_random_uuid(),
   client_id       varchar(36) NOT NULL,
-  report_time     timestamp   NOT NULL,
-  encryption_key  varchar     NOT NULL
+  ---encryption_key  varchar  ,
+  status          varchar(20) DEFAULT 'pending',
+  creation_time   timestamp   DEFAULT CURRENT_TIMESTAMP,
+  completion_time timestamp   ,
   PRIMARY KEY (report_id)
 );
 
@@ -68,6 +71,7 @@ CREATE TABLE scan_jobs
 (
   id            serial       NOT NULL,
   client_id     varchar(36)  NOT NULL,
+  report_id     varchar(36)  NOT NULL,
   subnet_name   varchar      NOT NULL,
   scan_type     varchar(50)  NOT NULL,
   scan_config   text        ,
@@ -134,6 +138,11 @@ ALTER TABLE scan_jobs
   ADD CONSTRAINT FK_client_TO_scan_jobs
     FOREIGN KEY (client_id)
     REFERENCES client (client_id);
+
+ALTER TABLE scan_jobs
+  ADD CONSTRAINT FK_report_TO_scan_jobs
+    FOREIGN KEY (report_id)
+    REFERENCES report (report_id);
 
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status);
 CREATE INDEX IF NOT EXISTS idx_scan_jobs_client_id ON scan_jobs(client_id);

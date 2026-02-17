@@ -17,8 +17,7 @@ services:
       context: frontend
       dockerfile: Dockerfile
     depends_on:
-      ${BACKEND_SERVER:-backend}:
-        condition: service_healthy
+      - ${BACKEND_SERVER}
     networks:
       - frontend
     command: npm start
@@ -37,9 +36,11 @@ services:
     #added working_dir to work on Mac environment, otherwise comment out
     working_dir: /src
     environment:
+      - SCAN_DIR=${SCAN_DIR:-/src/scans}
+      - REPORT_DIR=${REPORT_DIR:-/src/reports}
     #Web-related Variables
       - FLASK_SERVER=0.0.0.0
-      - FLASK_PORT=${BACKEND_PORT}
+      - FLASK_PORT=${BACKEND_PORT:-5000}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
@@ -58,7 +59,7 @@ services:
       - ${VPN_PORT}:${VPN_PORT}
       - ${BACKEND_PORT}:${BACKEND_PORT}
     #changed from python3 main.py to python3 /src/main.py to work on Mac environment, otherwise revert
-    command: python3 /src/main.py
+    command: # ['']
     depends_on:
       app:
         condition: service_healthy
@@ -83,9 +84,11 @@ services:
       context: backend
       target: builder
     environment:
+      - SCAN_DIR=${SCAN_DIR-/src/scans}
+      - REPORT_DIR=${REPORT_DIR:-/src/reports}
     #Web-related Variables
       - FLASK_SERVER=0.0.0.0
-      - FLASK_PORT=${BACKEND_PORT}
+      - FLASK_PORT=${BACKEND_PORT:-5000}
       - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
@@ -105,17 +108,18 @@ services:
       - ./backend:/src
     working_dir: /src
     ports:
-      - ${BACKEND_PORT}:${BACKEND_PORT}
+      - ${BACKEND_PORT:-5000}:${BACKEND_PORT:-5000}
     expose:
-      - ${BACKEND_PORT}
-    command: sleep infinity
+      - ${BACKEND_PORT:-5000}
+    command: # ['']
     #removed ports: - ${BACKEND_PORT}:${BACKEND_PORT} & - ${VPN_PORT}:${VPN_PORT}
     #to work on Mac environment, otherwise revert
     networks:
       - backend
       - frontend
     depends_on:
-      - database
+      database:
+        condition: service_healthy
 
   database:
     container_name: cyberclinic-database

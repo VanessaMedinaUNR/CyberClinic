@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class ScanExecutor:
     #handles execution of security scanning tools (Nmap, Nikto)
-    def __init__(self, results_dir="/src/results"):
+    def __init__(self, results_dir="/src/scans"):
         self.results_dir = results_dir
         self.ensure_results_directory()
     
@@ -24,6 +24,7 @@ class ScanExecutor:
     def execute_scan(self, scan_job_id: int, scan_type: str, target_value: str, target_type: str, scan_options: Dict = None) -> Dict[str, Any]:
         #execute a scan based on the scan type and target
         logger.info(f"Starting {scan_type} scan for job {scan_job_id} against {target_value}")
+        self.ensure_results_directory()
         
         try:
             st = scan_type.lower()
@@ -48,9 +49,9 @@ class ScanExecutor:
     def _execute_nmap_scan(self, scan_job_id: int, target: str, target_type: str, options: Dict) -> Dict[str, Any]:
         #execute Nmap scan with appropriate options
         #base Nmap command
-        cmd = ['nmap']
+        cmd = ['sudo', 'nmap']
         #add common options
-        cmd.extend(['-v', '-sS', '-sV', '--script=default,vuln', '--reason', '--open'])
+        cmd.extend(['-v', '-sS', '-sV', '--script=default,safe', '--reason', '--open'])
         if options.get('os_detect', True):
             cmd.append('-O')
         #output formats
@@ -80,7 +81,7 @@ class ScanExecutor:
             
         #add target
         cmd.append(target)
-        
+
         logger.info(f"Executing Nmap command: {' '.join(cmd)}")
         
         try:
@@ -94,7 +95,7 @@ class ScanExecutor:
                 cwd=self.results_dir
             )
             end_time = datetime.now()
-            
+
             #parse results
             scan_results = self._parse_nmap_results(output_base, result)
             
@@ -133,18 +134,18 @@ class ScanExecutor:
         if not target.startswith(('http://', 'https://')):
             target = f"http://{target}"
         #base Nikto command
-        cmd = ['nikto']
+        cmd = ['sudo', 'nikto']
         #output file
         suffix = options.get('output_suffix') if isinstance(options, dict) else None
         if suffix:
-            output_file = f"{self.results_dir}/nikto_scan_{scan_job_id}_{suffix}.json"
+            output_file = f"{self.results_dir}/nikto_scan_{scan_job_id}_{suffix}"
         else:
-            output_file = f"{self.results_dir}/nikto_scan_{scan_job_id}.json"
+            output_file = f"{self.results_dir}/nikto_scan_{scan_job_id}"
         cmd.extend(['-output', output_file])
         #target
         cmd.extend(['-h', target])
         #additional options
-        cmd.extend(['-Format', 'json', '-Tuning', 'x', '-C', 'all', '-usecookies'])
+        cmd.extend(['-Format', 'json', '-Tuning', 'x', '-C', 'all', '-Pause', '1'])
         
         #custom options from scan_options
         #note: dont use -p (port) option with full URIs as Nikto doesn't allow it
@@ -154,7 +155,7 @@ class ScanExecutor:
         if options.get('timeout'):
             cmd.extend(['-timeout', str(options['timeout'])])
         else:
-            cmd.extend(['-timeout', '10'])
+            cmd.extend(['-timeout', '30'])
             
         logger.info(f"Executing Nikto command: {' '.join(cmd)}")
         
@@ -169,6 +170,7 @@ class ScanExecutor:
                 cwd=self.results_dir
             )
             end_time = datetime.now()
+            
             #parse results
             scan_results = self._parse_nikto_results(output_file, result)
             
