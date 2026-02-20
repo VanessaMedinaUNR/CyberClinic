@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Toolbar from './Components/toolbar';
-import './CodeChecker.css';
+import './codechecker.css';
+import ReactMarkdown from "react-markdown";
 
 function CodeChecker() {
 
@@ -9,7 +10,7 @@ function CodeChecker() {
 
     const handleScan = async () => {
         try {
-            const response = await fetch("http://localhost:5000/codescan", {
+            const response = await fetch("http://localhost:4000/codescan", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -33,20 +34,27 @@ function CodeChecker() {
     }
 
     return (
-        <div id="code_box">
-            <Toolbar/>
-            <h1>Code Checker</h1>
-            <h3>Please input your code to see what security vulnerabilities are found and how they could be improved</h3>
-            <textarea placeholder="Paste your code here..." value = { code } onChange={(e) => setCode(e.target.value)}/>
-            <button onClick={handleScan}>Scan Code</button>
+        <div className="codechecker-wrapper">
+            <div id="code_box">
+                <Toolbar/>
+                <h1>Code Checker</h1>
+                <h3>Please input your code to see what security vulnerabilities are found and how they could be improved</h3>
+                <textarea placeholder="Paste your code here..." value = { code } onChange={(e) => setCode(e.target.value)}/>
+                <button onClick={handleScan}>Scan Code</button>
 
-            {result && (
-                <div className="result_box">
-                    <h4>Analysis Result:</h4>
-                    <pre>{result}</pre>
-                </div>
-            )}
-        </div>
+                {result && (
+                    <div className="result_box">
+                        <h4>Analysis Result:</h4>
+                        <pre>
+                            <ReactMarkdown>
+                                {result}
+                            </ReactMarkdown>
+                               
+                        </pre>
+                    </div>
+                )}
+            </div>
+        </div>    
     );
 }
 export default CodeChecker;

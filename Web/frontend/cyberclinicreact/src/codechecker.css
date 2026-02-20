@@ -1,13 +1,10 @@
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f3f5f7;
+.codechecker-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
+    background: #f3f5f7;
 }
-
 
 #code_box {
     background: white;
@@ -47,7 +44,7 @@ textarea {
 
 
 button {
-    width: 100%;
+    width: auto;
     padding: 12px;
     margin-top: 15px;
     border: none;
