@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class User_Auth(QObject):
     user_verified = pyqtSignal(QVariant, arguments=['result'])  # Define a signal to send data back
     
-    def __init__(self, form, email, passwd):
+    def __init__(self, form: Auth_Form, email, passwd):
         super().__init__()
         self.form = form
         self.email = email
@@ -32,7 +32,7 @@ class User_Auth(QObject):
         self.vpn_crt = form.vpn_crt
 
 
-    def start(self, auth_tunnel):
+    def start(self, auth_tunnel: TunnelHandler):
 
         logger.debug(f"hash: {self.apphash}\n")
         logger.debug(f"{self.email}: {self.passwd}")
@@ -60,7 +60,7 @@ class User_Auth(QObject):
                     self.user_verified.emit({"success": True, "auth_tunnel": auth_tunnel})  
                 case _:
                     auth_tunnel.close_tunnel()
-                    raise ValueError
+                    raise ValueError("Unexpected response from server during authentication.")
         except TimeoutError as e:
             logger.error(f'{e}')
             self.form.l.setText("Connection error, please try again later")
@@ -112,15 +112,15 @@ class Auth_Form(QDialog):
 
     def parse_user_auth(self, results):
         user_verified = results['success']
-        self.auth_tunnel = results['auth_tunnel']
+        auth_tunnel: TunnelHandler = results['auth_tunnel']
         if not user_verified:
-            self.auth_tunnel.close_tunnel()
+            auth_tunnel.close_tunnel()
             return
 
         time.sleep(1)
 
         try:
-            data = self.auth_tunnel.conn.recv(1024)
+            data = auth_tunnel.conn.recv(1024)
             logger.debug(data)
             names = data.decode().strip().split('|')
             response = names.pop(0)
@@ -134,7 +134,7 @@ class Auth_Form(QDialog):
                 passwd = self.p.text()
                 self.p.clear()
                 self.hide()
-                validate_subnet = Subnet_Form(self, names, self.auth_tunnel, passwd)
+                validate_subnet = Subnet_Form(self, names, auth_tunnel, passwd)
                 validate_subnet.show()
 
         except Exception as e:

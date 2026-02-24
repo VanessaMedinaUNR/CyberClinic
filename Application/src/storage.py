@@ -20,13 +20,13 @@ class StorageHandler:
     def fetch(self, relative_path):
         file = os.path.join(self.base_path, relative_path)
         if not os.path.exists(file):
-            raise FileNotFoundError
+            raise FileNotFoundError(f"Internal file not found at {relative_path}")
         return file
     
     def fetch_ext(self, relative_path):
         file = os.path.join(self.ext_path, relative_path)
         if not os.path.exists(file):
-            raise FileNotFoundError
+            raise FileNotFoundError(f"External file not found at {file}")
         return file
     
     def save_ext(self, relative_path, data):

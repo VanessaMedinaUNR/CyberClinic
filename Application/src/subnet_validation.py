@@ -82,7 +82,7 @@ class Subnet_Form(QDialog):
                 case _:
                     self.go_back()
         except Exception as e:
-            logg(f'{e}')
+            logger.error(f'{e}')
         
     def cleanup(self, results):
         if not results['success']:

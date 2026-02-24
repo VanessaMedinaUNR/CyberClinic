@@ -32,6 +32,7 @@ def is_admin():
         return os.getuid() == 0  # Unix: check if root
     except AttributeError:
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
+
 class Alert(QDialog):
     def __init__(self, app, message):
         super().__init__()
@@ -84,9 +85,8 @@ def authenticate(app_hash, app_storage: StorageHandler, server_host, auth_port, 
                 authed_tunnel = TunnelHandler(authed_crt, server_host, authed_port)
                 return authed_tunnel, subnet_name
             else:
-                raise ConnectionError
+                raise ConnectionError("Pre-authentication failed, launching login form.")
     except Exception as e:
-        logger.error(e)
         raise e
 
 

@@ -1,11 +1,6 @@
 name: CyberClinic Standalone Application
 
 services:
-
-# Windows build can only be run on Windows host
-#command: "cd src"
-#command: "pyinstaller --distpath ..\\dist\\windows -n CyberClinic --noconfirm --noconsole --onefile --add-data config\*;config --add-data tools\nmap-7.98-setup.exe;tools --add-data tools\nikto-main/*;tools/nikto-main client_application.py"
-
   
   build_linux:
     image: python:3.14

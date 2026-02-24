@@ -14,7 +14,7 @@ class TunnelHandler:
         self.crt = crt
         self.host = host
         self.port = port
-        self.conn = None
+        self.conn: ssl.SSLSocket | None = None
         self.reconnect_tunnel()
     
     def start_tunnel(self, reconnect=0):
@@ -34,7 +34,9 @@ class TunnelHandler:
         except Exception as e:
             reconnect = 6
         finally:
-            return reconnect
+            if reconnect == 6:
+                logger.error("Failed to establish tunnel after multiple attempts.")
+                raise TimeoutError("Failed to establish tunnel after multiple attempts.")
         
     def close_tunnel(self):
         try:
@@ -48,5 +50,5 @@ class TunnelHandler:
         reconnect = self.start_tunnel()
         while reconnect > 0:
             if reconnect == 6:
-                raise TimeoutError
+                raise TimeoutError("Failed to establish tunnel after multiple attempts.")
             reconnect = self.start_tunnel(reconnect)

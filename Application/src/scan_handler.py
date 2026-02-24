@@ -46,14 +46,19 @@ def execute_scans(scans: dict[str, dict[str]], storage: StorageHandler):
             if storage.save_ext(of, scanner.get_nmap_last_output().decode()):
                 return of
             else:
-                raise FileNotFoundError
+                raise FileNotFoundError(f"Failed to save nmap scan report to {of}")
 
 def check_tools():
+    tools = {}
     try:
         scanner = nmap.PortScanner()
-        return {'nmap': True}
+        tools['nmap']= True
+        tools['nikto'] = True
     except nmap.PortScannerError:
-        return {'nmap': False}
+        tools['nmap'] = False
+    except FileNotFoundError:
+        tools['nikto'] = False
+    return tools
 
 def send_scans(authed_tunnel: TunnelHandler, scans: dict[str, dict[str]]):
     for scan in scans:
