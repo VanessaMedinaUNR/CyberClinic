@@ -58,3 +58,10 @@ button {
 button:hover {
     background: #004d99;
 }
+
+pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+

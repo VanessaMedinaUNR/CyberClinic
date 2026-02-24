@@ -46,10 +46,7 @@ function CodeChecker() {
                     <div className="result_box">
                         <h4>Analysis Result:</h4>
                         <pre>
-                            <ReactMarkdown>
-                                {result}
-                            </ReactMarkdown>
-                               
+                            {result}      
                         </pre>
                     </div>
                 )}
