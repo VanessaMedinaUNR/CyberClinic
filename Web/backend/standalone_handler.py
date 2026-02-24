@@ -5,6 +5,7 @@ from cryptography.x509.oid import NameOID
 from app.database import get_db
 from cryptography import x509
 from threading import Thread
+import ipaddress
 import base64
 import logging
 import socket
@@ -58,7 +59,7 @@ class StandaloneHandler:
             try:
                 conn = context.wrap_socket(newsocket, server_side=True)
                 try:
-                    pre_authed, client_key = self.authenticate_standalone_client(
+                    pre_authed, identity = self.authenticate_standalone_client(
                         conn=conn,
                         fromaddr=fromaddr,
                     )
@@ -66,7 +67,7 @@ class StandaloneHandler:
                     if pre_authed:
                         conn.send(b'AUTH_SUCCESS')
                         logger.info("Standalone Client Authenticated")
-                        authed_tunnel = Thread(target=self.start_authed_tunnel, args=(authed_socket, client_key))
+                        authed_tunnel = Thread(target=self.start_authed_tunnel, args=(authed_socket, identity))
                         authed_tunnel.start()
                     else:
                         conn.send(b'AUTH_FAIL')
@@ -85,7 +86,7 @@ class StandaloneHandler:
                 logger.error(f"Auth tunnel error: {e}")
 
 
-    def authenticate_standalone_client(self, conn: ssl.SSLSocket, fromaddr) -> tuple[bool, bytes]:
+    def authenticate_standalone_client(self, conn: ssl.SSLSocket, fromaddr) -> tuple[bool, tuple[str, bytes]]:
         try:
             db = get_db()
             data = conn.recv(1024)
@@ -131,26 +132,25 @@ class StandaloneHandler:
                                     bundle = public_key + ca
                                     conn.sendall(bundle)
                                     msg = conn.recv(1024).decode()
-                                    print(msg)
+                                    logger.info(msg)
                                     if not msg == 'SAVED':
                                         self.clear_subnet_key(subnet, client)
-                                        return (False, b'')
+                                        return (False, ())
                                     return (False, public_key)
-                                return (False, b'')
+                                return (False, ())
                             else:
-                                return (False, b'')
+                                return (False, ())
                         else:
-                            return (False, b'')
+                            return (False, ())
                 else:
                     #send failure response
                     conn.sendall(f"AUTH_FAILED|{message}".encode())
                     logger.warning(f"Tunnel authentication failed from {fromaddr}: {message}")
-                    return (False, b'')
+                    return (False, ())
             #parse format: pre_authed:hash:subnet_name:encrypted_id
             elif len(parts) == 4:
                 pre_authed, app_hash, subnet_name, encrypted_id = parts
                 if pre_authed == 'PRE_AUTHED':
-                    print(base64.b64decode(encrypted_id))
                     return self.authenticate_subnet(
                         app_hash=app_hash,
                         subnet_name=subnet_name,
@@ -158,7 +158,7 @@ class StandaloneHandler:
                     )
             conn.sendall(f"AUTH_FAILED|Invalid authentication format".encode())
             logger.warning(f"Tunnel authentication failed from {fromaddr}")
-            return (False, b'')
+            return (False, ())
         except Exception as e:
             try:
                 conn.sendall(b"AUTH_FAILED|Server error")
@@ -187,7 +187,6 @@ class StandaloneHandler:
                     label=subnet_name.encode()
                 )
             ).decode()
-            logger.info(client_id)
             
             try:
                 db = get_db()
@@ -199,8 +198,8 @@ class StandaloneHandler:
                 if not subnet == None:
                     public_key: str = subnet['public_key']
                     logger.info(f'{client_id}: {subnet_name} Authenticated')
-                    return (True, public_key.rstrip())
-                return (False, b'')
+                    return (True, (client_id, public_key.rstrip()))
+                return (False, ())
             except Exception as e:
                 logger.error('Database Error')
                 raise e
@@ -380,13 +379,13 @@ class StandaloneHandler:
             return None
 
 
-    def start_authed_tunnel(self, authed_socket: socket.socket, client_key: bytes):
+    def start_authed_tunnel(self, authed_socket: socket.socket, identity: tuple[str, bytes]):
         logger.info(f'loading {self.authed_cert}')
         logger.info(f'loading {self.authed_key}')
 
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(certfile=self.authed_cert, keyfile=self.authed_key, password=self.authed_pass)
-        context.load_verify_locations(cadata=client_key)
+        context.load_verify_locations(cadata=identity[1])
         logger.info(f"Authed tunnel listening on {authed_socket.getsockname()[0]}:{authed_socket.getsockname()[1]}")
         while True:
             newsocket, fromaddr = authed_socket.accept()
@@ -394,7 +393,7 @@ class StandaloneHandler:
             try:
                 conn = context.wrap_socket(newsocket, server_side=True)
                 try:
-                    self.parse_command(conn)
+                    self.parse_command(conn, identity[0])
                 except Exception as e:
                     logger.error(f"Authed tunnel error: {e}")
                     try:
@@ -411,9 +410,71 @@ class StandaloneHandler:
                 logger.error(f"Authed tunnel error: {e}")
 
 
-    def parse_command(self, conn: ssl.SSLSocket):
-        logger.info('Authed Tunnel Success')
+    def parse_command(self, conn: ssl.SSLSocket, client_id):
+        data = conn.recv(1024).decode()
+        response = data.split("|")
+        if response:
+            logger.info(response)
+            command = response.pop(0)
+            match command:
+                case "FETCH_SCANS":
+                    subnet_name = response.pop(0)
+                    self.fetch_scans(conn, subnet_name, client_id)
+                case "CHECK":
+                    conn.send(b'TRUE')
+                case _:
+                    raise ValueError("Invalid command")
+    
 
+    def fetch_scans(self, conn, subnet_name, client_id):
+        try:
+            db = get_db()
+            pending_scans = db.execute_query(
+                """SELECT sj.*, nt.subnet_name, nt.subnet_ip, nt.subnet_netmask, nt.public_facing
+                    FROM scan_jobs sj
+                    LEFT JOIN network nt ON sj.subnet_name = nt.subnet_name AND sj.client_id = nt.client_id
+                    WHERE sj.status = 'pending' AND nt.subnet_name = %s AND nt.client_id = %s
+                    ORDER BY sj.created_at ASC
+                    """,
+                (subnet_name, client_id)
+            )
+            if pending_scans:
+                target_value = ""
+                domain = db.execute_single(
+                    """SELECT * FROM network NATURAL JOIN network_domains WHERE subnet_name = %s""",
+                    (subnet_name,)
+                )
+                if domain:
+                    target_value = domain['domain']
+
+                scan_list = {}
+                for scan in pending_scans:
+                    if scan['subnet_netmask'] == "255.255.255.255":
+                        target_value = scan['subnet_ip']
+                    else:
+                        subnet = ipaddress.ip_network(scan['subnet_ip'])
+                        subnet.netmask = scan['subnet_netmask']
+                        target_value = subnet.compressed 
+                    
+                    logger.info(target_value)
+                    scan_list[scan['id']] = {
+                        "report_id": scan['report_id'],
+                        "target_value": target_value,
+                        "scan_type": scan['scan_type']
+                    }
+                response = f'PENDING_SCANS|{scan_list}'
+                logger.info(response)
+                conn.send(response.encode())
+            else:
+                conn.send(b'NONE_PENDING')
+        except Exception as e:
+            try:
+                conn.send(b'SERVER_ERROR')
+            except Exception:
+                pass
+            finally:
+                raise e
+            
 
     def start_handler(self):
         #use the database manager for connections

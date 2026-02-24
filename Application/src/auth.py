@@ -1,12 +1,11 @@
-import os
-import sys
-import time
-import platform
-import subprocess
-from pathlib import Path
+#Cyber Clinic Standalone Application - User Authenication Form
+#CS 426 Team 13 - Spring 2026
+
+from PyQt6.QtCore import pyqtSignal, QObject, QVariant
 from subnet_validation import Subnet_Form
 from tunnel import TunnelHandler
-from PyQt6.QtCore import pyqtSignal, QObject, QVariant
+import logging
+import time
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -16,6 +15,8 @@ from PyQt6.QtWidgets import (
     QPushButton
 )
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class User_Auth(QObject):
     user_verified = pyqtSignal(QVariant, arguments=['result'])  # Define a signal to send data back
@@ -33,26 +34,26 @@ class User_Auth(QObject):
 
     def start(self, auth_tunnel):
 
-        print(f"hash: {self.apphash}\n")
-        print(f"{self.email}: {self.passwd}")
+        logger.debug(f"hash: {self.apphash}\n")
+        logger.debug(f"{self.email}: {self.passwd}")
         send = f'{self.apphash}|{self.email}|{self.passwd}'
 
         try:
             auth_tunnel.conn.send(send.encode())
             data = auth_tunnel.conn.recv(1024)
-            print(data)
+            logger.debug(data)
             response = data.decode().strip().split('|')
             success = response.pop(0)
             match success:
                 case "AUTH_FAILED":
                     message = response.pop(0)
-                    print(f"Received from server: {success}: {message}")
+                    logger.debug(f"Received from server: {success}: {message}")
                     self.form.l.setText(message)
                     self.form.app.processEvents()
                     self.form.p.clear()
                     self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel}) # Emit the result when done
                 case "AUTH_SUCCESS":
-                    print(f"Received from server: {success}")
+                    logger.debug(f"Received from server: {success}")
 
                     self.form.l.setText("User verification success!")
                     self.form.app.processEvents()
@@ -61,13 +62,13 @@ class User_Auth(QObject):
                     auth_tunnel.close_tunnel()
                     raise ValueError
         except TimeoutError as e:
-            print(f'{e}')
+            logger.error(f'{e}')
             self.form.l.setText("Connection error, please try again later")
             self.form.app.processEvents()
             time.sleep(5)
             self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel})
         except Exception as e:
-            print(f'{e}')
+            logger.error(f'{e}')
             self.form.l.setText("User verification failed! If you continue to recieve this error, please contact our support team: ")
             self.form.app.processEvents()
             time.sleep(5)
@@ -120,7 +121,7 @@ class Auth_Form(QDialog):
 
         try:
             data = self.auth_tunnel.conn.recv(1024)
-            print(data)
+            logger.debug(data)
             names = data.decode().strip().split('|')
             response = names.pop(0)
             if response == "SUBNET_INVALID":
@@ -137,7 +138,7 @@ class Auth_Form(QDialog):
                 validate_subnet.show()
 
         except Exception as e:
-            print(f'{e}')
+            logger.error(f'{e}')
             self.e.clear()
             self.p.clear()
 
@@ -153,10 +154,10 @@ class Auth_Form(QDialog):
             auth_tunnel = TunnelHandler(crt=self.vpn_crt, host=self.vpn_host, port=self.vpn_port)
             self.auth.start(auth_tunnel)
         except TimeoutError as e:
-            print(f'{e}')
+            logger.error(f'{e}')
             self.l.setText("Connection error, please try again later")
             time.sleep(5)
         except Exception as e:
-            print(f'{e}')
+            logger.error(f'{e}')
             self.l.setText("Unexpected error. Please contact support: [email].")
         

@@ -32,13 +32,11 @@ Thumbs.db
 _internal
 build/
 Cyberclinic.spec
-/Web/backend/app/reports/
-/Web/backend/app/results/
 *.log
 *.sqlite
 *.db
 Web/backend/certs/*
-Web/backend/results
+Web/backend/scans
 Web/backend/reports
 !Web/backend/certs/example.*
 

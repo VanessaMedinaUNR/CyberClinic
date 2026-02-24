@@ -1,2 +1,3 @@
-config/*
-!config/example.*
+src/config/*
+!src/config/example.*
+src/tools

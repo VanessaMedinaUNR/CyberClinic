@@ -1,14 +1,14 @@
-import os
-import sys
-import time
-import socket
-import keyring
-import platform
-import subprocess
+#Cyber Clinic Standalone Application - Subnet Validation Form
+#CS 426 Team 13 - Spring 2026
+
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
 from storage import StorageHandler
 from tunnel import TunnelHandler
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+import logging
+import keyring
+import time
+import os
 from PyQt6.QtCore import pyqtSignal, QObject, QVariant
 from PyQt6.QtWidgets import (
     QApplication,
@@ -18,6 +18,9 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QComboBox
 )
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Subnet_Form(QDialog):
     def __init__(self, auth, subnet_list, auth_tunnel: TunnelHandler, passwd: str):
@@ -57,13 +60,13 @@ class Subnet_Form(QDialog):
 
     def verify_host(self):
         host_name = self.h.currentText()
-        print(f'Hostname: {host_name}')
+        logging.debug(f'Hostname: {host_name}')
         send = f'{host_name}'
         try:
             self.auth_tunnel.conn.send(send.encode())
             data = self.auth_tunnel.conn.recv(1024)
             response = data.decode().strip().split('|')
-            print(response)
+            logging.debug(response)
             success = response.pop(0)
             match success:
                 case 'SUBNET_INVALID':
@@ -71,7 +74,7 @@ class Subnet_Form(QDialog):
                 case 'SUBNET_VALID':
                     self.l.setText("Subnet verified! Finishing up...")
                     encrypted_id = response.pop(0)
-                    print(encrypted_id)
+                    logging.debug(encrypted_id)
                     self.app.processEvents()
                     self.keygen = Generate_Key(self, host_name, encrypted_id)
                     self.keygen.key_generated.connect(self.cleanup)  # Connect signal to slot
@@ -79,7 +82,7 @@ class Subnet_Form(QDialog):
                 case _:
                     self.go_back()
         except Exception as e:
-            print(f'{e}')
+            logg(f'{e}')
         
     def cleanup(self, results):
         if not results['success']:
@@ -115,28 +118,28 @@ class Generate_Key(QObject):
                 public_exponent=65537,
                 key_size=2048
             ).private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.BestAvailableEncryption(self.form.passwd.encode()))
-            storage.save(os.path.join('config', 'client.key'), key.decode('utf-8'))
+            storage.save_ext(os.path.join('config', 'client.key'), key.decode('utf-8'))
             self.form.auth_tunnel.conn.send(key)
             
             crt = self.form.auth_tunnel.conn.recv(4096)
-            print(crt.decode('utf-8'))
-            storage.save(os.path.join('config', 'bundle.crt'), crt.decode('utf-8'))
-            storage.save(os.path.join('config', '.env'), f'SUBNET_NAME={self.subnet_name}')
+            logging.debug(crt.decode('utf-8'))
+            storage.save_ext(os.path.join('config', 'bundle.crt'), crt.decode('utf-8'))
+            storage.save_ext(os.path.join('config', '.env'), f'SUBNET_NAME={self.subnet_name}')
             keyring.set_password('CyberClinic', self.subnet_name, self.client_id)
             
             msg = 'NOT_SAVED'
             success = False
             try:
-                storage.fetch(os.path.join('config', 'bundle.crt'))
+                storage.fetch_ext(os.path.join('config', 'bundle.crt'))
                 success = True
                 success &= not (keyring.get_password('CyberClinic', self.subnet_name) == None)
             except Exception as e:
-                print(f'Failed to save - {e}')
+                logging.error(f'Failed to save - {e}')
             finally:
                 if success:
                     msg = 'SAVED'
                 self.form.auth_tunnel.conn.send(msg.encode())
                 self.key_generated.emit({"success": success}) # Emit the result when done
         except Exception as e:
-            print(f'Failed to save - {e}')
+            logging.error(f'Failed to save - {e}')
             self.key_generated.emit({"success": False}) # Emit the result when done

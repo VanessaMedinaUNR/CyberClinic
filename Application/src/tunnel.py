@@ -1,10 +1,13 @@
-#Cyber Clinic Standalone Application - VPN Handler
-#CS 425 Team 13 - Fall 2025
+#Cyber Clinic Standalone Application - Secure Tunnel Handler
+#CS 426 Team 13 - Spring 2026
 
-import shutil
+import logging
 import socket
 import ssl
 import os
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class TunnelHandler:
     def __init__(self, crt, host, port):
@@ -15,12 +18,13 @@ class TunnelHandler:
         self.reconnect_tunnel()
     
     def start_tunnel(self, reconnect=0):
-        print(self.crt)
+        logger.debug(self.crt)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.load_verify_locations(self.crt, os.path.dirname(self.crt))
 
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        print(f"Connecting to {self.host}:{self.port} with: {self.crt}")
+        logger.debug(f"Connecting to {self.host}:{self.port} with: {self.crt}")
+        logger.info(f"Connecting to {self.host}")
         try:
             raw_socket.connect((self.host, self.port))
             conn = context.wrap_socket(raw_socket, server_hostname=self.host)
@@ -36,7 +40,7 @@ class TunnelHandler:
         try:
             self.conn.shutdown(socket.SHUT_RDWR)
         except OSError as e:
-            print(f"Error during shutdown: {e}")
+            logger.error(f"Error during shutdown: {e}")
         self.conn.close()
 
 

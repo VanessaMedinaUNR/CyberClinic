@@ -114,7 +114,7 @@ services:
       - ${BACKEND_PORT}:${BACKEND_PORT}
       - ${AUTH_PORT}:${AUTH_PORT}
       - ${AUTHED_PORT}:${AUTHED_PORT}
-    command: ['--regen-certs']
+    command: # ['--regen-certs']
     networks:
       - backend
       - frontend
