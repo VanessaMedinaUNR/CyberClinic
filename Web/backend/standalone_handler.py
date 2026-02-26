@@ -59,45 +59,88 @@ class StandaloneHandler:
             try:
                 conn = context.wrap_socket(newsocket, server_side=True)
                 try:
-                    pre_authed, identity = self.authenticate_standalone_client(
-                        conn=conn,
-                        fromaddr=fromaddr,
-                    )
-                    
-                    if pre_authed:
-                        conn.send(b'AUTH_SUCCESS')
-                        logger.info("Standalone Client Authenticated")
-                        authed_tunnel = Thread(target=self.start_authed_tunnel, args=(authed_socket, identity))
-                        authed_tunnel.start()
-                    else:
-                        conn.send(b'AUTH_FAIL')
-                        logger.info(f"Failed Authentication attempt from {fromaddr}")
+                    self.parse_command(conn, fromaddr, authed_socket=authed_socket)
                 except Exception as e:
-                    logger.error(f"Auth tunnel error: {e}")
-                    conn.send(b'AUTH_FAIL')
-                    logger.info(f"Failed Authentication attempt from {fromaddr}")
-                finally:
-                    try:
-                        conn.shutdown(socket.SHUT_RDWR)
-                    except OSError as e:
-                        logger.warning(f"Error during shutdown: {e}")
-                    conn.close()
+                    logger.warning(f"Auth Tunnel Error: {e}")
+                try:
+                    conn.shutdown(socket.SHUT_RDWR)
+                except OSError as e:
+                    logger.warning(f"Error during shutdown: {e}")
             except Exception as e:
                 logger.error(f"Auth tunnel error: {e}")
+                try:
+                    conn.send(b'AUTH_FAIL')
+                except OSError as e:
+                    logger.warning(f"Error sending AUTH_FAIL: {e}")
+                logger.warning(f"Failed Authentication attempt from {fromaddr}")
+            finally:
+                try:
+                    conn.shutdown(socket.SHUT_RDWR)
+                except OSError as e:
+                    logger.warning(f"Error during shutdown: {e}")
+                conn.close()
+                logger.info(f"Connection from {fromaddr} closed")
 
 
-    def authenticate_standalone_client(self, conn: ssl.SSLSocket, fromaddr) -> tuple[bool, tuple[str, bytes]]:
+    def parse_command(self, conn: ssl.SSLSocket, client_id=None, authed_socket=None):
+        fromaddr = conn.getpeername()
+        data = conn.recv(1024).decode()
+        response = data.split("|")
+        if response:
+            command = response.pop(0)
+            match command:
+                case "FETCH_SCANS":
+                    subnet_name = response.pop(0)
+                    self.fetch_scans(conn, subnet_name, client_id)
+                case "AUTH":
+                    result, identity = self.authenticate_standalone_client(conn, fromaddr, response)
+                    if result == True:
+                        conn.send(b'AUTH_SUCCESS')
+                        Thread(target=self.start_authed_tunnel, args=(authed_socket, identity)).start()
+                    else:
+                        conn.send(b'AUTH_FAIL')
+                        logger.warning(f"Failed Authentication attempt from {fromaddr}")
+                        raise ConnectionError(f"Failed Authentication attempt from {fromaddr}")
+                case "CHECK":
+                    conn.send(b'TRUE')
+                    self.parse_command(conn, client_id, authed_socket)
+                case "CLOSE":
+                    logger.info(f"Connection from {fromaddr} closed by client")
+                    raise ConnectionError(f"Connection from {fromaddr} closed by client")
+                case _:
+                    logger.warning(f"Invalid command from {fromaddr}: {command}")
+                    conn.send(b'INVALID_COMMAND')
+                    raise ValueError(f"Invalid command from {fromaddr}: {command}")
+    
+
+    def authenticate_standalone_client(self, conn: ssl.SSLSocket, fromaddr, auth_string: list[str]):
+        success, identity = self.parse_auth_request(
+            conn=conn,
+            fromaddr=fromaddr,
+            auth_string=auth_string
+        )
+        
+        if success:
+            conn.send(b'AUTH_SUCCESS')
+            logger.debug(f"Standalone Client Authenticated at IP: {fromaddr[0]}")
+            return True, identity
+        else:
+            conn.send(b'AUTH_FAIL')
+            logger.warning(f"Failed Authentication attempt from {fromaddr}")
+            raise ValueError(f"Failed Authentication attempt from {fromaddr}")
+
+
+    def parse_auth_request(self, conn: ssl.SSLSocket, fromaddr, auth_string: str) -> tuple[bool, tuple[str, bytes]]:
         try:
             db = get_db()
-            data = conn.recv(1024)
-            auth_string = data.decode().strip()
-            logger.info(f"Received authentication: {auth_string[:20]}...")
+    
+            logger.debug(f"Received authentication: {auth_string[:2]}...")
             
             """
             Parse client authentication format: "apphash:email:password" or "apphash:subnet_name"
             Returns: (success, user_data, password, message)
             """
-            parts = auth_string.split('|')
+            parts = auth_string
             #parse format: "hash:email:password"
             if len(parts) == 3:
                 app_hash, email, password = parts
@@ -132,11 +175,10 @@ class StandaloneHandler:
                                     bundle = public_key + ca
                                     conn.sendall(bundle)
                                     msg = conn.recv(1024).decode()
-                                    logger.info(msg)
                                     if not msg == 'SAVED':
                                         self.clear_subnet_key(subnet, client)
                                         return (False, ())
-                                    return (False, public_key)
+                                    return (True, (client_id, public_key.decode()))
                                 return (False, ())
                             else:
                                 return (False, ())
@@ -196,8 +238,8 @@ class StandaloneHandler:
                     (client_id, subnet_name,)
                 )
                 if not subnet == None:
-                    public_key: str = subnet['public_key']
-                    logger.info(f'{client_id}: {subnet_name} Authenticated')
+                    public_key: str = base64.b64decode(subnet['public_key']).decode()
+                    logger.debug(f'{client_id}: {subnet_name} Authenticated')
                     return (True, (client_id, public_key.rstrip()))
                 return (False, ())
             except Exception as e:
@@ -274,7 +316,7 @@ class StandaloneHandler:
                                 WHERE subnet_name = %s AND client_id = %s
                                 RETURNING public_key 
                             """,
-                            (public_key.decode(), subnet, client['client_id'],)
+                            (base64.b64encode(public_key).decode(), subnet, client['client_id'],)
                         )
                         if success:
                             success = success = db.execute_single(
@@ -329,7 +371,7 @@ class StandaloneHandler:
                 conn.sendall(response.encode())
                 return False, None
             else:
-                logger.info(f'Client Subnet List: {subnet_list}')
+                logger.debug(f'Client Subnet List: {subnet_list}')
                 response = f"SUBNET_LIST"
                 for subnet in subnet_list:
                     name = subnet['subnet_name']
@@ -341,7 +383,6 @@ class StandaloneHandler:
                 response = f"SUBNET_INVALID"
                 for check in subnet_list:
                     name = check["subnet_name"]
-                    logger.info(f"{name} : {subnet}")
                     if name == subnet:
                         with open(self.authed_cert, "rb") as f:
                             cert = x509.load_pem_x509_certificate(f.read())
@@ -406,25 +447,10 @@ class StandaloneHandler:
                     except OSError as e:
                         logger.warning(f"Error during shutdown: {e}")
                     conn.close()
+                    logger.info(f"Connection from {fromaddr} closed")
             except Exception as e:
                 logger.error(f"Authed tunnel error: {e}")
 
-
-    def parse_command(self, conn: ssl.SSLSocket, client_id):
-        data = conn.recv(1024).decode()
-        response = data.split("|")
-        if response:
-            logger.info(response)
-            command = response.pop(0)
-            match command:
-                case "FETCH_SCANS":
-                    subnet_name = response.pop(0)
-                    self.fetch_scans(conn, subnet_name, client_id)
-                case "CHECK":
-                    conn.send(b'TRUE')
-                case _:
-                    raise ValueError("Invalid command")
-    
 
     def fetch_scans(self, conn, subnet_name, client_id):
         try:
@@ -456,14 +482,12 @@ class StandaloneHandler:
                         subnet.netmask = scan['subnet_netmask']
                         target_value = subnet.compressed 
                     
-                    logger.info(target_value)
                     scan_list[scan['id']] = {
                         "report_id": scan['report_id'],
                         "target_value": target_value,
                         "scan_type": scan['scan_type']
                     }
                 response = f'PENDING_SCANS|{scan_list}'
-                logger.info(response)
                 conn.send(response.encode())
             else:
                 conn.send(b'NONE_PENDING')

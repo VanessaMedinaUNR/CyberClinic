@@ -3,7 +3,7 @@
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-from storage import StorageHandler
+from storage_handler import StorageHandler
 from tunnel import TunnelHandler
 import logging
 import keyring
@@ -23,12 +23,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class Subnet_Form(QDialog):
-    def __init__(self, auth, subnet_list, auth_tunnel: TunnelHandler, passwd: str):
+    def __init__(self, auth, subnet_list, auth_tunnel: TunnelHandler, authed_tunnel: TunnelHandler, passwd: str):
         super().__init__(auth)
         self.app: QApplication = auth.app
         self.passwd = passwd
         self.apphash = auth.apphash
         self.auth_tunnel = auth_tunnel
+        self.authed_tunnel = authed_tunnel
 
         self.setWindowTitle("CyberClinic Subnet Validation")
 
@@ -60,13 +61,13 @@ class Subnet_Form(QDialog):
 
     def verify_host(self):
         host_name = self.h.currentText()
-        logging.debug(f'Hostname: {host_name}')
+        logger.debug(f'Hostname: {host_name}')
         send = f'{host_name}'
         try:
             self.auth_tunnel.conn.send(send.encode())
             data = self.auth_tunnel.conn.recv(1024)
             response = data.decode().strip().split('|')
-            logging.debug(response)
+            logger.debug(response)
             success = response.pop(0)
             match success:
                 case 'SUBNET_INVALID':
@@ -74,10 +75,12 @@ class Subnet_Form(QDialog):
                 case 'SUBNET_VALID':
                     self.l.setText("Subnet verified! Finishing up...")
                     encrypted_id = response.pop(0)
-                    logging.debug(encrypted_id)
+                    logger.debug(encrypted_id)
                     self.app.processEvents()
                     self.keygen = Generate_Key(self, host_name, encrypted_id)
-                    self.keygen.key_generated.connect(self.cleanup)  # Connect signal to slot
+                    self.check_auth = Check_Auth(self.authed_tunnel)
+                    self.check_auth.tunnel_checked.connect(self.cleanup)  # Connect signal to slot
+                    self.keygen.key_generated.connect(self.check_auth.start)  # Connect signal to slot
                     self.keygen.start()
                 case _:
                     self.go_back()
@@ -91,7 +94,8 @@ class Subnet_Form(QDialog):
             time.sleep(1)
             self.go_back()
         self.auth_tunnel.close_tunnel()
-        self.app.exit()
+        self.hide()
+        self.app.quit()
 
     def go_back(self):
         self.auth_tunnel.close_tunnel()
@@ -101,6 +105,27 @@ class Subnet_Form(QDialog):
     def closeEvent(self, event):
         self.auth_tunnel.close_tunnel()
         self.app.exit()
+
+class Check_Auth(QObject):
+    tunnel_checked = pyqtSignal(QVariant, arguments=['result'])  # Define a signal to send data back
+    def __init__(self, tunnel: TunnelHandler):
+        super().__init__()
+        self.tunnel = tunnel
+    def start(self):
+        try:
+            self.tunnel.reconnect_tunnel()
+            self.tunnel.conn.send(b'CHECK')
+            response = self.tunnel.conn.recv(1024).decode()
+            if response == 'TRUE':
+                self.tunnel.conn.send(b'CLOSE')
+                self.tunnel.close_tunnel()
+                self.tunnel_checked.emit({"success": True}) # Emit the result when done
+            else:
+                self.tunnel.close_tunnel()
+                self.tunnel_checked.emit({"success": False}) # Emit the result when done
+        except Exception as e:
+            logger.error(f'Failed to establish tunnel - {e}')
+            self.tunnel_checked.emit({"success": False}) # Emit the result when done
 
 class Generate_Key(QObject):
     key_generated = pyqtSignal(QVariant, arguments=['result'])  # Define a signal to send data back
@@ -122,7 +147,7 @@ class Generate_Key(QObject):
             self.form.auth_tunnel.conn.send(key)
             
             crt = self.form.auth_tunnel.conn.recv(4096)
-            logging.debug(crt.decode('utf-8'))
+            logger.debug(crt.decode('utf-8'))
             storage.save_ext(os.path.join('config', 'bundle.crt'), crt.decode('utf-8'))
             storage.save_ext(os.path.join('config', '.env'), f'SUBNET_NAME={self.subnet_name}')
             keyring.set_password('CyberClinic', self.subnet_name, self.client_id)
@@ -130,16 +155,18 @@ class Generate_Key(QObject):
             msg = 'NOT_SAVED'
             success = False
             try:
-                storage.fetch_ext(os.path.join('config', 'bundle.crt'))
+                bundle = storage.fetch_ext(os.path.join('config', 'bundle.crt'))
                 success = True
                 success &= not (keyring.get_password('CyberClinic', self.subnet_name) == None)
             except Exception as e:
-                logging.error(f'Failed to save - {e}')
+                logger.error(f'Failed to save - {e}')
             finally:
                 if success:
                     msg = 'SAVED'
                 self.form.auth_tunnel.conn.send(msg.encode())
+                self.form.authed_tunnel.crt = bundle
                 self.key_generated.emit({"success": success}) # Emit the result when done
+                
         except Exception as e:
-            logging.error(f'Failed to save - {e}')
+            logger.error(f'Failed to save - {e}')
             self.key_generated.emit({"success": False}) # Emit the result when done

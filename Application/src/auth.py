@@ -27,16 +27,13 @@ class User_Auth(QObject):
         self.email = email
         self.passwd = passwd
         self.apphash = form.apphash
-        self.vpn_host = form.vpn_host
-        self.vpn_port = form.vpn_port
-        self.vpn_crt = form.vpn_crt
 
 
     def start(self, auth_tunnel: TunnelHandler):
 
         logger.debug(f"hash: {self.apphash}\n")
         logger.debug(f"{self.email}: {self.passwd}")
-        send = f'{self.apphash}|{self.email}|{self.passwd}'
+        send = f'AUTH|{self.apphash}|{self.email}|{self.passwd}'
 
         try:
             auth_tunnel.conn.send(send.encode())
@@ -77,12 +74,13 @@ class User_Auth(QObject):
 
 class Auth_Form(QDialog):
 
-    def __init__(self, app: QApplication, apphash, host, port, cert):
+    def __init__(self, app: QApplication, apphash, host, port, cert, authed_port):
         self.app = app
         self.apphash = apphash
-        self.vpn_host = host
-        self.vpn_port = port
-        self.vpn_crt = cert
+        self.server = host
+        self.auth_port = port
+        self.authed_tunnel = TunnelHandler(None, host, authed_port)
+        self.auth_crt = cert
         super().__init__()
 
         self.setWindowTitle("CyberClinic Authentication")
@@ -134,7 +132,13 @@ class Auth_Form(QDialog):
                 passwd = self.p.text()
                 self.p.clear()
                 self.hide()
-                validate_subnet = Subnet_Form(self, names, auth_tunnel, passwd)
+                validate_subnet = Subnet_Form(
+                    auth=self,
+                    subnet_list=names,
+                    auth_tunnel=auth_tunnel,
+                    authed_tunnel=self.authed_tunnel,
+                    passwd=passwd
+                )
                 validate_subnet.show()
 
         except Exception as e:
@@ -151,7 +155,7 @@ class Auth_Form(QDialog):
         self.l.setText("Verifying...")
         self.app.processEvents()
         try:
-            auth_tunnel = TunnelHandler(crt=self.vpn_crt, host=self.vpn_host, port=self.vpn_port)
+            auth_tunnel = TunnelHandler(crt=self.auth_crt, host=self.server, port=self.auth_port)
             self.auth.start(auth_tunnel)
         except TimeoutError as e:
             logger.error(f'{e}')

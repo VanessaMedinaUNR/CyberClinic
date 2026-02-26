@@ -18,7 +18,7 @@ env/
 ENV/
 
 # IDE and editor files
-.vscode/settings.json
+.vscode
 .idea/
 *.swp
 *.swo

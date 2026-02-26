@@ -11,11 +11,12 @@ logger = logging.getLogger(__name__)
 
 class TunnelHandler:
     def __init__(self, crt, host, port):
-        self.crt = crt
+        self.crt = crt if crt else None
         self.host = host
         self.port = port
         self.conn: ssl.SSLSocket | None = None
-        self.reconnect_tunnel()
+        if crt:
+            self.reconnect_tunnel()
     
     def start_tunnel(self, reconnect=0):
         logger.debug(self.crt)
@@ -37,6 +38,7 @@ class TunnelHandler:
             if reconnect == 6:
                 logger.error("Failed to establish tunnel after multiple attempts.")
                 raise TimeoutError("Failed to establish tunnel after multiple attempts.")
+        return reconnect
         
     def close_tunnel(self):
         try:

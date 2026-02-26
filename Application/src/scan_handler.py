@@ -1,7 +1,9 @@
 #Cyber Clinic Standalone Application - Scan Handler
 #CS 426 Team 13 - Spring 2026
 
-from storage import StorageHandler
+from re import match
+
+from storage_handler import StorageHandler
 from tunnel import TunnelHandler
 import logging
 import nmap
@@ -28,7 +30,7 @@ def fetch_scans(authed_tunnel: TunnelHandler, subnet_name):
                         scans[scan_id]["status"] = "pending"
                 return scans
             elif msg == "NONE_PENDING":
-                logging.info("No scans scheduled, moving on...")
+                logger.info("No scans scheduled, moving on...")
                 return {}
     except Exception as e:
         raise e
@@ -36,24 +38,47 @@ def fetch_scans(authed_tunnel: TunnelHandler, subnet_name):
 def execute_scans(scans: dict[str, dict[str]], storage: StorageHandler):
     check_tools()
     for id, info in scans.items():
-        logging.debug(info)
-        if info['scan_type'] == 'nmap':
-            logging.info('Executing nmap scan...')
-            scanner = nmap.PortScanner()
-            of = os.path.join('scans', info['report_id'], f'{id}.xml')
-            nmap_results = scanner.scan(hosts=info["target_value"], arguments='-v -sT -Pn -sV --script=default,safe --reason --open')
-            logging.debug(scanner.get_nmap_last_output())
-            if storage.save_ext(of, scanner.get_nmap_last_output().decode()):
-                return of
-            else:
-                raise FileNotFoundError(f"Failed to save nmap scan report to {of}")
+        logger.debug(info)
+        results = ""
+        of = os.path.join('scans', info['report_id'], f'{id}.xml')
+        options = info['scan_options'] if 'scan_options' in info else {}
+        match info['scan_type']:
+            case 'nmap':
+                args = ['-v', '-sT', '-Pn', '-sV', '--script=default,safe', '--reason', '--open']
+                logger.info('Executing nmap scan...')
+                scanner = nmap.PortScanner()
+                #custom options from scan_options
+                if options.get('port_range'):
+                    args.extend(['-p', options['port_range']])
+                else:
+                    args.extend(['-p', '1-1000'])
+                    
+                if options.get('scan_speed'):
+                    speed = options['scan_speed']
+                    if speed in ['1', '2', '3', '4', '5']:
+                        args.extend([f'-T{speed}'])
+                else:
+                    args.extend(['-T3'])
+                nmap_results = scanner.scan(hosts=info["target_value"], arguments=' '.join(args))
+                logger.debug(scanner.get_nmap_last_output())
+                results = scanner.get_nmap_last_output().decode()
+            case 'nikto':
+                logger.info('Executing nikto scan...')
+                raise FileNotFoundError("Nikto is not installed, cannot execute nikto scan.")
+            case _:
+                raise ValueError(f"Unknown scan type: {info['scan_type']}")
+            
+        if storage.save_ext(of, results):
+            return of
+        else:
+            raise FileNotFoundError(f"Failed to save {info['scan_type']} scan report to {of}")
 
-def check_tools():
+def check_tools() -> dict[str, bool]:
     tools = {}
     try:
         scanner = nmap.PortScanner()
-        tools['nmap']= True
-        tools['nikto'] = True
+        tools['nmap'] = True
+        tools['nikto'] = False
     except nmap.PortScannerError:
         tools['nmap'] = False
     except FileNotFoundError:
@@ -62,4 +87,4 @@ def check_tools():
 
 def send_scans(authed_tunnel: TunnelHandler, scans: dict[str, dict[str]]):
     for scan in scans:
-        logging.debug(scan)
+        logger.debug(scan)

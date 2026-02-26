@@ -1,3 +1,12 @@
+# Testing
+```bash
+python3 -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+pytest tests/unit # Run Unit Tests
+```
+
 # Building For Windows
 ```bash
 python3 -m venv .venv

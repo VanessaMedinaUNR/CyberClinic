@@ -13,9 +13,11 @@ class StorageHandler:
             self.base_path = os.path.abspath(".")
         finally:
             if os.name == 'nt':
-                self.ext_path = os.path.expanduser("~/AppData/Local/CyberClinic")
+                ext_path = os.path.expanduser("~/AppData/Local/CyberClinic")
+                self.ext_path = os.path.abspath(ext_path)
             else:
-                self.ext_path = os.path.expanduser("~.CyberClinic")
+                ext_path = os.path.expanduser("~.CyberClinic")
+                self.ext_path = os.path.abspath(ext_path)
 
     def fetch(self, relative_path):
         file = os.path.join(self.base_path, relative_path)
@@ -29,7 +31,7 @@ class StorageHandler:
             raise FileNotFoundError(f"External file not found at {file}")
         return file
     
-    def save_ext(self, relative_path, data):
+    def save_ext(self, relative_path, data) -> bool:
         file = os.path.join(self.ext_path, relative_path)
         parent = os.path.dirname(file)
         os.makedirs(parent, exist_ok=True)
