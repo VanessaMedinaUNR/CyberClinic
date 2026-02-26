@@ -89,9 +89,6 @@ class StandaloneHandler:
         if response:
             command = response.pop(0)
             match command:
-                case "FETCH_SCANS":
-                    subnet_name = response.pop(0)
-                    self.fetch_scans(conn, subnet_name, client_id)
                 case "AUTH":
                     result, identity = self.authenticate_standalone_client(conn, fromaddr, response)
                     if result == True:
@@ -107,6 +104,19 @@ class StandaloneHandler:
                 case "CLOSE":
                     logger.info(f"Connection from {fromaddr} closed by client")
                     raise ConnectionError(f"Connection from {fromaddr} closed by client")
+                case "FETCH_SCANS":
+                    if client_id is None:
+                        logger.warning(f"Unauthorized FETCH_SCANS attempt from {fromaddr}")
+                        conn.send(b'UNAUTHORIZED')
+                        raise ConnectionError(f"Unauthorized FETCH_SCANS attempt from {fromaddr}")
+                    subnet_name = response.pop(0)
+                    self.fetch_scans(conn, subnet_name, client_id)
+                case "SEND_RESULTS":
+                    if client_id is None:
+                        logger.warning(f"Unauthorized SEND_RESULTS attempt from {fromaddr}")
+                        conn.send(b'UNAUTHORIZED')
+                        raise ConnectionError(f"Unauthorized SEND_RESULTS attempt from {fromaddr}")
+                    results = response.pop(0)
                 case _:
                     logger.warning(f"Invalid command from {fromaddr}: {command}")
                     conn.send(b'INVALID_COMMAND')
