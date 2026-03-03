@@ -10,7 +10,7 @@ def ensure_tools(expected_tools) -> dict[str, tuple[int, bool]]:
         assert tool in tools, f"Expected '{tool}' in tools, but got {tools}"
     return {tool: (idx, tool, tools[tool]) for idx, tool in enumerate(expected_tools)}
 
-@pytest.mark.order(after="tests/unit/test_storage.py::TestCStorageHandler::test_fetch_ext")
+@pytest.mark.order(after="tests/unit/test_tunnel.py::TestTunnel::test_auth_tunnel")
 class TestScans:
     tool_list = ['nmap', 'nikto']
 

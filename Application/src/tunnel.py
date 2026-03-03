@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class TunnelHandler:
-    def __init__(self, crt, host, port):
+    def __init__(self, crt: str, host: str, port: int):
         self.crt = crt if crt else None
         self.host = host
         self.port = port
@@ -33,6 +33,7 @@ class TunnelHandler:
         except TimeoutError as e:
             reconnect += 1
         except Exception as e:
+            logger.error(e)
             reconnect = 6
         finally:
             if reconnect == 6:
