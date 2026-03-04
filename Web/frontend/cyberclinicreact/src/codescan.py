@@ -8,14 +8,8 @@ CORS(app, resources={r"/codescan": {"origins": "http://localhost:3000"}})
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
-@app.route("/codescan", methods=["POST", "OPTIONS"])
-def code_scan():
-    if request.method== "OPTIONS":
-        return "", 200
-    data = request.get_json()
-    user_code = data.get("code")
-
-    prompt = f"""
+def generate_prompt(user_code):
+    return f"""
     Analyze the following code for:
     - Security vulnerabilities
     - Syntax errors
@@ -24,6 +18,15 @@ def code_scan():
     Code:
     {user_code}
     """
+    
+@app.route("/codescan", methods=["POST", "OPTIONS"])
+def code_scan():
+    if request.method== "OPTIONS":
+        return "", 200
+    data = request.get_json()
+    user_code = data.get("code")
+
+    prompt = generate_prompt(user_code)
 
     response = requests.post(OLLAMA_URL, json={
         "model": "deepseek-coder",
