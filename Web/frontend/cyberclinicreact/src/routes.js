@@ -7,13 +7,15 @@ import Dashboard from "./dashboard";
 import Setting from "./setting";
 import NewTarget from './newtarget';
 import CodeChecker from './codechecker';
+import Home from "./home";
 
 //make sure the import... is cap
 
 export default function AppRoutes() {
     return (
         <Routes>
-            <Route path="/" element={<Login />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/forgotpw" element={<Forgotpw />} />
             <Route path="/signup" element ={<Signup/>} />
             <Route path="/newscan" element ={<NewScan/>} /> {/*it was saying Signup instead of newscan*/}
@@ -21,6 +23,7 @@ export default function AppRoutes() {
             <Route path="/dashboard" element ={<Dashboard/>} />
             <Route path="/setting" element ={<Setting/>} />
             <Route path="/codechecker" element ={<CodeChecker/>} />
+           
         </Routes>
     );
 }

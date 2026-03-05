@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Toolbar from './Components/toolbar';
-import './CodeChecker.css';
+import './codechecker.css';
 
 function CodeChecker() {
 
