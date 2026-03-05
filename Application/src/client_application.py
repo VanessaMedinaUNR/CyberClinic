@@ -63,66 +63,51 @@ def compute_hash(filepath: str):
     return hash.hexdigest()
 
 
-def authenticate(app_hash, app_storage: StorageHandler, server_host, auth_tunnel: TunnelHandler, authed_port):
-    try:
-        try:
-            env = app_storage.fetch_ext(os.path.join('config', '.env'))
-        except FileNotFoundError as e:
-            logger.info(f'{e}')
-            raise ConnectionError("Pre-authentication failed, launching login form.")
-        load_dotenv(env)
-        subnet_name = os.getenv('SUBNET_NAME', None)
-        if subnet_name is not None:
-            encrypted_id = keyring.get_password('CyberClinic', subnet_name)
-            data = f'AUTH|PRE_AUTHED|{app_hash}|{subnet_name}|{encrypted_id}'
-            auth_tunnel.conn.send(data.encode('utf-8'))
+def authenticate(app_hash, subnet_name, app_storage: StorageHandler, server_host, authed_port, auth_tunnel: TunnelHandler = None):
+    if not auth_tunnel is None:
+        encrypted_id = keyring.get_password('CyberClinic', subnet_name)
+        data = f'AUTH|PRE_AUTHED|{app_hash}|{subnet_name}|{encrypted_id}'
+        auth_tunnel.conn.send(data.encode('utf-8'))
 
-            response = auth_tunnel.conn.recv().decode().split('|')
-            print(response)
-            success = response.pop(0).rstrip()
-            if success == 'AUTH_SUCCESS':
-                logger.info('Authentication Success!')
-                try:
-                    authed_crt = app_storage.fetch_ext(os.path.join('config', 'client.crt'))
-                    key = app_storage.fetch_ext(os.path.join('config', 'client.key'))
-                    ca = app_storage.fetch_ext(os.path.join('config', 'ca.crt'))
-                    authed_tunnel = TunnelHandler(server_host, authed_port, crt=authed_crt, key=key, ca=ca)
-                    return authed_tunnel, subnet_name
-                except FileNotFoundError:
-                    raise ConnectionError("Pre-authentication failed, launching login form.")
-            else:
-                auth_tunnel.close_tunnel()
-                raise ConnectionError("Pre-authentication failed, launching login form.")
+        response = auth_tunnel.conn.recv().decode().split('|')
+        print(response)
+        success = response.pop(0).rstrip()
+        if success == 'AUTH_SUCCESS':
+            logger.info('Authentication Success!')
+            return auth_tunnel, subnet_name
         else:
-            raise ConnectionError("Pre-authentication failed, launching login form.")
-    except Exception as e:
-        raise e
+            auth_tunnel.close_tunnel()
+            raise ConnectionError("Re-authentication failed, launching login form.")
+    else:
+        try:
+            authed_crt = app_storage.fetch_ext(os.path.join('config', 'client.crt'))
+            key = app_storage.fetch_ext(os.path.join('config', 'client.key'))
+            ca = app_storage.fetch_ext(os.path.join('config', 'ca.crt'))
+            authed_tunnel = TunnelHandler(server_host, authed_port, crt=authed_crt, key=key, ca=ca)
+            authed_tunnel.conn.send(b'CHECK')
+            data = authed_tunnel.conn.recv(1024)
+            if data.decode() != 'TRUE':
+                raise ConnectionError("Failed to connect to authenticated tunnel.")
+            authed_tunnel.conn.send(b'CLOSE')
+            return authed_tunnel, subnet_name
+        except Exception as e:
+            logger.error(f'Failed to connect to authenticated tunnel: {e}')
+            raise ConnectionError("Pre-authentication failed.")
 
 
-def auto_run(app, app_hash, app_storage: StorageHandler, server_host, auth_port, authed_port):
+def auto_run(app: QApplication, app_hash, app_storage: StorageHandler, server_host, subnet_name, authed_port, auth_port: int = None):
     check_tools(app)
-
-    auth_crt = app_storage.fetch(os.path.join('config', 'auth.crt'))
-    logger.info(auth_crt)
-    auth_tunnel = TunnelHandler(server_host, auth_port, crt=auth_crt)
     try:
-        auth_tunnel.conn.send(b'CHECK')
-        data = auth_tunnel.conn.recv(1024)
-        if data.decode() != 'TRUE':
-            raise TimeoutError("Failed to connect to authentication server.")
-        authed_tunnel, subnet_name = authenticate(app_hash, app_storage, server_host, auth_tunnel, authed_port)
+        authed_tunnel, subnet_name = authenticate(app_hash, subnet_name, app_storage, server_host, authed_port)
         pending_scans = scanner.fetch_scans(authed_tunnel, subnet_name)
         authed_tunnel.close_tunnel()
         
         results = scanner.execute_scans(pending_scans, app_storage)
         logger.debug(results)
-    except TimeoutError as e:
-        authed_tunnel.close_tunnel()
-        logger.info(f'{e}')
-        alert = Alert(app, "Failed to connect to authentication server. Please try again later. If the problem persists, please contact our support team.")
-        alert.show()
-        app.exec()
-        sys.exit()
+    except ConnectionError as e:
+        crt = app_storage.fetch(os.path.join('config', 'auth.crt'))
+        auth_tunnel = TunnelHandler(server_host, auth_port, crt=crt)
+        authed_tunnel, subnet_name = authenticate(app_hash, subnet_name, app_storage, server_host, authed_port, auth_tunnel=auth_tunnel)
         
     
 
@@ -180,7 +165,25 @@ if __name__ == '__main__':
         sys.exit()
 
     try:
-        auto_run(app, APP_HASH, app_storage, server_host, auth_port, authed_port)
+        env = app_storage.fetch_ext(os.path.join('config', '.env'))
+        load_dotenv(env)
+        subnet_name = os.getenv('SUBNET_NAME', None)
+        try:
+            authed_tunnel = authenticate(app_hash=APP_HASH, subnet_name=subnet_name, app_storage=app_storage, server_host=server_host, auth_tunnel=None, authed_port=authed_port)
+        except ConnectionError as e:
+            logger.error(e)
+            logger.info("Trying Re-authentication...")
+            
+            auth_crt = app_storage.fetch(os.path.join('config', 'auth.crt'))
+            auth_tunnel = TunnelHandler(server_host, auth_port, crt=auth_crt)
+            auth_tunnel.conn.send(b'CHECK')
+            data = auth_tunnel.conn.recv(1024)
+            if data.decode() != 'TRUE':
+                raise TimeoutError("Failed to connect to authentication server.")
+            
+            authed_tunnel = authenticate(app_hash=APP_HASH, subnet_name=subnet_name, app_storage=app_storage, server_host=server_host, auth_tunnel=auth_tunnel, authed_port=authed_port)
+    except FileNotFoundError as e:
+        raise ConnectionError("No authentication information found, launching login form.")
     except ConnectionError as e:
         logger.error(e)
         try:
@@ -202,8 +205,24 @@ if __name__ == '__main__':
         app.exec()
         sys.exit()
     finally:
+        try:
+            env = app_storage.fetch_ext(os.path.join('config', '.env'))
+            load_dotenv(env)
+            subnet_name = os.getenv('SUBNET_NAME', None)
+            auto_run(app, APP_HASH, app_storage, server_host, subnet_name, authed_port)
+        except Exception as e:
+            logger.error(e)
+            alert = Alert(app, "Failed to connect to server. Please try again later. If the problem persists, please contact our support team.")
+            alert.show()
+            app.exec()
+            sys.exit()
         sched = BlockingScheduler()
 
         @sched.scheduled_job('interval', hours=1)
         def timed_job():
-            auto_run(app, APP_HASH, app_storage, server_host, auth_port, authed_port)
+            try:
+                auto_run(app, APP_HASH, app_storage, server_host, auth_port, authed_port)
+            except Exception as e:
+                logger.error(f'Error during scheduled job: {e}')
+        
+        sched.start()

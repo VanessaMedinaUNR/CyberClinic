@@ -30,7 +30,7 @@ class TunnelHandler:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT, cafile=self.ca)
             context.load_cert_chain(certfile=self.crt, keyfile=self.key)
             context.load_verify_locations(self.ca)
-            logger.info(f"Connecting to {self.host}:{self.port} with: {self.ca}, {self.crt}, {self.key}")
+            logger.debug(f"Connecting to {self.host}:{self.port} with: {self.ca}, {self.crt}, {self.key}")
             logger.debug(context.get_ca_certs())
         else:
             raise ValueError("Insufficient information to establish tunnel. Please provide either a certificate or a certificate, key, and CA.")

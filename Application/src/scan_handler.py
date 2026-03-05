@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 def fetch_scans(authed_tunnel: TunnelHandler, subnet_name):
     scans = {}
     try:
+        authed_tunnel.reconnect_tunnel()
         send = f'FETCH_SCANS|{subnet_name}'
         authed_tunnel.conn.send(send.encode())
         response = authed_tunnel.conn.recv(1024).decode()
