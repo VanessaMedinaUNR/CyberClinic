@@ -10,7 +10,6 @@ import phonenumbers
 import logging
 from app.database import get_db
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 #create blueprint for authentication routes

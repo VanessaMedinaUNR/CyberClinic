@@ -79,7 +79,7 @@ class Auth_Form(QDialog):
         self.apphash = apphash
         self.server = host
         self.auth_port = port
-        self.authed_tunnel = TunnelHandler(None, host, authed_port)
+        self.authed_tunnel = TunnelHandler(host, authed_port)
         self.auth_crt = cert
         super().__init__()
 

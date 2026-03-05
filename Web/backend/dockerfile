@@ -1,5 +1,8 @@
 FROM python:3.11-slim AS builder
 
+ARG AUTHED_CRT
+ENV AUTHED_CRT=$AUTHED_CRT
+
 WORKDIR /src
 
 #install system dependencies and scanning tools
@@ -26,13 +29,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 #copy application code
 COPY . .
 
+RUN openssl x509 -in ${AUTHED_CRT} -outform PEM -out /usr/local/share/ca-certificates/CyberClinicCA.crt
+RUN update-ca-certificates
+
 #create non-root user for security
 RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /src
 USER app
-
-RUN dos2unix generate_certs
-RUN chmod +x generate_certs
 
 ENTRYPOINT ["python", "main.py"]
 

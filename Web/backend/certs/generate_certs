@@ -1,0 +1,23 @@
+#!/bin/bash
+
+read -s -p "Enter password: " pass
+export AUTH_PASS=$pass
+export AUTHED_PASS=$pass
+
+# Server - Generate authentication tunnel cert
+openssl req  \
+    -x509 -days 365 \
+    -newkey rsa:2048 \
+    -keyout auth.key \
+    -out auth.crt \
+    -passout env:AUTH_PASS \
+    -config server.cnf
+# Server - Generate authenticated tunnel CA cert
+openssl req \
+    -x509 -days 365 \
+    -newkey rsa:2048 \
+    -keyout authed.key \
+    -out authed.crt \
+    -passout env:AUTHED_PASS \
+    -config server.cnf \
+    -addext "basicConstraints=critical,CA:true" \

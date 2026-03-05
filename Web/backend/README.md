@@ -8,16 +8,21 @@ This backend provides REST API endpoints for the cyber clinic web application. A
 
 ## Quick Start for Frontend
 
-1. **Start the backend server**
+1. **Generate Certs**
+    ```bash
+    cd Web/backend/certs
+    chmod +x generate_certs
+    ./generate certs
+    cd ..
+    # The password prompt should match your environment variables for "AUTH_PASS" and "AUTHED_PASS"
+    ```
+
+2. **Start the backend server**
    ```bash
-   cd Web/backend
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   python3 main.py
+   docker compose up -d --build 'backend-dev'
    ```
 
-2. **Test connection**
+3. **Test connection**
    ```bash
    curl http://localhost:5000/
    # Should return: {"status": "running", "service": "cyber-clinic-backend"}

@@ -52,13 +52,11 @@ class TestCStorageHandler:
         
         os.remove(test_file)
 
-    @pytest.fixture(scope='function')
     def test_save_ext(self, setup_storage):
         storage: StorageHandler = setup_storage
         file_saved = storage.save_ext('test_save_ext.txt', "Test content")
         assert file_saved == True, "External File Failed to save"
 
-    @pytest.mark.usefixtures("test_save_ext")
     def test_fetch_ext(self, setup_storage):
         storage: StorageHandler = setup_storage
         test_file = os.path.join(storage.ext_path, 'test_fetch_ext.txt')

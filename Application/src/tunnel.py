@@ -10,21 +10,32 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class TunnelHandler:
-    def __init__(self, crt: str, host: str, port: int):
-        self.crt = crt if crt else None
+    def __init__(self, host: str, port: int, crt: str=None, key: str=None, ca: str=None):
+        self.crt = crt
         self.host = host
         self.port = port
+        self.key = key
+        self.ca = ca
         self.conn: ssl.SSLSocket | None = None
         if crt:
             self.reconnect_tunnel()
     
     def start_tunnel(self, reconnect=0):
         logger.debug(self.crt)
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        context.load_verify_locations(self.crt, os.path.dirname(self.crt))
+        if (self.key is None or self.ca is None) and not self.crt is None:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.load_verify_locations(self.crt)
+            logger.debug(f"Connecting to {self.host}:{self.port} with: {self.crt}")
+        elif self.key and self.ca and self.crt:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT, cafile=self.ca)
+            context.load_cert_chain(certfile=self.crt, keyfile=self.key)
+            context.load_verify_locations(self.ca)
+            logger.info(f"Connecting to {self.host}:{self.port} with: {self.ca}, {self.crt}, {self.key}")
+            logger.debug(context.get_ca_certs())
+        else:
+            raise ValueError("Insufficient information to establish tunnel. Please provide either a certificate or a certificate, key, and CA.")
 
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        logger.debug(f"Connecting to {self.host}:{self.port} with: {self.crt}")
         logger.info(f"Connecting to {self.host}")
         try:
             raw_socket.connect((self.host, self.port))
@@ -43,10 +54,9 @@ class TunnelHandler:
         
     def close_tunnel(self):
         try:
-            self.conn.shutdown(socket.SHUT_RDWR)
-        except OSError as e:
-            logger.error(f"Error during shutdown: {e}")
-        self.conn.close()
+            self.conn.send(b'CLOSE')
+        except Exception as e:
+            logger.warning(f"Error sending close signal: {e}")
 
 
     def reconnect_tunnel(self):

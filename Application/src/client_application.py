@@ -83,11 +83,13 @@ def authenticate(app_hash, app_storage: StorageHandler, server_host, auth_tunnel
             if success == 'AUTH_SUCCESS':
                 logger.info('Authentication Success!')
                 try:
-                    authed_crt = app_storage.fetch_ext(os.path.join('config', 'bundle.crt'))
+                    authed_crt = app_storage.fetch_ext(os.path.join('config', 'client.crt'))
+                    key = app_storage.fetch_ext(os.path.join('config', 'client.key'))
+                    ca = app_storage.fetch_ext(os.path.join('config', 'ca.crt'))
+                    authed_tunnel = TunnelHandler(server_host, authed_port, crt=authed_crt, key=key, ca=ca)
+                    return authed_tunnel, subnet_name
                 except FileNotFoundError:
                     raise ConnectionError("Pre-authentication failed, launching login form.")
-                authed_tunnel = TunnelHandler(authed_crt, server_host, authed_port)
-                return authed_tunnel, subnet_name
             else:
                 auth_tunnel.close_tunnel()
                 raise ConnectionError("Pre-authentication failed, launching login form.")
@@ -97,11 +99,12 @@ def authenticate(app_hash, app_storage: StorageHandler, server_host, auth_tunnel
         raise e
 
 
-def auto_run(app, app_hash, app_storage, server_host, auth_port, authed_port):
+def auto_run(app, app_hash, app_storage: StorageHandler, server_host, auth_port, authed_port):
     check_tools(app)
 
     auth_crt = app_storage.fetch(os.path.join('config', 'auth.crt'))
-    auth_tunnel = TunnelHandler(auth_crt, server_host, auth_port)
+    logger.info(auth_crt)
+    auth_tunnel = TunnelHandler(server_host, auth_port, crt=auth_crt)
     try:
         auth_tunnel.conn.send(b'CHECK')
         data = auth_tunnel.conn.recv(1024)

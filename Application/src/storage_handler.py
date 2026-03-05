@@ -35,8 +35,9 @@ class StorageHandler:
         file = os.path.join(self.ext_path, relative_path)
         parent = os.path.dirname(file)
         os.makedirs(parent, exist_ok=True)
-
-        with open(file, 'w+') as f:
+        if type(data) == str:
+            data = data.encode('utf-8')
+        with open(file, 'wb') as f:
             f.write(data)
 
         if not os.path.exists(file):

@@ -39,6 +39,8 @@ Web/backend/certs/*
 Web/backend/scans
 Web/backend/reports
 !Web/backend/certs/example.*
+!Web/backend/certs/generate_certs
+!Web/backend/certs/README.md
 
 # Development and testing
 test_results.json

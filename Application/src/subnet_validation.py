@@ -1,6 +1,8 @@
 #Cyber Clinic Standalone Application - Subnet Validation Form
 #CS 426 Team 13 - Spring 2026
 
+import base64
+
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from storage_handler import StorageHandler
@@ -139,23 +141,34 @@ class Generate_Key(QObject):
         try:
             storage = StorageHandler()
             
-            key: bytes = rsa.generate_private_key(
+            key: rsa.RSAPrivateKey = rsa.generate_private_key(
                 public_exponent=65537,
                 key_size=2048
-            ).private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.BestAvailableEncryption(self.form.passwd.encode()))
-            storage.save_ext(os.path.join('config', 'client.key'), key.decode('utf-8'))
-            self.form.auth_tunnel.conn.send(key)
+            )
+            pem = key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+            storage.save_ext(os.path.join('config', 'client.key'), pem)
+            self.form.auth_tunnel.conn.send(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.BestAvailableEncryption(self.form.passwd.encode())))
             
-            crt = self.form.auth_tunnel.conn.recv(4096)
-            logger.debug(crt.decode('utf-8'))
-            storage.save_ext(os.path.join('config', 'bundle.crt'), crt.decode('utf-8'))
+            data = self.form.auth_tunnel.conn.recv(4096)
+            response = data.decode().split('|')
+            logger.debug(response)
+            crt = base64.b64decode(response[0])
+            ca = base64.b64decode(response[1])
+            storage.save_ext(os.path.join('config', 'ca.crt'), ca)
+            storage.save_ext(os.path.join('config', 'client.crt'), crt)
             storage.save_ext(os.path.join('config', '.env'), f'SUBNET_NAME={self.subnet_name}')
             keyring.set_password('CyberClinic', self.subnet_name, self.client_id)
             
             msg = 'NOT_SAVED'
             success = False
             try:
-                bundle = storage.fetch_ext(os.path.join('config', 'bundle.crt'))
+                crt = storage.fetch_ext(os.path.join('config', 'client.crt'))
+                ca = storage.fetch_ext(os.path.join('config', 'ca.crt'))
+                key = storage.fetch_ext(os.path.join('config', 'client.key'))
                 success = True
                 success &= not (keyring.get_password('CyberClinic', self.subnet_name) == None)
             except Exception as e:
@@ -163,8 +176,10 @@ class Generate_Key(QObject):
             finally:
                 if success:
                     msg = 'SAVED'
+                    self.form.authed_tunnel.crt = crt
+                    self.form.authed_tunnel.ca = ca
+                    self.form.authed_tunnel.key = key
                 self.form.auth_tunnel.conn.send(msg.encode())
-                self.form.authed_tunnel.crt = bundle
                 self.key_generated.emit({"success": success}) # Emit the result when done
                 
         except Exception as e:

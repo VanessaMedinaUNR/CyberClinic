@@ -17,7 +17,6 @@ DB_CONFIG = {
 }
 
 #setup logging for database operations
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class DatabaseManager:

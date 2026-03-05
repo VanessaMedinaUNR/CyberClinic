@@ -8,18 +8,27 @@ from app.routes.scans import scans_bp
 from app.routes.auth import auth_bp
 from flask import Flask, jsonify
 from flask_cors import CORS
+import logging
 import subprocess
 import atexit
 import os
 
+# setup logging for the application
+logger = logging.getLogger(__name__)
 
-def create_app():
+def create_app(debug=False):
     #this creates our main flask web application
     #sets up basic configuration for development mode
     app = Flask(__name__)
     #get secret key from environment or use default for development
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-    app.config['DEBUG'] = os.environ.get('FLASK_DEBUG')
+    if debug:
+        app.config['DEBUG'] = True
+        logging.basicConfig(level=logging.DEBUG)
+        logger.debug("Debug mode enabled - auto-reload on code changes")
+    else:
+        app.config['DEBUG'] = False
+        logging.basicConfig(level=logging.INFO)
     #connect our authentication routes to the main app
     #this adds all the /api/auth/* endpoints like login and register
     app.register_blueprint(auth_bp)
@@ -68,13 +77,8 @@ if __name__ == '__main__':
     #parse arguments
     import argparse
     parser = argparse.ArgumentParser(description="Main CyberClinic Backend Entrypoint")
-    parser.add_argument('--regen-certs', action='store_true', help='Regenerate keys and certificates')
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode with auto-reload and verbose logging')
     args = parser.parse_args()
-    if args.regen_certs:
-        print("Generating keys and certificates...")
-        curdir = os.path.dirname(__file__)
-        result = subprocess.run([os.path.join(curdir, 'generate_certs')], capture_output=True, text=True)
-        print("Return code:", result.returncode)
     #start standalone handler
     print("Starting Standalone Handler...")
 
@@ -100,7 +104,7 @@ if __name__ == '__main__':
     )
     
     #starts up our web server so people can connect to it
-    app = create_app()
+    app = create_app(debug=args.debug)
     CORS(app)
     #start the background scan worker
     print("Starting background scan worker...")
