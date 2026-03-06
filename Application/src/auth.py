@@ -155,7 +155,7 @@ class Auth_Form(QDialog):
         self.l.setText("Verifying...")
         self.app.processEvents()
         try:
-            auth_tunnel = TunnelHandler(crt=self.auth_crt, host=self.server, port=self.auth_port)
+            auth_tunnel = TunnelHandler(host=self.server, port=self.auth_port, crt=self.auth_crt)
             self.auth.start(auth_tunnel)
         except TimeoutError as e:
             logger.error(f'{e}')

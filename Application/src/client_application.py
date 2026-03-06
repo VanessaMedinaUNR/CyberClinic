@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+scans_running = False
 
 def is_admin():
     try:
@@ -70,11 +71,11 @@ def authenticate(app_hash, subnet_name, app_storage: StorageHandler, server_host
         auth_tunnel.conn.send(data.encode('utf-8'))
 
         response = auth_tunnel.conn.recv().decode().split('|')
-        print(response)
+        logger.debug(response)
         success = response.pop(0).rstrip()
         if success == 'AUTH_SUCCESS':
             logger.info('Authentication Success!')
-            return auth_tunnel, subnet_name
+            return auth_tunnel
         else:
             auth_tunnel.close_tunnel()
             raise ConnectionError("Re-authentication failed, launching login form.")
@@ -89,7 +90,7 @@ def authenticate(app_hash, subnet_name, app_storage: StorageHandler, server_host
             if data.decode() != 'TRUE':
                 raise ConnectionError("Failed to connect to authenticated tunnel.")
             authed_tunnel.conn.send(b'CLOSE')
-            return authed_tunnel, subnet_name
+            return authed_tunnel
         except Exception as e:
             logger.error(f'Failed to connect to authenticated tunnel: {e}')
             raise ConnectionError("Pre-authentication failed.")
@@ -98,18 +99,38 @@ def authenticate(app_hash, subnet_name, app_storage: StorageHandler, server_host
 def auto_run(app: QApplication, app_hash, app_storage: StorageHandler, server_host, subnet_name, authed_port, auth_port: int = None):
     check_tools(app)
     try:
-        authed_tunnel, subnet_name = authenticate(app_hash, subnet_name, app_storage, server_host, authed_port)
+        authed_tunnel = authenticate(app_hash, subnet_name, app_storage, server_host, authed_port)
         pending_scans = scanner.fetch_scans(authed_tunnel, subnet_name)
+        logger.debug(pending_scans)
         authed_tunnel.close_tunnel()
-        
-        results = scanner.execute_scans(pending_scans, app_storage)
-        logger.debug(results)
+
+        for report_id, scans in pending_scans.items():
+            pending_scans[report_id] = scanner.execute_scans(scans, app_storage)
+            logger.debug(pending_scans)
+
+        for report_id, scans in pending_scans.items():
+            logger.debug(scans)
+            scanner.send_scans(authed_tunnel, scans, app_storage)
     except ConnectionError as e:
         crt = app_storage.fetch(os.path.join('config', 'auth.crt'))
         auth_tunnel = TunnelHandler(server_host, auth_port, crt=crt)
-        authed_tunnel, subnet_name = authenticate(app_hash, subnet_name, app_storage, server_host, authed_port, auth_tunnel=auth_tunnel)
+        authed_tunnel = authenticate(app_hash, subnet_name, app_storage, server_host, authed_port, auth_tunnel=auth_tunnel)
+        pending_scans = scanner.fetch_scans(authed_tunnel, subnet_name)
+        logger.debug(pending_scans)
+        authed_tunnel.close_tunnel()
+
+        for report_id, scans in pending_scans.items():
+            pending_scans[report_id] = scanner.execute_scans(scans, app_storage)
+        logger.debug(pending_scans)
         
-    
+        for report_id, scans in pending_scans.items():
+            logger.debug(scans)
+            scanner.send_scans(authed_tunnel, scans, app_storage)
+    except Exception as e:
+        logger.error(f'Error during auto-run: {e}')
+        alert = Alert(app, "An error occurred during the auto-run process. Please try again later. If the problem persists, please contact our support team.")
+        alert.show()
+        app.exec()
 
 
 
@@ -163,13 +184,24 @@ if __name__ == '__main__':
         if not "python" in file:
             subprocess.Popen(file, start_new_session=True)
         sys.exit()
-
     try:
-        env = app_storage.fetch_ext(os.path.join('config', '.env'))
-        load_dotenv(env)
-        subnet_name = os.getenv('SUBNET_NAME', None)
+        
         try:
-            authed_tunnel = authenticate(app_hash=APP_HASH, subnet_name=subnet_name, app_storage=app_storage, server_host=server_host, auth_tunnel=None, authed_port=authed_port)
+            env = app_storage.fetch_ext(os.path.join('config', '.env'))
+            load_dotenv(env)
+        except FileNotFoundError as e:
+            raise ConnectionError("No authentication information found, launching login form.")
+        
+        try:
+            subnet_name = os.getenv('SUBNET_NAME', None)
+            authed_tunnel = authenticate(
+                app_hash=APP_HASH,
+                subnet_name=subnet_name,
+                app_storage=app_storage,
+                server_host=server_host,
+                auth_tunnel=None,
+                authed_port=authed_port
+            )
         except ConnectionError as e:
             logger.error(e)
             logger.info("Trying Re-authentication...")
@@ -182,47 +214,73 @@ if __name__ == '__main__':
                 raise TimeoutError("Failed to connect to authentication server.")
             
             authed_tunnel = authenticate(app_hash=APP_HASH, subnet_name=subnet_name, app_storage=app_storage, server_host=server_host, auth_tunnel=auth_tunnel, authed_port=authed_port)
-    except FileNotFoundError as e:
-        raise ConnectionError("No authentication information found, launching login form.")
+        finally:
+            if 'auth_tunnel' in locals() and auth_tunnel is not None:
+                auth_tunnel.close_tunnel()
     except ConnectionError as e:
         logger.error(e)
         try:
             auth_crt = app_storage.fetch(os.path.join('config', 'auth.crt'))
-            login = auth.Auth_Form(app, APP_HASH, server_host, auth_port, auth_crt, authed_port)
+            logger.info(auth_crt)
+            login = auth.Auth_Form(
+                app=app,
+                apphash=APP_HASH,
+                host=server_host,
+                port=auth_port,
+                cert=auth_crt,
+                authed_port=authed_port
+            )
             login.show()
             app.exec()
-            auto_run(app, APP_HASH, app_storage, server_host, auth_port, authed_port)
         except Exception as e:
-            logger.error(e)
-            alert = Alert(app, "We encountered an error. Please re-launch the app.")
+            logger.error(f'Unhandled error: {e}')
+            alert = Alert(app, "An error occurred while connecting to the authentication server. Please try again later. If the problem persists, please contact our support team.")
             alert.show()
             app.exec()
             sys.exit()
-    except Exception as e:
+        finally:
+            authed_tunnel = authenticate(app_hash=APP_HASH, subnet_name=subnet_name, app_storage=app_storage, server_host=server_host, authed_port=authed_port)
+    except TimeoutError as e:
         logger.error(f'Unhandled error: {e}')
         alert = Alert(app, "An error occurred while connecting to the authentication server. Please try again later. If the problem persists, please contact our support team.")
         alert.show()
         app.exec()
         sys.exit()
+    except Exception as e:
+            logger.error(e)
+            alert = Alert(app, "We encountered an unknown error. Please re-launch the app.")
+            alert.show()
+            app.exec()
+            sys.exit()
     finally:
         try:
             env = app_storage.fetch_ext(os.path.join('config', '.env'))
             load_dotenv(env)
             subnet_name = os.getenv('SUBNET_NAME', None)
-            auto_run(app, APP_HASH, app_storage, server_host, subnet_name, authed_port)
+            auto_run(app, APP_HASH, app_storage, server_host, subnet_name, authed_port, auth_port=auth_port)
+
+            sched = BlockingScheduler()
+            
+            @sched.scheduled_job('interval', hours=1)
+            def run_periodically():
+                global scans_running
+                if not scans_running:
+                    logger.info("Running scheduled job to check for pending scans...")
+                    scans_running = True
+                    try:
+                        auto_run(app, APP_HASH, app_storage, server_host, subnet_name, authed_port, auth_port=auth_port)
+                    except Exception as e:
+                        logger.error(f'Error during scheduled job: {e}')
+                    finally:
+                        logger.info("All pending scans have finished executing.")
+                        scans_running = False
+                else:
+                    logger.info("Previous scheduled job is still running, skipping this run.")
+            
+            sched.start()
         except Exception as e:
             logger.error(e)
             alert = Alert(app, "Failed to connect to server. Please try again later. If the problem persists, please contact our support team.")
             alert.show()
             app.exec()
             sys.exit()
-        sched = BlockingScheduler()
-
-        @sched.scheduled_job('interval', hours=1)
-        def timed_job():
-            try:
-                auto_run(app, APP_HASH, app_storage, server_host, auth_port, authed_port)
-            except Exception as e:
-                logger.error(f'Error during scheduled job: {e}')
-        
-        sched.start()

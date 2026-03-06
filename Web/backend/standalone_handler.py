@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from datetime import datetime, timedelta, timezone
@@ -73,7 +76,7 @@ class StandaloneHandler:
                 logger.error(f"Auth tunnel error: {e}")
 
 
-    def parse_command(self, conn: ssl.SSLSocket, client_id=None, authed_socket=None):
+    def parse_command(self, conn: ssl.SSLSocket, client_id: bytes=None, authed_socket=None):
         fromaddr = conn.getpeername()
         data = conn.recv(1024).decode()
         response = data.split("|")
@@ -106,7 +109,30 @@ class StandaloneHandler:
                         logger.warning(f"Unauthorized SEND_RESULTS attempt from {fromaddr}")
                         conn.send(b'UNAUTHORIZED')
                         raise ConnectionError(f"Unauthorized SEND_RESULTS attempt from {fromaddr}")
-                    results = response.pop(0)
+                    report_id = response.pop(0)
+                    scan_id = response.pop(0)
+                    filename = response.pop(0)
+                    result_size = int(response.pop(0))
+                    logger.debug(f"Receiving results for {result_size} byte scan {scan_id} of report {report_id} from {fromaddr}")
+
+                    conn.send(b'READY_FOR_RESULTS')
+                    results = conn.recv(result_size)
+                    logger.debug(f"Received results for scan {scan_id} of report {report_id} from {fromaddr}")
+                    conn.send(b'RESULT_RECEIVED')
+                    result_dir = os.getenv('SCAN_DIR', '/src/scans')
+                    of = os.path.join(result_dir, report_id, filename)
+                    
+                    logger.debug(f'Saving results to {of}: {results[:100]}...')
+                    Path(os.path.dirname(of)).mkdir(parents=True, exist_ok=True)
+                    with open(of, 'wb') as f:
+                        f.write(results)
+                    
+                    if os.path.exists(of) and os.path.getsize(of) == result_size:
+                        logger.debug(f"Results for scan {scan_id} of report {report_id} saved successfully, marking scan as completed")
+                        self._mark_scan_completed(scan_id, of)
+                    else:
+                        logger.error(f"Failed to save results for scan {scan_id} of report {report_id}")
+                        self._mark_scan_failed(scan_id, "Failed to save results to server")
                 case _:
                     logger.warning(f"Invalid command from {fromaddr}: {command}")
                     conn.send(b'INVALID_COMMAND')
@@ -438,7 +464,12 @@ class StandaloneHandler:
                 conn = context.wrap_socket(newsocket, server_side=True)
                 client_cert = conn.getpeercert(binary_form=True)
                 client_id = self.get_client_id_from_subnet_cert(client_cert)
+                if client_id is None:
+                    logger.warning(f"Unauthorized connection attempt from {fromaddr}")
+                    conn.send(b'UNAUTHORIZED')
+                    raise ConnectionError(f"Unauthorized connection attempt from {fromaddr}")
                 try:
+                    logger.debug(f"Authed connection established with {fromaddr}, client_id: {client_id}")
                     self.parse_command(conn, client_id=client_id)
                 except Exception as e:
                     logger.error(f"Authed tunnel error: {e}")
@@ -473,6 +504,7 @@ class StandaloneHandler:
             return None
 
     def fetch_scans(self, conn, subnet_name, client_id):
+        logger.debug(f"Fetching scans for subnet {subnet_name} of client {client_id}")
         try:
             db = get_db()
             pending_scans = db.execute_query(
@@ -519,6 +551,37 @@ class StandaloneHandler:
             finally:
                 raise e
             
+
+    def _mark_scan_completed(self, scan_id, result_path):
+        #mark scan as completed and store results
+        db = get_db()
+        
+        db.execute_command(
+            """UPDATE scan_jobs SET 
+               status = 'completed',
+               completed_at = CURRENT_TIMESTAMP,
+               results_path = %s
+               WHERE id = %s""",
+            (result_path, scan_id)
+        )
+        
+        logger.info(f"Scan job {scan_id} completed successfully")
+    
+    def _mark_scan_failed(self, scan_id, error_message):
+        #mark scan as failed with error message
+        db = get_db()
+        
+        db.execute_command(
+            """UPDATE scan_jobs SET 
+               status = 'failed',
+               completed_at = CURRENT_TIMESTAMP,
+               error_message = %s
+               WHERE id = %s""",
+            (error_message, scan_id)
+        )
+        
+        logger.error(f"Scan job {scan_id} failed: {error_message}")
+
 
     def start_handler(self):
         #use the database manager for connections

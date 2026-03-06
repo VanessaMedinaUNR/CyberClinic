@@ -14,6 +14,7 @@ import atexit
 import os
 
 # setup logging for the application
+logging_format = '%(asctime)s: %(name)s - %(levelname)s: %(message)s'
 logger = logging.getLogger(__name__)
 
 def create_app(debug=False):
@@ -24,11 +25,11 @@ def create_app(debug=False):
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
     if debug:
         app.config['DEBUG'] = True
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(format=logging_format, level=logging.DEBUG, force=True)
         logger.debug("Debug mode enabled - auto-reload on code changes")
     else:
         app.config['DEBUG'] = False
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(format=logging_format, level=logging.INFO, force=True)
     #connect our authentication routes to the main app
     #this adds all the /api/auth/* endpoints like login and register
     app.register_blueprint(auth_bp)
@@ -72,15 +73,17 @@ def create_app(debug=False):
     return app
 
 if __name__ == '__main__':
-    #this runs when we start the file directly (not imported)
-    
     #parse arguments
     import argparse
     parser = argparse.ArgumentParser(description="Main CyberClinic Backend Entrypoint")
     parser.add_argument('--debug', action='store_true', help='Enable debug mode with auto-reload and verbose logging')
     args = parser.parse_args()
+    
+    app = create_app(debug=args.debug)
+    logger.info("Starting Cyber Clinic Backend...")
+    
     #start standalone handler
-    print("Starting Standalone Handler...")
+    logger.info("Starting Standalone Handler...")
 
     auth_port = int(os.getenv('AUTH_PORT', 9999))
     auth_cert = os.getenv('AUTH_CRT', '/src/certs/auth.crt')
@@ -104,23 +107,21 @@ if __name__ == '__main__':
     )
     
     #starts up our web server so people can connect to it
-    app = create_app(debug=args.debug)
     CORS(app)
     #start the background scan worker
-    print("Starting background scan worker...")
+    logger.info("Starting background scan worker...")
     start_scan_worker()
     #register cleanup function to stop worker on exit
     atexit.register(stop_scan_worker)
+    logger.info("Scan worker running - will process scan jobs automatically")
+    
     #server settings for docker containers
     host = os.environ.get('FLASK_SERVER')
     port = os.environ.get('FLASK_PORT')
     #disable debug in Docker to avoid I/O issues
-    debug = os.environ.get('FLASK_ENV') == 'development' and not os.path.exists('/.dockerenv')
+    debug = app.config['DEBUG'] and not os.path.exists('/.dockerenv')
     
-    print("Starting Cyber Clinic Backend...")
-    print(f"Server running on http://{host}:{port}")
-    print("Debug mode enabled - auto-reload on code changes")
-    print("Scan worker running - will process scan jobs automatically")
+    logger.info(f"Server running on http://{host}:{port}")
     
     app.run(host=host, port=port, debug=debug)
 

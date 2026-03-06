@@ -1,4 +1,4 @@
-# Cyber Clinic backend api
+# Cyber Clinic Backend API
 
 ## Notes for frontend coders
 
@@ -7,22 +7,28 @@ This backend provides REST API endpoints for the cyber clinic web application. A
 **Base URL**: `http://localhost:5000`
 
 ## Quick Start for Frontend
+  > **Note:** The first two steps are required for standalone integration when hosting the CyberClinic Server locally
+00. **Set up server.cnf**
 
-1. **Generate Certs**
     ```bash
     cd Web/backend/certs
+    cp example.server.cnf server.cnf
+    # Modify the new server.cnf file to replace <Your IP> with the IP of the device hosting the server
+    ```
+0. **Generate Certs**
+    ```bash
     chmod +x generate_certs
     ./generate certs
     cd ..
     # The password prompt should match your environment variables for "AUTH_PASS" and "AUTHED_PASS"
     ```
 
-2. **Start the backend server**
+1. **Start the backend server**
    ```bash
    docker compose up -d --build 'backend-dev'
    ```
 
-3. **Test connection**
+2. **Test connection**
    ```bash
    curl http://localhost:5000/
    # Should return: {"status": "running", "service": "cyber-clinic-backend"}

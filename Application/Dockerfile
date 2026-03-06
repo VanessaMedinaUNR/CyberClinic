@@ -13,9 +13,9 @@ RUN pip install -r requirements.txt
 CMD pyinstaller \
 -n CyberClinic \
 --distpath /dist/linux \
---add-data config/*:config \
+--add-data config/auth.crt:config \
 --add-data tools/nmap-7.98-1.x86_64.rpm:tools \
---add-data tools/nikto-main/*:tools/nikto-main \
+#--add-data tools/nikto-main/*:tools/nikto-main \
 --onefile \
 --windowed \
 --noconfirm \
