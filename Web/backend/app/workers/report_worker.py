@@ -88,6 +88,18 @@ class ReportWorker:
             SCAN_ID = complete_scans[0]['id']
             MODE = complete_scans[0]['scan_type']
             completed_time = datetime.now()
+
+            #fetch client info
+            client_row = db.execute_single(
+                "SELECT client_name FROM client c JOIN client_users cu ON c.client_id = cu.client_id WHERE cu.client_id = %s LIMIT 1",
+                (client_id,)
+            )
+            client_name = client_row['client_name'] if client_row else 'Cyber Clinic'
+            admin_email_row = db.execute_single(
+                "SELECT u.email FROM users u JOIN client_users cu ON cu.user_id = u.user_id WHERE cu.client_id = %s AND u.client_admin = TRUE LIMIT 1",
+                (client_id,)
+            )
+            client_email = admin_email_row['email'] if admin_email_row else 'contact@cyberclinic.unr.edu'
             
             targets = []
             results_paths = []
@@ -134,17 +146,49 @@ class ReportWorker:
                 'scan_type': scan_type,
                 'targets': targets,
                 'client': {
-                    'name': 'Cyber Clinic',
-                    'email': 'example@unr.edu'
+                    'name': client_name,
+                    'email': client_email
                 },
                 'timestamps': {
-                    'started': start_time,
-                    'completed': completed_time
+                    #use the actual earliest scan start and latest scan completion
+                    #so the duration in the PDF matches what the web viewer shows
+                    'started': min(
+                        (s['started_at'] for s in complete_scans if s.get('started_at')),
+                        default=start_time
+                    ),
+                    'completed': max(
+                        (s['completed_at'] for s in complete_scans if s.get('completed_at')),
+                        default=completed_time
+                    )
                 },
                 'results_paths': results_paths
             }
             try:
-                self.report_generator.generate_report(report_data, output_format='json')
+                json_path = self.report_generator.generate_report(report_data, output_format='json')
+                #also generate PDF
+                pdf_path = None
+                try:
+                    pdf_path = self.report_generator.generate_report(report_data, output_format='pdf')
+                except Exception as pdf_err:
+                    logger.warning(f"PDF generation failed in worker, trying HTML: {pdf_err}")
+                    try:
+                        pdf_path = self.report_generator.generate_report(report_data, output_format='html')
+                    except Exception:
+                        pass
+
+                #update ALL scan_jobs in this report with the fresh report paths so fetch_report works
+                for scan in complete_scans:
+                    try:
+                        existing = json.loads(scan['results_path']) if scan.get('results_path') else {}
+                    except Exception:
+                        existing = {}
+                    existing['report'] = json_path
+                    if pdf_path:
+                        existing['report_pdf'] = pdf_path
+                    db.execute_command(
+                        "UPDATE scan_jobs SET results_path = %s WHERE id = %s",
+                        (json.dumps(existing), scan['id'])
+                    )
                 self._mark_report_completed(report_id)
             except Exception as e:
                 raise e

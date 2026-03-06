@@ -1,23 +1,26 @@
 
 export function TargetList ({targets}) {
+    const list = Array.isArray(targets) ? targets : [];
+    if (list.length === 0) return <span>N/A</span>;
     return (
-        <ul>
-            {targets.map((target, index) => (
-                <li key={index}>
-                    {target.target_name}({target.target_value}) - {target.target_type}
-                </li>
+        <span>
+            {list.map((target, index) => (
+                <span key={index}>
+                    {target.target_name}
+                    {target.target_value && target.target_value !== target.target_name ? ` (${target.target_value})` : ''}
+                    {index < list.length - 1 ? ', ' : ''}
+                </span>
             ))}
-        </ul>
+        </span>
     )
 };
 
 export function TargetTable ({targets}) {
+    const list = Array.isArray(targets) ? targets : [];
+    if (list.length === 0) return null;
     return (
         <table>
             <thead>
-                <tr>
-                    <th>Targets</th>
-                </tr>
                 <tr>
                     <th>Target Name</th>
                     <th>Target Address</th>
@@ -25,7 +28,7 @@ export function TargetTable ({targets}) {
                 </tr>
             </thead>
             <tbody>
-                {targets.map((target, index) => (
+                {list.map((target, index) => (
                     <tr key={index}>
                         <td>{target.target_name}</td>
                         <td>{target.target_value}</td>

@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS builder
+FROM python:3.11-bookworm AS builder
 
 WORKDIR /src
 
@@ -10,13 +10,20 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     perl \
-    libxml-writer-perl \ 
+    libxml-writer-perl \
     libnet-ssleay-perl \
     openssl \
     libauthen-pam-perl \
     libio-pty-perl \
     libjson-perl \
     sudo \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 #install Nikto from GitHub since it's not in main repos

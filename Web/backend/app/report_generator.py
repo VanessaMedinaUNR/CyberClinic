@@ -20,8 +20,18 @@ logger = logging.getLogger(__name__)
 
 try:
     from zoneinfo import ZoneInfo
+    _PST = ZoneInfo("America/Los_Angeles")
 except Exception:
     ZoneInfo = None
+    _PST = None
+
+def _now_pst():
+    """Return the current datetime in America/Los_Angeles (PST/PDT)."""
+    if _PST:
+        return datetime.now(tz=_PST)
+    #fallback: PST if zoneinfo is unavailable
+    from datetime import timezone, timedelta
+    return datetime.now(tz=timezone(timedelta(hours=-8)))
 
 class CustomReportGenerator:
     #generate custom json/html/pdf security assessment reports
@@ -95,16 +105,41 @@ class CustomReportGenerator:
                 finding_stats = self.severity_mapper.aggregate_findings_stats(sorted_findings)
                 scan_duration = self._calculate_duration(scan_data.get('timestamps', {}).get('started'), scan_data.get('timestamps', {}).get('completed'))
 
+                #normalise targets the same way _prepare_report_data does
+                _raw_targets = scan_data.get('targets')
+                if isinstance(_raw_targets, list):
+                    _targets_list = _raw_targets
+                    _first_target = _raw_targets[0] if _raw_targets else {}
+                    _target_value = _first_target.get('target_value', '')
+                    _target_type  = _first_target.get('target_type', 'unknown')
+                    _target_name  = _first_target.get('target_name', '')
+                elif isinstance(_raw_targets, dict) and _raw_targets:
+                    _target_value = _raw_targets.get('value', '')
+                    _target_type  = _raw_targets.get('type', 'unknown')
+                    _target_name  = _raw_targets.get('name', '')
+                    _targets_list = [{'target_name': _target_name, 'target_value': _target_value, 'target_type': _target_type}]
+                else:
+                    _legacy = scan_data.get('target', {}) or {}
+                    _target_value = _legacy.get('value', '') if isinstance(_legacy, dict) else ''
+                    _target_type  = _legacy.get('type', 'unknown') if isinstance(_legacy, dict) else 'unknown'
+                    _target_name  = _legacy.get('name', '') if isinstance(_legacy, dict) else ''
+                    _targets_list = [{'target_name': _target_name, 'target_value': _target_value, 'target_type': _target_type}] if _target_value else []
+
+                _default_versions = {'nmap': '7.98', 'nikto': '2.1.6'}
                 report_data = {
-                    'report_title': f"Security Assessment - {scan_data.get('target', {}).get('name', 'Unknown Target')}",
-                    'report_date': datetime.now().strftime('%B %d, %Y'),
-                    'scan_date': scan_data.get('timestamps', {}).get('completed', '') or datetime.now().strftime('%Y-%m-%d'),
+                    'report_title': f"Security Assessment - {scan_data.get('client', {}).get('name', _target_name or 'Unknown')}",
+                    'report_date': _now_pst().strftime('%B %d, %Y'),
+                    'scan_date': scan_data.get('timestamps', {}).get('completed', '') or _now_pst().strftime('%Y-%m-%d'),
                     'is_draft': False,
                     'client_name': scan_data.get('client', {}).get('name', 'Unknown Organization'),
                     'contact_email': scan_data.get('client', {}).get('email', 'contact@cyberclinic.unr.edu'),
-                    'targets': scan_data.get('targets', {}),
+                    'targets': _targets_list,
+                    'target_value': _target_value,
+                    'target_type':  _target_type,
+                    'target_name':  _target_name,
+                    'scan_type': scan_data.get('scan_type', 'unknown'),
                     'scan_type_display': self._get_scan_type_display(scan_data.get('scan_type', 'unknown')),
-                    'scan_types_used': ([ 'nmap' ] if (merged_nmap_hosts or merged_nmap_findings) else []) + ([ 'nikto' ] if nikto_files else []) ,
+                    'scan_types_used': (['nmap'] if (merged_nmap_hosts or merged_nmap_findings) else []) + (['nikto'] if nikto_files else []),
                     'scan_duration': scan_duration,
                     'hosts_scanned': len(merged_nmap_hosts),
                     'open_ports_total': sum(len([p for p in h.get('ports', []) if p.get('state') == 'open']) for h in merged_nmap_hosts),
@@ -116,13 +151,11 @@ class CustomReportGenerator:
                     'overall_risk_class': 'risk-unknown',
                     'nmap_data': {'hosts': merged_nmap_hosts, 'findings': merged_nmap_findings},
                     'nikto_data': {'findings': merged_nikto_findings},
-                    #'per_host_findings': self._group_findings_by_host(sorted_findings, {'hosts': merged_nmap_hosts}),
-                    #'services_summary': self._aggregate_services({'hosts': merged_nmap_hosts}),
-                    #'tool_versions': self._collect_tool_versions({'scan_info': {}}, {'scan_info': {}}),
-                    'default_tool_versions': [
-                        {'name': 'nmap', 'version': '7.98'},
-                        {'name': 'nikto', 'version': '2.1.6'}
-                    ],
+                    'per_host_findings': self._group_findings_by_host(sorted_findings, {'hosts': merged_nmap_hosts}),
+                    'services_summary': self._aggregate_services({'hosts': merged_nmap_hosts}),
+                    'tool_versions': {},
+                    'default_tool_versions': [{'name': k, 'version': v} for k, v in _default_versions.items()],
+                    'default_tool_versions_map': _default_versions,
                     'scan_warning': 'Surface-level automated scans (Nmap/Nikto) can miss issues. Further manual testing recommended.',
                     'generated_by': self.generated_by,
                     'confidentiality_notice': 'CONFIDENTIAL. This report contains sensitive security information and should be handled accordingly.'
@@ -132,11 +165,11 @@ class CustomReportGenerator:
                     host_map = self._build_host_map(merged_nmap_hosts)
                     report_data['hosts_summary'] = host_map
                     host_list = [h.get('ip') or h.get('ipv4') or h.get('ipv6') for h in merged_nmap_hosts if isinstance(h, dict)]
-                    report_data['hosts_list'] = host_list or [scan_data.get('target', {}).get('value')]
-                    report_data['hosts_display_list'] = [ (hl + (f" ({host_map.get(hl, [''])[0]})" if host_map.get(hl) else '')) for hl in report_data['hosts_list'] ]
+                    report_data['hosts_list'] = host_list or ([_target_value] if _target_value else [])
+                    report_data['hosts_display_list'] = [(hl + (f" ({host_map.get(hl, [''])[0]})" if host_map.get(hl) else '')) for hl in report_data['hosts_list']]
                 except Exception:
                     report_data['hosts_summary'] = {}
-                    report_data['hosts_list'] = [scan_data.get('target', {}).get('value')]
+                    report_data['hosts_list'] = [_target_value] if _target_value else []
                     report_data['hosts_display_list'] = report_data['hosts_list']
 
             #include generated_by and confidentiality text in both json and html
@@ -146,8 +179,10 @@ class CustomReportGenerator:
             )
 
             #always save a JSON copy of the report for frontend consumption (named report_<id>.json)
+            #use scan_id (primary key) as the report identifier, fall back to report_id if provided
+            _report_id = scan_data.get('report_id') or scan_data.get('scan_id')
             try:
-                json_path = self._save_json_report(report_data, scan_data.get('report_id'))
+                json_path = self._save_json_report(report_data, _report_id)
                 logger.info(f"JSON report saved for frontend: {json_path}")
             except Exception:
                 logger.exception('Failed to save JSON report')
@@ -157,7 +192,7 @@ class CustomReportGenerator:
                 return json_path
 
             if output_format == 'csv':
-                csv_path = self._save_csv_report(report_data, scan_data.get('report_id'))
+                csv_path = self._save_csv_report(report_data, _report_id)
                 logger.info(f"Report generated successfully: {csv_path}")
                 return csv_path
 
@@ -218,10 +253,47 @@ class CustomReportGenerator:
     def _prepare_report_data(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
         scan_id = scan_data.get('scan_id')
         scan_type = scan_data.get('scan_type', 'unknown')
-        target_info = scan_data.get('targets', {})
         client_info = scan_data.get('client', {})
         timestamps = scan_data.get('timestamps', {})
         results_paths = scan_data.get('results_paths', [])
+
+        #targets can be:
+        #a list of dicts with {target_name, target_value, target_type}  (from report_worker)
+        #a dict with {name, value, type}  (from generate_report endpoint)
+        #None / {}
+        raw_targets = scan_data.get('targets')
+        if isinstance(raw_targets, list):
+            targets_list = raw_targets
+            if targets_list:
+                first = targets_list[0]
+                target_info = {
+                    'name':  first.get('target_name', ''),
+                    'value': first.get('target_value', ''),
+                    'type':  first.get('target_type', 'unknown'),
+                }
+            else:
+                target_info = {}
+        elif isinstance(raw_targets, dict) and raw_targets:
+            target_info = raw_targets
+            #convert to list form for the template
+            targets_list = [{
+                'target_name':  raw_targets.get('name', raw_targets.get('target_name', '')),
+                'target_value': raw_targets.get('value', raw_targets.get('target_value', '')),
+                'target_type':  raw_targets.get('type',  raw_targets.get('target_type', 'unknown')),
+            }]
+        else:
+            #fall back to the legacy 'target' (singular) key used by the manual generate endpoint
+            legacy = scan_data.get('target', {})
+            if isinstance(legacy, dict) and legacy:
+                target_info = legacy
+                targets_list = [{
+                    'target_name':  legacy.get('name', ''),
+                    'target_value': legacy.get('value', ''),
+                    'target_type':  legacy.get('type', 'unknown'),
+                }]
+            else:
+                target_info = {}
+                targets_list = []
 
         all_findings = []
         scan_types_used = []
@@ -230,7 +302,7 @@ class CustomReportGenerator:
 
         #determine/normalize target type if not provided
         #if not target_info.get('type'):
-        #    target_info['type'] = self._detect_target_type(target_info.get('value', ''))
+        #target_info['type'] = self._detect_target_type(target_info.get('value', ''))
 
         #ensure results_paths is a list
         if isinstance(results_paths, str):
@@ -346,18 +418,23 @@ class CustomReportGenerator:
         }
         overall_risk_label, overall_risk_class = risk_map.get(risk.lower(), (risk, 'risk-unknown')) if isinstance(risk, str) else (risk, 'risk-unknown')
 
+        #build default tool version map keyed by tool name so the template can
+        #look up versions by name without looping every time.
+        _default_versions = {'nmap': '7.98', 'nikto': '2.1.6'}
+
         #build preliminary report_data so later sections can attach hosts info
         report_data = {
             'report_title': f"Security Assessment - {client_info.get('name', '')}",
-            'report_date': datetime.now().strftime('%B %d, %Y'),
-            'scan_date': timestamps.get('completed', '') or datetime.now().strftime('%Y-%m-%d'),
+            'report_date': _now_pst().strftime('%B %d, %Y'),
+            'scan_date': timestamps.get('completed', '') or _now_pst().strftime('%Y-%m-%d'),
             'is_draft': False,
             'client_name': client_info.get('name', 'Unknown Organization'),
             'contact_email': client_info.get('email', 'contact@cyberclinic.unr.edu'),
-            'targets': target_info,
-            #'target_value': target_info.get('value', 'Unknown'),
-            #'target_type': target_info.get('type', 'unknown'),
-            #'target_name': target_info.get('name', 'Unknown'),
+            #targets is always a list so React and the PDF template agree
+            'targets': targets_list,
+            'target_value': (target_info.get('value', '') if isinstance(target_info, dict) else (targets_list[0].get('target_value','') if targets_list else '')),
+            'target_type':  (target_info.get('type',  '') if isinstance(target_info, dict) else (targets_list[0].get('target_type', '') if targets_list else '')),
+            'target_name':  (target_info.get('name',  '') if isinstance(target_info, dict) else (targets_list[0].get('target_name', '') if targets_list else '')),
             'scan_type': actual_scan_type,
             'scan_type_display': scan_type_display,
             'scan_types_used': normalized_tools,
@@ -374,11 +451,13 @@ class CustomReportGenerator:
             'nikto_data': nikto_data,
             'per_host_findings': per_host_findings,
             'services_summary': self._aggregate_services(nmap_data),
+            #tool_versions starts empty, filled in later by _collect_tool_versions
             'tool_versions': {},
+            #default_tool_versions is a list (for React) and a dict (for Jinja lookup)
             'default_tool_versions': [
-                {'name': 'nmap', 'version': '7.98'},
-                {'name': 'nikto', 'version': '2.1.6'}
+                {'name': k, 'version': v} for k, v in _default_versions.items()
             ],
+            'default_tool_versions_map': _default_versions,
             'scan_warning': 'Surface-level automated scans (Nmap/Nikto) can miss issues. Further manual testing recommended.',
             'generated_by': self.generated_by,
             'confidentiality_notice': 'CONFIDENTIAL. This report contains sensitive security information and should be handled accordingly.'
@@ -400,9 +479,22 @@ class CustomReportGenerator:
 
         #if no hosts found yet, try to fall back to provided target value
         if not ordered_hosts:
-            tv = target_info.get('value')
+            if isinstance(target_info, dict):
+                tv = target_info.get('value')
+            elif targets_list:
+                tv = targets_list[0].get('target_value')
+            else:
+                tv = None
             if tv:
                 ordered_hosts = [tv]
+
+        #build a flat set of all known hostnames already aliased to discovered IPs,
+        #so we don't add them as duplicate standalone entries in hosts_list.
+        _aliased_hostnames: set = set()
+        for _names in hosts_summary.values():
+            for _n in (_names or []):
+                if _n:
+                    _aliased_hostnames.add(str(_n).lower())
 
         extra_hosts: List[str] = []
         try:
@@ -414,7 +506,8 @@ class CustomReportGenerator:
                     val = t
                 if isinstance(val, str):
                     for part in [p.strip() for p in re.split(r'[;,\s]+', val) if p.strip()]:
-                        if part and part not in extra_hosts:
+                        #skip if this part is already a hostname alias for a known IP
+                        if part and part not in extra_hosts and part.lower() not in _aliased_hostnames:
                             extra_hosts.append(part)
         except Exception:
             pass
@@ -447,7 +540,7 @@ class CustomReportGenerator:
                             if ':' in s and not re.match(r'^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$', s):
                                 s = s.split(':')[0]
                             s = s.strip().rstrip('/')
-                            if s and s not in extra_hosts:
+                            if s and s not in extra_hosts and s.lower() not in _aliased_hostnames:
                                 extra_hosts.append(s)
                         except Exception:
                             continue
@@ -463,13 +556,13 @@ class CustomReportGenerator:
                         continue
                     if isinstance(hv, dict):
                         for k in hv.keys():
-                            if k and k not in extra_hosts:
+                            if k and k not in extra_hosts and str(k).lower() not in _aliased_hostnames:
                                 extra_hosts.append(str(k))
                     elif isinstance(hv, list):
                         for item in hv:
-                            if item and str(item) not in extra_hosts:
+                            if item and str(item) not in extra_hosts and str(item).lower() not in _aliased_hostnames:
                                 extra_hosts.append(str(item))
-                    elif isinstance(hv, str) and hv not in extra_hosts:
+                    elif isinstance(hv, str) and hv not in extra_hosts and hv.lower() not in _aliased_hostnames:
                         extra_hosts.append(hv)
         except Exception:
             pass
@@ -616,13 +709,30 @@ class CustomReportGenerator:
             report_data['target_types'] = list(target_type_set)
 
             #collect tool versions now that report_data exists
-            report_data['tool_versions'] = self._collect_tool_versions(nmap_data, nikto_data) or {}
-
+            collected_versions = self._collect_tool_versions(nmap_data, nikto_data) or []
+            #_collect_tool_versions returns a list of {name, version} dicts.
+            #build a dict keyed by tool name for fast template lookups.
+            tool_versions_map: Dict[str, str] = {}
+            for tv in collected_versions:
+                if isinstance(tv, dict) and tv.get('name'):
+                    tool_versions_map[tv['name'].lower()] = tv.get('version', '')
+            #fill in hardcoded defaults for any tool that was used but whose version
+            #could not be detected at runtime (nmap/nikto version rarely changes)
+            _hardcoded = {'nmap': '7.98', 'nikto': '2.1.6'}
+            for tool in report_data.get('scan_types_used', []):
+                tl = tool.lower()
+                if tl not in tool_versions_map and tl in _hardcoded:
+                    tool_versions_map[tl] = _hardcoded[tl]
+            report_data['tool_versions'] = tool_versions_map
+            #also keep as list form so React frontend can iterate easily
+            report_data['tool_versions_list'] = [
+                {'name': k, 'version': v} for k, v in tool_versions_map.items()
+            ]
             #add fallback default tool versions so template can show versions even if tool_versions is missing
             report_data['default_tool_versions'] = [
-                {'name': 'nmap', 'version': '7.98'},
-                {'name': 'nikto', 'version': '2.1.6'}
+                {'name': k, 'version': v} for k, v in _hardcoded.items()
             ]
+            report_data['default_tool_versions_map'] = _hardcoded
 
             #ensure tool_versions contains sensible defaults when a tool was run but its version couldn't be detected
             '''
@@ -1018,14 +1128,13 @@ class CustomReportGenerator:
 
             HTML(filename=html_path).write_pdf(pdf_path)
 
-            logger.info(f"PDF report generated: {pdf_path}")
+            logger.info(f"PDF report generated via WeasyPrint: {pdf_path}")
             return pdf_path
         except ImportError:
-            logger.warning("WeasyPrint not installed - PDF generation unavailable")
-            logger.warning("Install with: pip install weasyprint")
+            logger.warning("WeasyPrint not installed - falling back to HTML")
             return html_path
         except Exception as e:
-            logger.error(f"PDF conversion failed: {e}")
+            logger.error(f"WeasyPrint PDF conversion failed: {e}")
             return html_path
 
     def _aggregate_services(self, nmap_data: Dict[str, Any]) -> List[Dict[str, Any]]:

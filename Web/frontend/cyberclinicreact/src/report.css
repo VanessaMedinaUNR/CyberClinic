@@ -1,27 +1,19 @@
 /* Cyber Clinic Report Styling */
 @page {
-size: A4;
-margin: 2cm 1.5cm;
-@top-right {
-    content: "Cyber Clinic Report";
-    font-size: 10pt;
-    color: #0033A0;
+    size: A4;
+    margin: 2cm 1.5cm;
 }
-@bottom-left {
-    content: "CONFIDENTIAL";
-    font-size: 9pt;
-    font-style: italic;
-    color: #666;
-}
-@bottom-center {
-    content: "Security Assessment";
-    font-size: 9pt;
-    color: #FFD966; /* old yellow accent */
-}
-@bottom-right {
-    content: "Page " counter(page) " of " counter(pages);
-    font-size: 9pt;
-}
+
+@media print {
+    .no-print { display: none !important; }
+    #bounding_box { margin: 0; width: 100%; }
+    .report-paper { box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; }
+    .page-end-footer { display: none; }
+    .cover-page { min-height: 100vh; page-break-after: always; }
+    .host-section { page-break-inside: avoid; }
+    .finding-card { page-break-inside: avoid; }
+    h1, h2 { page-break-after: avoid; }
+    .stats-grid { grid-template-columns: repeat(5, 1fr); }
 }
 
 * {
@@ -34,7 +26,40 @@ body {
 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 line-height: 1.6;
 color: #333;
-background: #fff;
+background: #f0f2f5;
+}
+
+/* Action bar above report */
+.report-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0 16px 0;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #0f172a;
+    padding: 8px 16px;
+    border-radius: 5px;
+    border: 1px solid #0f172a;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.btn-outline:hover { background: #f1f5f9; }
+
+/* White paper wrapper */
+.report-paper {
+    background: #fff;
+    max-width: 900px;
+    margin: 0 auto;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .cover-page {
@@ -42,11 +67,14 @@ page-break-after: always;
 display: flex;
 flex-direction: column;
 justify-content: space-between;
-min-height: 100vh;
 padding: 3cm 2cm;
 background: linear-gradient(135deg, #0033A0 0%, #003D82 50%, #002855 100%);
 color: white;
 border-bottom: 8px solid #0033A0; /* blue bottom border */
+}
+
+@media print {
+    .cover-page { min-height: 100vh; }
 }
 
 .cover-header {
@@ -336,13 +364,10 @@ color: white;
 padding: 12px 20px;
 text-align: center;
 margin-top: 1.5em;
-/* Make footer span full viewport width (bleed) */
-width: 100vw;
-position: relative;
-left: 50%;
-right: 50%;
-margin-left: -50vw;
-margin-right: -50vw;
+max-width: 900px;
+margin-left: auto;
+margin-right: auto;
+border-radius: 0 0 4px 4px;
 }
 
 /* Make cover-footer text stand out on cover */

@@ -11,11 +11,13 @@ export default function ReportViewer () {
     const reportRef = useRef(null);
     const [ loading, setLoading ] = useState(true);
     const [ success, setSuccess ] = useState(false);
+    const [ notReady, setNotReady ] = useState(false);
 
     const [ reportData, setReportData ] = useState({
         report_title: '',
         report_date: '',
         client_name: '',
+        contact_email: '',
         targets: [],
         scan_type: '',
         scan_types_used: [],
@@ -23,14 +25,16 @@ export default function ReportViewer () {
         hosts_list: [],
         hosts_summary: {},
         overall_risk: '',
+        overall_risk_class: '',
         scan_warning: '',
-        finding_stats: {},
+        finding_stats: { critical: 0, high: 0, medium: 0, low: 0, info: 0, total: 0 },
         hosts_scanned: 0,
         open_ports_total: 0,
-        nmap_data: {},
+        nmap_data: { hosts: [] },
         finding_types: {},
-        tool_versions: {},
+        tool_versions: [],
         default_tool_versions: [],
+        tools_used: [],
         services_summary: [],
         per_host_findings: {},
         findings: []
@@ -40,17 +44,7 @@ export default function ReportViewer () {
     const report_id = location.state
 
     useEffect(() =>{
-        try
-        {
-            loadReport();
-            setLoading(false);
-            setSuccess(true);
-        }
-        catch(error) {
-            console.log(error);
-            setLoading(false);
-            setSuccess(false);
-        }
+        loadReport();
     }, [])
 
     useEffect(() => {
@@ -63,56 +57,114 @@ export default function ReportViewer () {
     }, [hash]);
 
     async function loadReport() {
-        'use server';
         api.get('/reports/' + report_id.id)
         .then(function (response) { 
+            const d = response.data;
+
+            // tool_versions from backend is now a dict {nmap: '7.98', nikto: '2.1.6'}
+            // Fall back to default_tool_versions_map if tool_versions is missing/empty.
+            const toolVersionMap = (d.tool_versions && typeof d.tool_versions === 'object' && !Array.isArray(d.tool_versions))
+                ? d.tool_versions
+                : {};
+            const defaultVersionMap = (d.default_tool_versions_map && typeof d.default_tool_versions_map === 'object')
+                ? d.default_tool_versions_map
+                : {};
+            const toolsUsed = (d.scan_types_used || []).map(name => ({
+                name,
+                version: toolVersionMap[name] || defaultVersionMap[name] || null
+            }));
+
+            // Keep all keys including 'global' — we render it separately in the findings section
+            const perHostFindings = d.per_host_findings || {};
+
             setReportData({
                 ...reportData,
-                report_title: response.data.report_title,
-                report_date: response.data.report_date,
-                client_name: response.data.client_name,
-                targets: response.data.targets,
-                scan_type: response.data.scan_type_display,
-                scan_types_used: response.data.scan_types_used,
-                scan_duration: response.data.scan_duration,
-                hosts_list: response.data.hosts_list,
-                hosts_summary: response.data.hosts_summary,
-                overall_risk: response.data.overall_risk,
-                overall_risk_class: response.data.overall_risk_class,
-                scan_warning: response.data.scan_warning,
-                finding_stats: response.data.finding_stats,
-                hosts_scanned: response.data.hosts_scanned,
-                open_ports_total: response.data.open_ports_total,
-                nmap_data: response.data.nmap_data,
-                finding_types: response.data.finding_types,
-                tool_versions: response.data.tool_versions,
-                default_tool_versions: response.data.default_tool_versions,
-                services_summary: response.data.services_summary,
-                per_host_findings: response.data.per_host_findings,
-                findings: response.data.findings
+                report_title: d.report_title || '',
+                report_date: d.report_date || '',
+                client_name: d.client_name || '',
+                contact_email: d.contact_email || '',
+                targets: Array.isArray(d.targets) ? d.targets : [],
+                scan_type: d.scan_type_display || d.scan_type || '',
+                scan_types_used: d.scan_types_used || [],
+                scan_duration: d.scan_duration || '',
+                hosts_list: d.hosts_list || [],
+                hosts_summary: d.hosts_summary || {},
+                overall_risk: d.overall_risk || '',
+                overall_risk_class: d.overall_risk_class || 'risk-unknown',
+                scan_warning: d.scan_warning || '',
+                finding_stats: {
+                    critical: d.finding_stats?.critical ?? 0,
+                    high:     d.finding_stats?.high     ?? 0,
+                    medium:   d.finding_stats?.medium   ?? 0,
+                    low:      d.finding_stats?.low      ?? 0,
+                    info:     d.finding_stats?.info     ?? 0,
+                    total:    d.finding_stats?.total    ?? 0,
+                },
+                hosts_scanned: d.hosts_scanned ?? 0,
+                open_ports_total: d.open_ports_total ?? 0,
+                nmap_data: d.nmap_data || { hosts: [] },
+                finding_types: d.finding_types || {},
+                tool_versions: d.tool_versions || {},
+                default_tool_versions: d.default_tool_versions || [],
+                tools_used: toolsUsed,
+                services_summary: d.services_summary || [],
+                per_host_findings: perHostFindings,
+                findings: d.findings || []
             });
+            setSuccess(true);
+            setLoading(false);
         })
         .catch(error => {
             console.log(error);
-            setSuccess(false);
+            if (error.response && error.response.status === 404) {
+                setNotReady(true);
+            } else {
+                setSuccess(false);
+            }
+            setLoading(false);
         });
     }
     
     const handleGeneratePDF = () => {
-        const doc = new jsPDF({
-            format: 'letter',
-            unit: 'px',
-        });
-        doc.setFont('Inter-Regular', 'normal');
-        doc.html(reportRef.current, {
-            html2canvas: {scale: 0.6 },
-            callback: () => doc.save(reportData.report_title)
-        });
+        window.print();
+    }
+
+    const handleDownloadJSON = async () => {
+        try {
+            const response = await api.get(`/reports/download/${report_id.id}`, {
+                responseType: 'blob'
+            });
+            const contentType = response.headers['content-type'] || 'application/pdf';
+            const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('html') ? 'html' : 'bin';
+            const blob = new Blob([response.data], { type: contentType });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `cyberclinic_report_${report_id.id}.${ext}`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+        } catch (err) {
+            alert('Download failed: ' + (err.response?.data?.error || err.message));
+        }
     }
     if (loading) return (
         <div id = "bounding_box" style={{ alignItems: 'center'}}>
             <Toolbar/>
             <h2>Loading...</h2>
+        </div>
+    )
+    if (notReady) return (
+        <div id = "bounding_box" style={{ alignItems: 'center'}}>
+            <Toolbar/>
+            <div style={{ textAlign: 'center', marginTop: '60px' }}>
+                <h2>Report Not Ready Yet</h2>
+                <p style={{ color: '#666' }}>The scan is still running or the report hasn't been generated yet.</p>
+                <button className="btn-black" onClick={() => window.history.back()} style={{ marginTop: '20px' }}>
+                    ← Back to Dashboard
+                </button>
+            </div>
         </div>
     )
     if (success === false) return (
@@ -122,27 +174,21 @@ export default function ReportViewer () {
         </div>
     )
     return(
-        <div id = "bounding_box" style={{ alignItems: 'center'}}>
+        <div id="bounding_box">
             <Toolbar/>
-            <div 
-                className="flex justify-center items-center"
-                style={{ 
-                    width: '90%',
-                    border: '2px solid #919191',
-                    marginLeft: 'auto',
-                    marginRight: 'auto'
-                }}
-            >
-                <div style={{textAlign: 'right', padding: '1em'}}>
-                    <button className="btn-black" onClick={handleGeneratePDF}>
-                        Download PDF
+            {/* Action bar — outside reportRef so it is excluded from print */}
+            <div className="report-action-bar no-print">
+                <button className="btn-outline" onClick={() => window.history.back()}>← Back</button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button className="btn-black" onClick={handleDownloadJSON}>
+                        ↓ Download Report (PDF)
                     </button>
                 </div>
-                <hr/>
+            </div>
+            <div className="report-paper">
                 <ReportTemplate reportData={reportData} reportRef={reportRef} sectionRef={sectionRef} location={location} />
             </div>
-            {/* Blue end footer matching cover accent */}
-            <div className="page-end-footer">Generated on { reportData.report_date } • Report Version 1.0</div>
+            <div className="page-end-footer no-print">Generated on { reportData.report_date } • Report Version 1.0</div>
         </div>
     )
 }
@@ -174,8 +220,15 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                                 <div className="cover-info-value">{ reportData.report_date }</div>
                             </div>
                             <div>
-                                <div className="cover-info-label">Targets</div>
-                                <div className="cover-info-value"><TargetList targets={reportData.targets}/></div>
+                                <div className="cover-info-label">Target{reportData.targets.length > 1 ? 's' : ''}</div>
+                                <div className="cover-info-value">
+                                    {reportData.targets.length > 0
+                                        ? <TargetList targets={reportData.targets}/>
+                                        : reportData.hosts_list.length > 0
+                                            ? reportData.hosts_list.join(', ')
+                                            : 'N/A'
+                                    }
+                                </div>
                             </div>
                             <div>
                                 <div className="cover-info-label">Scan Type</div>
@@ -206,9 +259,13 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                         <p>This security assessment was conducted by Cyber Clinic on <strong>{ reportData.report_date }</strong>
                         &nbsp;for <strong>{ reportData.client_name }</strong>.</p>
 
-                        <div>The scan targeted the following hosts:
-                            <TargetTable targets={reportData.targets}/>
-                        </div>
+                        <p style={{marginTop: '0.6em'}}>The scan targeted the following hosts:</p>
+                        {reportData.targets.length > 0
+                            ? <TargetTable targets={reportData.targets}/>
+                            : reportData.hosts_list.length > 0
+                                ? <p><strong>{reportData.hosts_list.join(', ')}</strong></p>
+                                : <p><em>No target information available.</em></p>
+                        }
 
                         <p style={{marginTop: '0.8em', display: 'flex', alignItems: 'center', gap: '0.8em'}}>
                             <strong>Scan tools used:</strong>
@@ -273,7 +330,6 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                     { reportData.scan_types_used.includes('nmap') ?
                         <>
                             <>
-                                {/* Table of contents for quick navigation when multiple hosts present */}
                                 {reportData.hosts_list.length > 1 &&
                                     <div className="toc">
                                         <strong>Report Contents:</strong>
@@ -290,9 +346,8 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                                     </div>
                                 }
                             </>
-
                             <>
-                            {reportData.nmap_data.hosts.length > 0 ?
+                            {reportData.nmap_data?.hosts?.length > 0 ?
                                 reportData.nmap_data.hosts.map((host, index) => (
                                     <div key={index} ref={sectionRef} id={`host-${ host.ip.replaceAll('.', '-') }`} className="host-section">
                                         <div className="host-header">
@@ -343,24 +398,22 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                         </div>
                         <div className="section-card">
                             <h4>Tools Used</h4>
-                            <p><strong>Scan Tools:</strong> { reportData.scan_types_used.join(', ') }</p>
+                            <p><strong>Scan Tools:</strong> { reportData.scan_types_used.join(', ') || '—' }</p>
                             <p><strong>Versions:</strong></p>
-                            {reportData.tool_versions.length > 0 ? 
-                                <>
-                                    {reportData.tool_versions.map((tool) => (
-                                        <span key={tool.name} style={{marginLeft: '0.5em'}}>
-                                            { tool.name }: { tool.version }
-                                        </span>
-                                    ))}
-                                </>
-                            :
-                            <>
-                                {reportData.default_tool_versions.map((tool) => (
-                                    <span key={tool.name} style={{marginLeft: '0.5em'}}>
-                                        { tool.name }: { tool.version }<br></br>
+                            {reportData.tools_used && reportData.tools_used.length > 0 ?
+                                reportData.tools_used.map((tool, i) => (
+                                    <span key={i} style={{display: 'block', marginLeft: '0.5em'}}>
+                                        { tool.name }: { tool.version }
                                     </span>
-                                ))}
-                            </>}
+                                ))
+                            : reportData.default_tool_versions && reportData.default_tool_versions.length > 0 ?
+                                reportData.default_tool_versions.map((tool, i) => (
+                                    <span key={i} style={{display: 'block', marginLeft: '0.5em'}}>
+                                        { tool.name }: { tool.version }
+                                    </span>
+                                ))
+                            : <span style={{marginLeft: '0.5em', color: '#888'}}>Not available</span>
+                            }
                         </div>
                     </div>
 
@@ -369,7 +422,7 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                         <>
                             {reportData.services_summary.length > 0 ?
                                 <>
-                                        {reportData.nmap_data.hosts.map((host, index) => (
+                                        {reportData.nmap_data?.hosts?.map((host, index) => (
                                             <div key={index}>
                                                 <h3>{host.ip}</h3>
                                                 <table>
@@ -441,8 +494,11 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
 
                             { reportData.per_host_findings ?
                             <>
-                                <h2>Findings by Host</h2>
-                                {Object.entries(reportData.per_host_findings).map(([host, findings], index) => (
+                                {Object.keys(reportData.per_host_findings).filter(h => h !== 'global').length > 0 &&
+                                    <h2>Findings by Host</h2>}
+                                {Object.entries(reportData.per_host_findings)
+                                    .filter(([host]) => host !== 'global')
+                                    .map(([host, findings], index) => (
                                     <div key={index} id={`host-${ host.replaceAll('.', '-') }-findings`} className="host-section">
                                         <div className="host-header" style={{marginBottom: '0.6em'}}>
                                             <div>
@@ -479,12 +535,13 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                                 ))}
 
                                 {/* Render global findings if present (primarily from web scans like Nikto) */}
-                                {reportData.scan_types_used.includes('nikto') ? <>
-                                    {Object.keys(reportData.per_host_findings).filter(([key]) => key === 'global').length > 0 && <>
+                                {(() => {
+                                    const globalFindings = reportData.per_host_findings['global'] || [];
+                                    return globalFindings.length > 0 ? <>
                                         <h2>Global / Shared Findings</h2>
                                         <p style={{fontStyle: 'italic', color: '#444'}}>These findings are at the site or application level and may apply across multiple hosts listed above.</p>
-                                        {Object.keys(reportData.per_host_findings).filter(([key]) => key === 'global').map((finding) => (
-                                            <div className="finding-card">
+                                        {globalFindings.map((finding, index) => (
+                                            <div key={index} className="finding-card">
                                                 <div className="finding-header">
                                                     <h3>{ finding.title }</h3>
                                                     <span className={`severity-badge severity-${finding.severity}`}>{ finding.severity }</span>
@@ -503,8 +560,8 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                                                 <p><strong>Recommendation:</strong> { finding.recommendation }</p>
                                             </div>
                                         ))}
-                                    </>}
-                                </>: <p><em>Nikto was not run for this scan; web-level findings are unavailable.</em></p>}
+                                    </> : null;
+                                })()}
                             </>
                             :
                             <>
@@ -575,7 +632,7 @@ function ReportTemplate({reportData, reportRef, sectionRef, location})  {
                             <h3>Contact Information</h3>
                             <p>For questions or assistance regarding this report, please contact Cyber Clinic:</p>
                             <p><strong>Email:</strong> { reportData.contact_email }</p>
-                            <p><strong>Organization:</strong> { reportData.client_name }</p>
+                            <p><strong>Organization:</strong> Cyber Clinic</p>
                             <p><strong>Website:</strong> <a href="https://github.com/VanessaMedinaUNR/CyberClinic">github.com/VanessaMedinaUNR/CyberClinic</a></p>
                             <p style={{height: '0.8em'}} aria-hidden="true"></p>
                             <hr />

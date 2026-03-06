@@ -9,7 +9,7 @@ function NewTarget () {
     const[ targetName, setTargetName ] = useState("");
     const [ targetType, setTargetType ]  = useState("None");
     const [ targetValue, setTargetValue ]  = useState("");
-    const [ targetPublic, setTargetPublic ]  = useState("");
+    const [ targetPublic, setTargetPublic ]  = useState(false);
 
     async function handleSubmit(e) {
         e.preventDefault();

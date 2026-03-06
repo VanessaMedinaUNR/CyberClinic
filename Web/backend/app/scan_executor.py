@@ -33,7 +33,7 @@ class ScanExecutor:
             elif st == 'nikto':
                 return self._execute_nikto_scan(scan_job_id, target_value, target_type, scan_options or {})
             elif st in ('full', 'comprehensive'):
-                # run Nmap then run Nikto against discovered web hosts (if any)
+                #run Nmap then run Nikto against discovered web hosts (if any)
                 return self._execute_full_scan(scan_job_id, target_value, target_type, scan_options or {})
             else:
                 raise ValueError(f"Unsupported scan type: {scan_type}")
@@ -48,12 +48,9 @@ class ScanExecutor:
     
     def _execute_nmap_scan(self, scan_job_id: int, target: str, target_type: str, options: Dict) -> Dict[str, Any]:
         #execute Nmap scan with appropriate options
-        #base Nmap command
-        cmd = ['sudo', 'nmap']
-        #add common options
-        cmd.extend(['-v', '-sS', '-sV', '--script=default,safe', '--reason', '--open'])
-        if options.get('os_detect', True):
-            cmd.append('-O')
+        cmd = ['nmap']
+        #fast, focused options: version detection, top 1000 ports, no OS detect, no heavy scripts
+        cmd.extend(['-sV', '--open', '-T4'])
         #output formats
         output_base = f"{self.results_dir}/nmap_scan_{scan_job_id}"
         cmd.extend(['-oA', output_base])  
@@ -61,8 +58,6 @@ class ScanExecutor:
         #target-specific options
         if target_type == 'domain':
             cmd.extend(['-Pn'])
-        elif target_type == 'range':
-            cmd.extend(['-sn']) 
             
         #custom options from scan_options
         if options.get('full_ports') is True:
@@ -76,9 +71,7 @@ class ScanExecutor:
             speed = options['scan_speed']
             if speed in ['1', '2', '3', '4', '5']:
                 cmd.extend([f'-T{speed}'])
-        else:
-            cmd.extend(['-T3'])
-            
+        
         #add target
         cmd.append(target)
 
@@ -134,7 +127,7 @@ class ScanExecutor:
         if not target.startswith(('http://', 'https://')):
             target = f"http://{target}"
         #base Nikto command
-        cmd = ['sudo', 'nikto']
+        cmd = ['nikto']
         #output file
         suffix = options.get('output_suffix') if isinstance(options, dict) else None
         if suffix:
@@ -144,18 +137,13 @@ class ScanExecutor:
         cmd.extend(['-output', output_file])
         #target
         cmd.extend(['-h', target])
-        #additional options
-        cmd.extend(['-Format', 'json', '-Tuning', 'x', '-C', 'all', '-Pause', '1'])
+        #faster options: json output, no CGI-all (slow), no pause, shorter timeout
+        cmd.extend(['-Format', 'json', '-Tuning', 'x', '-timeout', '10', '-maxtime', '300s'])
         
         #custom options from scan_options
         #note: dont use -p (port) option with full URIs as Nikto doesn't allow it
         if not target.startswith(('http://', 'https://')) and options.get('port'):
             cmd.extend(['-p', str(options['port'])])
-            
-        if options.get('timeout'):
-            cmd.extend(['-timeout', str(options['timeout'])])
-        else:
-            cmd.extend(['-timeout', '30'])
             
         logger.info(f"Executing Nikto command: {' '.join(cmd)}")
         

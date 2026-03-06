@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class ScanWorker:
     #background worker that processes pending scan jobs
-    def __init__(self, scan_dir, poll_interval=30):
+    def __init__(self, scan_dir, poll_interval=5):
         self.poll_interval = poll_interval
         self.running = False
         self.executor = ScanExecutor()

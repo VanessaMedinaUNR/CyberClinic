@@ -71,11 +71,15 @@ def add_target():
         client_id = client["client_id"]
 
         #validate required fields  
-        required_fields = ['target_name', 'target_type', 'target_value', 'public_facing']
+        required_fields = ['target_name', 'target_type', 'target_value']
         for field in required_fields:
-            if not data.get(field):
+            if data.get(field) is None or data.get(field) == '':
                 logger.warning(data)
                 return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # public_facing is a boolean — check separately so False is valid
+        if data.get('public_facing') is None:
+            return jsonify({'error': 'Missing required field: public_facing'}), 400
 
         target_name = data['target_name'].strip()
         target_type = data['target_type'].lower()

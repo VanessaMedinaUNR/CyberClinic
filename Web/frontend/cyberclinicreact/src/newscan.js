@@ -14,19 +14,16 @@ function NewScan () {
     useEffect(() => {
         api.get("/target/list-targets")
         .then(function (response) { 
-            const target_list = JSON.parse(response.data.target_list);
+            const raw = response.data.target_list;
+            const target_list = typeof raw === 'string' ? JSON.parse(raw) : raw;
             setTargets(target_list.map((item) => ({ value: item, label: item })));
         })
         .catch(function (error) {
-            if (!error.response)
-            {
-                alert("Connection error: Please try again later");
-            }
-            else 
-            {
-                console.error('Error fetching data:', error)
-                alert("Scan failed: " + error.response.data.error);
-                if (error.response.status === 401){ navigate('/') }
+            if (!error.response) {
+                console.error("Connection error loading targets:", error);
+            } else {
+                console.error('Error fetching targets:', error.response.data);
+                if (error.response.status === 401) { navigate('/') }
             }
         })
         .finally(() => setLoading(false));
@@ -72,6 +69,11 @@ function NewScan () {
             <Toolbar/> 
             <h1>Generate a New Scan!</h1>
             <h4>Please select your target and what type of scan</h4>
+            {!loading && targets.length === 0 && (
+                <p style={{ color: 'red', marginBottom: '10px' }}>
+                    No targets found. Please <button className="btn-black" style={{padding:'4px 10px'}} onClick={() => navigate('/newTarget')}>add a target</button> first.
+                </p>
+            )}
             <form id="newScanForm" onSubmit={handleSubmit}>
                 <div>
                     <label htmlFor="target_name">Select your target: </label>
