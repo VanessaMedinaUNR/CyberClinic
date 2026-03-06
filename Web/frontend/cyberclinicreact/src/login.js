@@ -71,7 +71,7 @@ function Login() {
             </div>
         </form>
         <div id="external_buttons">
-            <button id="signup" type="button" onClick={() => (navigate("./signup"))}>Sign Up</button>
+            <button id="signup" type="button" onClick={() => (navigate("/signup"))}>Sign Up</button>
 
             <button id="forgotpw" type="button" onClick={() => (navigate("/forgotpw"))}>Forgot Password</button>
         </div>
