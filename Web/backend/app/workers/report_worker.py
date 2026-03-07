@@ -131,7 +131,15 @@ class ReportWorker:
                     }
                     if not target in targets:
                         targets.append(target)
-                results_file: dict = json.loads(scan['results_path'])
+                #results path may be a JSON dict string {"json":..} or a plain file path
+                try:
+                    results_file: dict = json.loads(scan['results_path'])
+                    if not isinstance(results_file, dict):
+                        raise ValueError("not a dict")
+                except Exception:
+                    #plain path fallback, treat it as a json file path
+                    raw = (scan.get('results_path') or '').strip()
+                    results_file = {'json': raw.replace('.json', '')} if raw else {}
                 logger.info(results_file)
                 path = results_file.get('json')
                 if results_file.get('json') and os.path.exists(f'{path}.json'):
