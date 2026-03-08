@@ -221,13 +221,24 @@ class ScanExecutor:
         except Exception:
             logger.exception('Failed running per-host Nikto scans')
 
+        #collect all output files from nmap and nikto sub scans so scan_worker can persist them in the results_path for report_worker
+        combined_output_files = {}
+        nmap_files = nmap_result.get('output_files', {}) or {}
+        for k, v in nmap_files.items():
+            combined_output_files[f'nmap_{k}'] = v
+        for idx, nr in enumerate(nikto_results):
+            nikto_files = nr.get('output_files', {}) or {}
+            for k, v in nikto_files.items():
+                combined_output_files[f'nikto_{idx}_{k}'] = v
+
         return {
             'success': nmap_result.get('success', False),
             'scan_job_id': scan_job_id,
             'scan_type': 'full',
             'target': target,
             'nmap': nmap_result,
-            'nikto': nikto_results
+            'nikto': nikto_results,
+            'output_files': combined_output_files
         }
     
     def _parse_nmap_results(self, output_base: str, subprocess_result) -> Dict[str, Any]:

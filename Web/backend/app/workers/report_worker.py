@@ -137,11 +137,33 @@ class ReportWorker:
                         targets.append(target)
                 results_file: dict = json.loads(scan['results_path'])
                 logger.debug(results_file)
-                path = results_file.get('json')
-                if results_file.get('json') and os.path.exists(f'{path}.json'):
-                    results_paths.append(f'{path}.json')
-                elif results_file.get('xml') and os.path.exists(results_file.get('xml')):
-                    results_paths.append(results_file.get('xml'))
+                #collects every file path stored in results_path that actually exists
+                #keys vary by scan type:
+                #nmap plain: xml, nmap, gnmap
+                #nikto plain: json
+                #full scan: nmap_xml, nmap_nmap, nmap_gnmap, nikto_<n>_json
+                #priority: prefers json files first (already parsed ones), then xml for nmap
+                _added = set()
+
+                def _try_add(p):
+                    if p and isinstance(p, str) and p not in _added and os.path.exists(p):
+                        results_paths.append(p)
+                        _added.add(p)
+                        return True
+                    return False
+
+                #explicit json key (standalone.py/nikto)
+                json_val = results_file.get('json')
+                if json_val:
+                    #standalone.py stores just a base path without extension
+                    _try_add(f'{json_val}.json') or _try_add(json_val)
+                #explicit xml key (plain nmap scan)
+                _try_add(results_file.get('xml'))
+                #full scan prefixed keys (nmap_xml, nikto_*_json, etc)
+                for key, fpath in results_file.items():
+                    if not isinstance(fpath, str) or key in ('json', 'xml', 'report', 'report_pdf'):
+                        continue
+                    _try_add(fpath)
 
             logger.debug(results_paths)
             report_data = {
