@@ -28,10 +28,16 @@ function Dashboard() {
                 }
             })
             .catch(err => {
-                console.error(err);
-                if (isInitial) {
-                    setError('Failed to load scans.');
-                    setLoading(false);
+                const errcode = err.response?.status || err.status || null;
+                if (errcode && errcode === 401) {
+                    setGenerateError('Session expired. Please log in again.');
+                    setTimeout(() => navigate('/'), 3000);
+                } else {
+                    console.error(err);
+                    if (isInitial) {
+                        setError('Failed to load scans.');
+                        setLoading(false);
+                    }
                 }
             });
     }, []);

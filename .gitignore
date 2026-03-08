@@ -13,12 +13,13 @@ __pycache__/
 .Python
 
 # Virtual environments
+.venv/
 venv/
 env/
 ENV/
 
 # IDE and editor files
-.vscode/settings.json
+.vscode
 .idea/
 *.swp
 *.swo
@@ -32,26 +33,21 @@ Thumbs.db
 _internal
 build/
 Cyberclinic.spec
-/Web/backend/app/reports/
-/Web/backend/app/results/
 *.log
 *.sqlite
 *.db
-VPN_config
-Application/src/server.crt
+Web/backend/certs/*
 Web/backend/scans
-Web/backend/reports/*
-!Web/backend/reports/report_example.json
-Web/backend/certs
-server.crt
+Web/backend/reports
+!Web/backend/certs/example.*
+!Web/backend/certs/generate_certs
+!Web/backend/certs/README.md
 
 # Development and testing
 test_results.json
 coverage/
 .coverage
 .pytest_cache/
-test_*.py
-*_test.py
 requirements_minimal.txt
 start_dev.sh
 

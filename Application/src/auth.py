@@ -1,0 +1,167 @@
+#Cyber Clinic Standalone Application - User Authenication Form
+#CS 426 Team 13 - Spring 2026
+
+from PyQt6.QtCore import pyqtSignal, QObject, QVariant
+from subnet_validation import Subnet_Form
+from tunnel import TunnelHandler
+import logging
+import time
+from PyQt6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QLineEdit,
+    QDialog,
+    QFormLayout,
+    QPushButton
+)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class User_Auth(QObject):
+    user_verified = pyqtSignal(QVariant, arguments=['result'])  # Define a signal to send data back
+    
+    def __init__(self, form: Auth_Form, email, passwd):
+        super().__init__()
+        self.form = form
+        self.email = email
+        self.passwd = passwd
+        self.apphash = form.apphash
+
+
+    def start(self, auth_tunnel: TunnelHandler):
+
+        logger.debug(f"hash: {self.apphash}\n")
+        logger.debug(f"{self.email}: {self.passwd}")
+        send = f'AUTH|{self.apphash}|{self.email}|{self.passwd}'
+
+        try:
+            auth_tunnel.conn.send(send.encode())
+            data = auth_tunnel.conn.recv(1024)
+            logger.debug(data)
+            response = data.decode().strip().split('|')
+            success = response.pop(0)
+            match success:
+                case "AUTH_FAILED":
+                    message = response.pop(0)
+                    logger.debug(f"Received from server: {success}: {message}")
+                    self.form.l.setText(message)
+                    self.form.app.processEvents()
+                    self.form.p.clear()
+                    self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel}) # Emit the result when done
+                case "AUTH_SUCCESS":
+                    logger.debug(f"Received from server: {success}")
+
+                    self.form.l.setText("User verification success!")
+                    self.form.app.processEvents()
+                    self.user_verified.emit({"success": True, "auth_tunnel": auth_tunnel})  
+                case _:
+                    auth_tunnel.close_tunnel()
+                    raise ValueError("Unexpected response from server during authentication.")
+        except TimeoutError as e:
+            logger.error(f'{e}')
+            self.form.l.setText("Connection error, please try again later")
+            self.form.app.processEvents()
+            time.sleep(5)
+            self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel})
+        except Exception as e:
+            logger.error(f'{e}')
+            self.form.l.setText("User verification failed! If you continue to recieve this error, please contact our support team: ")
+            self.form.app.processEvents()
+            time.sleep(5)
+            self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel})
+
+
+class Auth_Form(QDialog):
+
+    def __init__(self, app: QApplication, apphash, host, port, cert, authed_port):
+        self.app = app
+        self.apphash = apphash
+        self.server = host
+        self.auth_port = port
+        self.authed_tunnel = TunnelHandler(host, authed_port)
+        self.auth_crt = cert
+        super().__init__()
+
+        self.setWindowTitle("CyberClinic Authentication")
+
+        layout = QFormLayout()
+
+        self.l = QLabel("Please enter your CyberClinic Email and Password.")
+        self.l.setMargin(10)
+
+        self.e = QLineEdit()
+        self.e.setPlaceholderText("Email")
+        self.p = QLineEdit()
+        self.p.setPlaceholderText("Password")
+        self.p.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.s = QPushButton("Submit")
+        self.s.setDefault(1)
+        self.s.clicked.connect(self.verify_user)
+
+        layout.addRow(self.l)
+        layout.addRow("Email:", self.e)
+        layout.addRow("Password", self.p)
+        layout.addRow(self.s)
+
+        self.setLayout(layout)
+
+
+    def parse_user_auth(self, results):
+        user_verified = results['success']
+        auth_tunnel: TunnelHandler = results['auth_tunnel']
+        if not user_verified:
+            auth_tunnel.close_tunnel()
+            return
+
+        time.sleep(1)
+
+        try:
+            data = auth_tunnel.conn.recv(1024)
+            logger.debug(data)
+            names = data.decode().strip().split('|')
+            response = names.pop(0)
+            if response == "SUBNET_INVALID":
+                self.l.setText("Please add this subnet in the web portal first.")
+                self.app.processEvents()
+                return
+            elif response == "SUBNET_LIST":
+                self.l.setText("Please enter your CyberClinic Email and Password.")
+                self.e.clear()
+                passwd = self.p.text()
+                self.p.clear()
+                self.hide()
+                validate_subnet = Subnet_Form(
+                    auth=self,
+                    subnet_list=names,
+                    auth_tunnel=auth_tunnel,
+                    authed_tunnel=self.authed_tunnel,
+                    passwd=passwd
+                )
+                validate_subnet.show()
+
+        except Exception as e:
+            logger.error(f'{e}')
+            self.e.clear()
+            self.p.clear()
+
+
+    def verify_user(self):
+        email = self.e.text()
+        passwd = self.p.text()
+        self.auth = User_Auth(self, email, passwd)
+        self.auth.user_verified.connect(self.parse_user_auth)  # Connect signal to slot
+        self.l.setText("Verifying...")
+        self.app.processEvents()
+        try:
+            auth_tunnel = TunnelHandler(host=self.server, port=self.auth_port, crt=self.auth_crt)
+            self.auth.start(auth_tunnel)
+        except TimeoutError as e:
+            logger.error(f'{e}')
+            self.l.setText("Connection error, please try again later")
+            time.sleep(5)
+        except Exception as e:
+            logger.error(f'{e}')
+            self.l.setText("Unexpected error. Please contact support: [email].")
+        

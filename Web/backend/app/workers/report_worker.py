@@ -57,7 +57,7 @@ class ReportWorker:
                 self._mark_report_failed(report['report_id'], e)
 
     def _compile_report(self, report_id, start_time):
-        logger.info(f'compiling {report_id}...')
+        logger.info(f'Attempting to compile {report_id[:8]}...')
 
         db = get_db()
         report_scans = db.execute_query(
@@ -74,7 +74,7 @@ class ReportWorker:
         for scan in report_scans:
             scan_id = scan['id']
             status = scan['status']
-            logger.info(f'{scan_id} - {status}')
+            logger.debug(f'{scan_id} - {status}')
             match status:
                 case 'failed':
                     self._mark_report_failed(report_id, f'Scan job {scan_id} failed')
@@ -84,6 +84,7 @@ class ReportWorker:
                 case _:
                     pass
         if len(complete_scans) == len(report_scans):
+            logger.info(f"All scans for report {report_id[:8]} completed, generating report...")
             client_id = complete_scans[0]['client_id']
             SCAN_ID = complete_scans[0]['id']
             MODE = complete_scans[0]['scan_type']
@@ -94,7 +95,10 @@ class ReportWorker:
                 "SELECT client_name FROM client c JOIN client_users cu ON c.client_id = cu.client_id WHERE cu.client_id = %s LIMIT 1",
                 (client_id,)
             )
-            client_name = client_row['client_name'] if client_row else 'Cyber Clinic'
+            client_name = client_row['client_name']
+            if not client_name:
+                self._mark_report_failed(report_id, "Client information not found")
+                return
             admin_email_row = db.execute_single(
                 "SELECT u.email FROM users u JOIN client_users cu ON cu.user_id = u.user_id WHERE cu.client_id = %s AND u.client_admin = TRUE LIMIT 1",
                 (client_id,)
@@ -132,14 +136,14 @@ class ReportWorker:
                     if not target in targets:
                         targets.append(target)
                 results_file: dict = json.loads(scan['results_path'])
-                logger.info(results_file)
+                logger.debug(results_file)
                 path = results_file.get('json')
                 if results_file.get('json') and os.path.exists(f'{path}.json'):
                     results_paths.append(f'{path}.json')
                 elif results_file.get('xml') and os.path.exists(results_file.get('xml')):
                     results_paths.append(results_file.get('xml'))
 
-            logger.info(results_paths)
+            logger.debug(results_paths)
             report_data = {
                 'report_id': report_id,
                 'scan_id': SCAN_ID,
@@ -209,7 +213,7 @@ class ReportWorker:
             (report_id,)
         )
         
-        logger.info(f"Report {report_id} compiled successfully")
+        logger.info(f"Report {report_id[:8]} compiled successfully")
 
     def _mark_report_failed(self, report_id, error_message):
         #mark scan as failed with error message

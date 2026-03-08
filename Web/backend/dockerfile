@@ -1,4 +1,7 @@
-FROM python:3.11-bookworm AS builder
+FROM python:3.11-slim AS builder
+
+ARG AUTHED_CRT
+ENV AUTHED_CRT=$AUTHED_CRT
 
 WORKDIR /src
 
@@ -21,9 +24,9 @@ RUN apt-get update && apt-get install -y \
     libpangoft2-1.0-0 \
     libpangocairo-1.0-0 \
     libcairo2 \
-    libgdk-pixbuf2.0-0 \
     libffi-dev \
     fonts-liberation \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 #install Nikto from GitHub since it's not in main repos
@@ -38,6 +41,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 #copy application code
 COPY . .
+
+RUN openssl x509 -in ${AUTHED_CRT} -outform PEM -out /usr/local/share/ca-certificates/CyberClinicCA.crt
+RUN update-ca-certificates
 
 #create non-root user for security
 RUN useradd --create-home --shell /bin/bash app \

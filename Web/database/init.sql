@@ -51,6 +51,14 @@ CREATE TABLE network
   PRIMARY KEY (client_id, subnet_name)
 );
 
+CREATE TABLE network_keys
+(
+  client_id   varchar(36) NOT NULL,
+  subnet_name varchar     NOT NULL,
+  public_key  text        ,
+  PRIMARY KEY (client_id, subnet_name)
+);
+
 CREATE TABLE network_domains
 (
   domain      web_domain  NOT NULL,
@@ -72,14 +80,14 @@ CREATE TABLE report
 
 CREATE TABLE scan_jobs
 (
-  id            serial       NOT NULL,
-  client_id     varchar(36)  NOT NULL,
-  report_id     varchar(36)  NOT NULL,
-  subnet_name   varchar      NOT NULL,
-  scan_type     varchar(50)  NOT NULL,
+  id            serial      NOT NULL,
+  report_id     varchar(36) NOT NULL,
+  client_id     varchar(36) NOT NULL,
+  subnet_name   varchar     NOT NULL,
+  scan_type     varchar(50) NOT NULL,
   scan_config   text        ,
-  status        varchar(20)  DEFAULT 'pending',
-  created_at    timestamp   ,
+  status        varchar(20) DEFAULT 'pending',
+  created_at    timestamp   DEFAULT CURRENT_TIMESTAMP,
   started_at    timestamp   ,
   completed_at  timestamp   ,
   results       text        ,
@@ -126,6 +134,11 @@ ALTER TABLE report
   ADD CONSTRAINT FK_client_TO_report
     FOREIGN KEY (client_id)
     REFERENCES client (client_id);
+
+ALTER TABLE network_keys
+  ADD CONSTRAINT FK_network_TO_network_keys
+    FOREIGN KEY (client_id, subnet_name)
+    REFERENCES network (client_id, subnet_name);
 
 ALTER TABLE network_domains
   ADD CONSTRAINT FK_network_TO_network_domains

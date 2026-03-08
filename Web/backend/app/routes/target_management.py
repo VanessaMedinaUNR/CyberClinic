@@ -83,10 +83,13 @@ def add_target():
 
         target_name = data['target_name'].strip()
         target_type = data['target_type'].lower()
-        target_value = data['target_value'].strip()
+        target_value = data['target_value']
         public_facing = data['public_facing']
         verified = False
         verified_date = None
+
+        if not public_facing == False and not public_facing == True :
+            return jsonify({'error': f'Missing required field: public_facing'}), 400
 
         ip: ipaddress.IPv4Network
 
@@ -132,6 +135,11 @@ def add_target():
             db.execute_command(
                 """INSERT INTO network_domains (domain, client_id, subnet_name) VALUES (%s, %s, %s)""",
                 (target_value, client_id, target_name)
+            )
+        if not public_facing:
+            db.execute_command(
+                """INSERT INTO network_keys (client_id, subnet_name) VALUES (%s, %s)""",
+                (client_id, target_name)
             )
         return jsonify({
             'success': True,

@@ -127,7 +127,7 @@ class CustomReportGenerator:
 
                 _default_versions = {'nmap': '7.98', 'nikto': '2.1.6'}
                 report_data = {
-                    'report_title': f"Security Assessment - {scan_data.get('client', {}).get('name', _target_name or 'Unknown')}",
+                    'report_title': f"CyberClinic Security Assessment - {scan_data.get('client', {}).get('name', _target_name or 'Unknown Client')}",
                     'report_date': _now_pst().strftime('%B %d, %Y'),
                     'scan_date': scan_data.get('timestamps', {}).get('completed', '') or _now_pst().strftime('%Y-%m-%d'),
                     'is_draft': False,
@@ -212,10 +212,10 @@ class CustomReportGenerator:
                     #last resort simple message
                     html_content = '<html><body><h1>Scan Report</h1><p>Report generation failed to render template.</p></body></html>'
 
-            html_path = self._save_html_report(html_content, scan_data.get('scan_id'))
+            html_path = self._save_html_report(html_content, scan_data.get('report_id'))
 
             if output_format == 'pdf':
-                pdf_path = self._convert_to_pdf(html_path, scan_data.get('scan_id'))
+                pdf_path = self._convert_to_pdf(html_path, scan_data.get('report_id'))
                 logger.info(f"Report generated successfully: {pdf_path}")
                 return pdf_path
 
@@ -1051,12 +1051,12 @@ class CustomReportGenerator:
             logger.error(f"Template rendering failed: {e}")
             raise
 
-    def _save_html_report(self, html_content: str, scan_id: int) -> str:
+    def _save_html_report(self, html_content: str, report_id: str) -> str:
         #remove any previous reports for this scan to avoid duplicates and conserve storage
         try:
             patterns = [
-                os.path.join(self.reports_dir, f"cyberclinic_report_{scan_id}_*.html"),
-                os.path.join(self.reports_dir, f"report_{scan_id}.html")
+                os.path.join(self.reports_dir, f"report_{report_id}_*.html"),
+                os.path.join(self.reports_dir, f"report_{report_id}.html")
             ]
             for pat in patterns:
                 for old in glob.glob(pat):
@@ -1069,7 +1069,7 @@ class CustomReportGenerator:
             logger.exception('Failed cleaning up old reports')
 
         #write new timestamped report
-        filename = f"cyberclinic_report_{scan_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+        filename = f"report_{report_id}_{datetime.now().strftime('%Y-%m-%d')}.html"
         filepath = os.path.join(self.reports_dir, filename)
 
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -1119,11 +1119,11 @@ class CustomReportGenerator:
         logger.info(f"CSV report saved: {filepath}")
         return filepath
 
-    def _convert_to_pdf(self, html_path: str, scan_id: int) -> str:
+    def _convert_to_pdf(self, html_path: str, report_id: str) -> str:
         try:
             from weasyprint import HTML
 
-            pdf_filename = f"cyberclinic_report_{scan_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            pdf_filename = f"report_{report_id}_{datetime.now().strftime('%Y-%m-%d')}.pdf"
             pdf_path = os.path.join(self.reports_dir, pdf_filename)
 
             HTML(filename=html_path).write_pdf(pdf_path)

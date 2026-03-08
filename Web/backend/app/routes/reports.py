@@ -527,6 +527,11 @@ def download_report(report_id):
         if not client:
             return jsonify({'error': 'Authentication required'}), 401
         client_id = client['client_id']
+        client = db.execute_single(
+            "SELECT * FROM client WHERE client_id = %s",
+            (client_id,)
+        )
+        client_name_safe = client['client_name'].replace(' ', '_') if client and client.get('client_name') else 'Unknown_Client'
 
         scan_data = db.execute_single(
             """SELECT sj.results_path, nt.subnet_name
@@ -546,7 +551,8 @@ def download_report(report_id):
             return jsonify({'error': 'Report file not found'}), 404
 
         ext = os.path.splitext(report_path)[1][1:] or 'pdf'
-        filename = f"cyberclinic_report_{scan_data['subnet_name']}_{report_id}.{ext}"
+        timestamp = datetime.now().strftime('%Y-%m-%d')
+        filename = f"CyberClinic_Report_{client_name_safe}_{timestamp}.{ext}"
         mimetype = 'application/pdf' if ext == 'pdf' else 'text/html'
         
         return send_file(report_path, as_attachment=True, download_name=filename, mimetype=mimetype)

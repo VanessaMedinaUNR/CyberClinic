@@ -12,7 +12,6 @@ from app.database import get_db, block_jwt
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token, get_jwt
 from datetime import timedelta
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 #create blueprint for authentication routes
