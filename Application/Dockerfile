@@ -1,17 +1,4 @@
-FROM mcr.microsoft.com/windows:ltsc2019 AS win_builder
-
-#ADD https://www.python.org/ftp/python/3.14.0/python-3.14.0-amd64.exe C:/python3.exe
-#RUN c:\python3.exe /quiet InstallAllUsers=1 PrependPath=1
-#RUN del c:\python3.exe -Force
-
-#WORKDIR /shared
-#COPY requirements.txt requirements.txt
-
-#RUN pip install --upgrade pip
-#RUN pip install -r requirements.txt
-
-
-FROM python:3.14 AS linux_builder
+FROM python:3.14-bookworm AS linux_builder
 
 RUN apt update && \
   apt install libgl1 libxkbcommon-x11-0 libegl1 dbus -y && \
@@ -22,6 +9,18 @@ WORKDIR /src
 COPY requirements.txt requirements.txt
 
 RUN pip install -r requirements.txt
+
+CMD pyinstaller \
+-n CyberClinic \
+--distpath /dist/linux \
+--add-data config/auth.crt:config \
+--add-data tools/nmap-7.98-1.x86_64.rpm:tools \
+--icon CyberClinic.ico \
+#--add-data tools/nikto-main/*:tools/nikto-main \
+--onefile \
+--windowed \
+--noconfirm \
+client_application.py
 
 
 FROM dockurr/macos AS mac_builder

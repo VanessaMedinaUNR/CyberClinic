@@ -99,7 +99,8 @@ Our application will provide:
 - Git
 - Modern browser (Chrome, Edge, Firefox)
 
-### Current Setup
+### For 
+### 1) Build Web Portal
 
 ```bash
 #Clone the repository
@@ -116,17 +117,10 @@ cp app.env.example app.env
 #Update app.env as shown at https://docs.sysreptor.com/setup/installation/#manual-installation
 
 docker-compose up
-
-#Create virtual environment for downloadable application testing
-cd.. # back into ~/CyberClinic/
-cd Application
-python3 -m venv .venv
-source .venv/bin/activate #On Windows: .venv\Scripts\activate
-
-pip install -r requirements.txt
-cd src
-python -m  PyInstaller --distpath /dist/{Your Distribution} -n CyberClinic --noconfirm client_application.py
 ```
+
+#### 2) Build Standalone Application (For subnets without public IP addresses)
+[Follow the Standalone Application Build Steps](Application/README.md)
 
 > **Development Note:** Full installation instructions will be updated as we build out the application components.
 
@@ -163,7 +157,7 @@ python -m  PyInstaller --distpath /dist/{Your Distribution} -n CyberClinic --noc
 <a href="#"><img src="https://github.com/Austin-Finch.png" width="100px;" alt="Austin Finch"/></a><br />
 <sub><b>Austin Finch</b></sub><br/>
 <sub><em>x Developer/Engineer</em></sub><br/>
-<sub>Focus: Dockerization, Database, Backend</sub>
+<sub>Focus: Dockerization, Database, Backend, Standalone App</sub>
 </td>
 <td align="center">
 <a href="https://github.com/VanessaMedinaUNR"><img src="https://github.com/VanessaMedinaUNR.png" width="100px;" alt="Vanessa Medina"/></a><br />

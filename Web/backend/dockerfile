@@ -1,7 +1,11 @@
 FROM python:3.11-slim AS builder
 
-ARG PORT
-ENV PORT=$PORT
+ARG AUTHED_CRT
+ENV AUTHED_CRT=$AUTHED_CRT
+ARG BACKEND_SERVER
+ENV BACKEND_SERVER=$BACKEND_SERVER
+ARG BACKEND_PORT
+ENV BACKEND_PORT=$BACKEND_PORT
 
 WORKDIR /src
 
@@ -13,7 +17,21 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     perl \
-    && rm -rf /var/lib/apt/lists/*
+    libxml-writer-perl \
+    libnet-ssleay-perl \
+    openssl \
+    libauthen-pam-perl \
+    libio-pty-perl \
+    libjson-perl \
+    sudo \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libffi-dev \
+    fonts-liberation \
+    dos2unix \
+    && rm -rf /var/lib/apt/lists/* 
 
 #install Nikto from GitHub since it's not in main repos
 RUN git clone https://github.com/sullo/nikto.git /opt/nikto \
@@ -28,11 +46,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 #copy application code
 COPY . .
 
+RUN openssl x509 -in ${AUTHED_CRT} -outform PEM -out /usr/local/share/ca-certificates/CyberClinicCA.crt
+RUN update-ca-certificates
+
 #create non-root user for security
 RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /src
+#Give scan executor privleges to run nmap and nikto scans
+RUN echo "app ALL=(ALL) NOPASSWD: /bin/nmap" | tee -a /etc/sudoers
+RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/nikto" | tee -a /etc/sudoers
 USER app
 
-CMD python3 main.py
+ENTRYPOINT [ "python3",  "main.py" ]
+HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD curl --silent --fail http://${BACKEND_SERVER}:${BACKEND_PORT}/ || exit 1
 
 # Done by Morales-Marroquin and Austin Finch

@@ -1,8 +1,5 @@
 name: CyberClinic Web Portal
 
-include:
- - reptor/sysreptor/deploy/docker-compose.yml
-
 services:
 
   frontend:
@@ -17,29 +14,53 @@ services:
       context: frontend
       dockerfile: Dockerfile
     depends_on:
-      - ${BACKEND_SERVER}
+      #backend:
+      #  condition: service_healthy
+      # Run with development backend
+      backend-dev:
+        condition: service_healthy
     networks:
       - frontend
     command: npm start
 
   backend:
     container_name: cyberclinic-backend
-    image: python:latest
     build:
       context: backend
       target: builder
+      args:
+        - BACKEND_SERVER=${BACKEND_SERVER-backend}
+        - BACKEND_PORT=${BACKEND_PORT:-5000}
+        - AUTHED_CRT=${AUTHED_CRT}
     volumes:
       - ./backend:/src
     environment:
-    #Web-related Variables
-      - FLASK_SERVER=0.0.0.0
-      - FLASK_PORT=${BACKEND_PORT}
-      - FLASK_DEBUG=${FLASK_DEBUG}
+      - SCAN_DIR=${SCAN_DIR:-/src/scans}
+      - REPORT_DIR=${REPORT_DIR:-/src/reports}
+      - OLLAMA_HOST=${OLLAMA_HOST:-ollama}
+      - OLLAMA_PORT=${OLLAMA_PORT:-11434}
+    #web-related variables
+      - FRONTEND_HOST=frontend
+      - FRONTEND_PORT=${FRONTEND_PORT:-3000}
+      - FLASK_SERVER=${BACKEND_SERVER}
+      #-- Windows/Linux start
+      - FLASK_PORT=${BACKEND_PORT:-5000}
+      #-- windows/linux end
+
+      #-- macOS start
+      # - FLASK_PORT=${BACKEND_PORT:-5001}
+      #-- macOS end
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
-      - VPN_PORT=${VPN_PORT}
-      - VPN_CRT=${VPN_CRT}
-      - VPN_KEY=${VPN_KEY}
+      - SERVER_CNF=${SERVER_CNF}
+      - AUTH_PORT=${AUTH_PORT}
+      - AUTH_CRT=${AUTH_CRT}
+      - AUTH_KEY=${AUTH_KEY}
+      - AUTH_PASS=${AUTH_PASS}
+      - AUTHED_PORT=${AUTHED_PORT}
+      - AUTHED_CRT=${AUTHED_CRT}
+      - AUTHED_KEY=${AUTHED_KEY}
+      - AUTHED_PASS=${AUTHED_PASS}
     #Databse-related Variables
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}  
@@ -47,13 +68,18 @@ services:
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
     expose:
-      - ${BACKEND_PORT}
+      #-- Windows/Linux start
+      - ${BACKEND_PORT:-5000}
+      #-- Windows/Linux end
+      #-- macOS start
+      # - ${BACKEND_PORT:-5001}
+      #-- macOS end
     ports:
-      - ${VPN_PORT}:${VPN_PORT}
-      - ${BACKEND_PORT}:${BACKEND_PORT}
-    command: python3 main.py
+      - ${AUTH_PORT}:${AUTH_PORT}
+      - ${AUTHED_PORT}:${AUTHED_PORT}
+    command: ['']
     depends_on:
-      app:
+      ollama:
         condition: service_healthy
       database:
         condition: service_healthy
@@ -61,7 +87,7 @@ services:
       - backend
       - frontend
     healthcheck:
-      test: curl -f http://localhost:$$BACKEND_PORT/
+      test: curl --silent --fail http://${BACKEND_SERVER}:${BACKEND_PORT}/ || exit 1
       interval: 30s
       timeout: 30s
       retries: 5
@@ -69,43 +95,91 @@ services:
 
   backend-dev:
     container_name: cyberclinic-backend
-    image: python:latest
     build:
       context: backend
       target: builder
+      args:
+        - BACKEND_SERVER=${BACKEND_SERVER:-backend}
+        - BACKEND_PORT=${BACKEND_PORT:-5000}
+        - AUTHED_CRT=${AUTHED_CRT}
     environment:
+      - SCAN_DIR=${SCAN_DIR:-/src/scans}
+      - REPORT_DIR=${REPORT_DIR:-/src/reports}
+      - OLLAMA_HOST=${OLLAMA_HOST:-ollama}
+      - OLLAMA_PORT=${OLLAMA_PORT:-11434}
     #Web-related Variables
-      - FLASK_SERVER=0.0.0.0
-      - FLASK_PORT=${BACKEND_PORT}
-      - FLASK_DEBUG=${FLASK_DEBUG}
+      - FRONTEND_HOST=frontend
+      - FRONTEND_PORT=${FRONTEND_PORT:-3000}
+      - FLASK_SERVER=${BACKEND_SERVER}
+      #-- Windows/Linux start
+      - FLASK_PORT=${BACKEND_PORT:-5000}
+      #-- Windows/Linux end
+      #-- macOS start
+      # - FLASK_PORT=${BACKEND_PORT:-5001}
+      #-- macOS end
       - SECRET_KEY=${FLASK_SECRET_KEY}
     #Standalone-related Variables
-      - VPN_PORT=${VPN_PORT}
-      - VPN_CRT=${VPN_CRT}
-      - VPN_KEY=${VPN_KEY}
+      - SERVER_CNF=${SERVER_CNF}
+      - AUTH_PORT=${AUTH_PORT}
+      - AUTH_CRT=${AUTH_CRT}
+      - AUTH_KEY=${AUTH_KEY}
+      - AUTH_PASS=${AUTH_PASS}
+      - AUTHED_PORT=${AUTHED_PORT}
+      - AUTHED_CRT=${AUTHED_CRT}
+      - AUTHED_KEY=${AUTHED_KEY}
+      - AUTHED_PASS=${AUTHED_PASS}
     #Databse-related Variables
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}  
       - DB_PASS=${DB_PASS}
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=database
       - DB_PORT=${DB_PORT}
-    #Sysreptor-related Variables
+    #sysreptor-related variables
       - REPTOR_SERVER_URL=http://${REPTOR_SERVER}:${REPTOR_PORT}
       - REPTOR_API_TOKEN=${REPTOR_API_TOKEN}
     volumes:
       - ./backend:/src
-    expose:
-      - ${BACKEND_PORT}
+    #-- windows/linux start
     ports:
-      - ${BACKEND_PORT}:${BACKEND_PORT}
-      - ${VPN_PORT}:${VPN_PORT}
-    command: sleep infinity
+      #-- Windows/Linux start
+      - ${BACKEND_PORT:-5000}:${BACKEND_PORT:-5000}
+      #-- Windows/Linux end
+      #-- macOS start
+      # - ${BACKEND_PORT:-5001}:${BACKEND_PORT:-5001}
+      #-- macOS end
+      - ${AUTH_PORT}:${AUTH_PORT}
+      - ${AUTHED_PORT}:${AUTHED_PORT}
+    command: ['--debug']
     networks:
       - backend
       - frontend
     depends_on:
-      - database
-  
+      ollama:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+
+  ollama:
+    container_name: cyberclinic-ollama
+    build: 
+      context: ollama
+      dockerfile: Dockerfile
+    environment:
+      - OLLAMA_ORIGINS="http://${BACKEND_SERVER},https://${BACKEND_SERVER},http://localhost,https://localhost"
+    expose:
+      - ${OLLAMA_PORT:-11434}
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+       test: curl --silent --fail http://localhost:${OLLAMA_PORT:-11434}/ || exit 1
+       interval: 30s
+       timeout: 10s
+       retries: 5
+    
+
   database:
     container_name: cyberclinic-database
     image: bitnami/postgresql:latest
@@ -115,13 +189,14 @@ services:
       - POSTGRESQL_USERNAME=${DB_USER}
       - POSTGRESQL_PASSWORD=${DB_PASS}
       - POSTGRESQL_PORT_NUMBER=${DB_PORT}
-      - POSTGRESQL_MAX_CONNECTIONS=100 #performance settings for handling multiple connections
+      - POSTGRESQL_MAX_CONNECTIONS=100
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-    expose:
-      - ${DB_PORT}
+    # Expose datbase locally for development and testing
     ports:
       - ${DB_PORT}:${DB_PORT}
+    expose:
+      - ${DB_PORT}
     networks:
       - backend
     healthcheck:
@@ -130,6 +205,9 @@ services:
       timeout: 30s
       start_period: 30s
       retries: 3
+
+volumes:
+  ollama_data:
 
 networks:
   backend:

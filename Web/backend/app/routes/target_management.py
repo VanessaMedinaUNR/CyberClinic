@@ -1,3 +1,5 @@
+#Cyber Clinic backend -  Manage targets for validation, verification, and storing target/network records for scans
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import re
@@ -69,18 +71,25 @@ def add_target():
         client_id = client["client_id"]
 
         #validate required fields  
-        required_fields = ['target_name', 'target_type', 'target_value', 'public_facing']
+        required_fields = ['target_name', 'target_type', 'target_value']
         for field in required_fields:
-            if not data.get(field):
+            if data.get(field) is None or data.get(field) == '':
                 logger.warning(data)
                 return jsonify({'error': f'Missing required field: {field}'}), 400
 
+        # public_facing is a boolean — check separately so False is valid
+        if data.get('public_facing') is None:
+            return jsonify({'error': 'Missing required field: public_facing'}), 400
+
         target_name = data['target_name'].strip()
         target_type = data['target_type'].lower()
-        target_value = data['target_value'].strip()
+        target_value = data['target_value']
         public_facing = data['public_facing']
         verified = False
         verified_date = None
+
+        if not public_facing == False and not public_facing == True :
+            return jsonify({'error': f'Missing required field: public_facing'}), 400
 
         ip: ipaddress.IPv4Network
 
@@ -126,6 +135,11 @@ def add_target():
             db.execute_command(
                 """INSERT INTO network_domains (domain, client_id, subnet_name) VALUES (%s, %s, %s)""",
                 (target_value, client_id, target_name)
+            )
+        if not public_facing:
+            db.execute_command(
+                """INSERT INTO network_keys (client_id, subnet_name) VALUES (%s, %s)""",
+                (client_id, target_name)
             )
         return jsonify({
             'success': True,
@@ -183,3 +197,5 @@ def list_targets():
     except Exception as e:
         logger.error(f"Target submission failed: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+    
+# Done by Manuel Morales-Marroquin

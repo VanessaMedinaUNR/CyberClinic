@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ report_title }} - Cyber Clinic Security Assessment</title>
+    <style>
+        /* ── Page setup ── WeasyPrint compatible */
+        @page {
+            size: Letter;
+            margin: 1.2cm 1.8cm 2cm 1.8cm;
+            @top-right {
+                content: "Cyber Clinic Report";
+                font-size: 9pt;
+                color: #0033A0;
+            }
+            @bottom-left {
+                content: "CONFIDENTIAL";
+                font-size: 8pt;
+                font-style: italic;
+                color: #666;
+            }
+            @bottom-center {
+                content: "Security Assessment";
+                font-size: 8pt;
+                color: #555;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+            }
+        }
+        /* Cover page bleeds edge-to-edge by removing page margin for that page */
+        @page cover { margin: 0; }
+        .cover-page { page: cover; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #333;
+            background: #fff;
+        }
+
+        /* ── Cover page ──────────────────────────────────────────── */
+        .cover-page {
+            page-break-after: always;
+            background: #0033A0;
+            color: white;
+            min-height: 27.9cm;
+            padding: 2.5cm 2cm 2cm 2cm;
+            display: block;
+        }
+        .cover-header { text-align: center; margin-bottom: 2em; }
+        .cover-logo { font-size: 2.8em; font-weight: bold; letter-spacing: 2px; }
+        .cover-subtitle { font-size: 0.95em; opacity: 0.85; margin-top: 0.3em; }
+        .cover-client-name {
+            font-size: 2em;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 1.4em 0 0.2em;
+        }
+        .cover-assessment-label {
+            font-size: 1.25em;
+            font-weight: 600;
+            color: #FFD966;
+        }
+        .cover-info {
+            background: rgba(255,255,255,0.09);
+            border-radius: 8px;
+            padding: 1.4em 1.6em;
+            margin-top: 2.2em;
+        }
+        .cover-info-grid { width: 100%; border-collapse: collapse; }
+        .cover-info-grid td { width: 50%; padding: 0.55em 0.6em; border: none; vertical-align: top; }
+        .cover-info-label { font-size: 0.78em; opacity: 0.72; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.15em; }
+        .cover-info-value { font-size: 1em; font-weight: 600; }
+        .confidential-banner {
+            margin-top: 1.2em;
+            padding: 0.6em 1em;
+            background: rgba(255,255,255,0.09);
+            border-radius: 6px;
+            text-align: center;
+            color: white;
+        }
+        .confidential-title { font-weight: 800; font-size: 1em; letter-spacing: 2px; }
+        .confidential-text  { font-size: 0.88em; font-weight: 400; margin-top: 0.2em; }
+        .cover-footer { text-align: center; margin-top: 2em; color: rgba(255,255,255,0.85); font-weight: 600; font-size: 0.95em; }
+
+        /* ── Headings ─────────────────────────────────────────────── */
+        .content { padding: 0; }
+        h1 { color: #0033A0; font-size: 1.8em; margin: 1em 0 0.5em; padding-bottom: 0.3em; border-bottom: 3px solid #0033A0; }
+        h2 { color: #003D82; font-size: 1.4em; margin: 1.2em 0 0.4em; padding-bottom: 0.2em; border-bottom: 2px solid #ddd; }
+        h3 { color: #002855; font-size: 1.1em; margin: 0.8em 0 0.3em; }
+
+        /* ── Executive summary ────────────────────────────────────── */
+        .executive-summary {
+            background: #f8f9fa;
+            padding: 1.2em;
+            margin: 1em 0;
+            border-left: 5px solid #0033A0;
+            border-radius: 4px;
+        }
+        .executive-summary p { margin-top: 0.5em; }
+        .overall-risk-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; color: #fff; font-weight: 700; }
+        .risk-critical { background: #8B0000; }
+        .risk-high     { background: #DC143C; }
+        .risk-medium   { background: #FF8C00; }
+        .risk-low      { background: #2E8B57; }
+        .risk-minimal  { background: #4682B4; }
+        .risk-unknown  { background: #6c757d; }
+        .scan-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffd966;
+            padding: 0.7em;
+            margin: 0.8em 0 0;
+            border-radius: 4px;
+            color: #665c00;
+        }
+
+        /* ── Stats cards ──────────────────────────────────────────── */
+        .stats-table { width: 100%; border-collapse: separate; border-spacing: 8px; margin: 1em 0; }
+        .stats-table td {
+            width: 20%; text-align: center; padding: 1em 0.5em;
+            border-radius: 8px; background: #fff;
+            border: 1px solid #e8e8e8; border-top: 4px solid #ccc;
+        }
+        .stats-table td.critical { border-top-color: #8B0000; }
+        .stats-table td.high     { border-top-color: #DC143C; }
+        .stats-table td.medium   { border-top-color: #FF8C00; }
+        .stats-table td.low      { border-top-color: #2E8B57; }
+        .stats-table td.info     { border-top-color: #4682B4; }
+        .stat-number { font-size: 2em; font-weight: bold; display: block; }
+        .stat-label  { font-size: 0.82em; color: #666; text-transform: uppercase; letter-spacing: 1px; display: block; }
+
+        /* ── Generic table ────────────────────────────────────────── */
+        table { border-collapse: collapse; width: 100%; margin: 0.8em 0; font-size: 0.95em; }
+        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+        th     { background: #f2f2f2; }
+
+        /* ── 2-col section grid ───────────────────────────────────── */
+        .section-table { width: 100%; border-collapse: separate; border-spacing: 10px; margin: 1em 0; }
+        .section-table > tr > td { width: 50%; vertical-align: top; background: #f8f9fa; padding: 1em; border-radius: 6px; border: 1px solid #e1e1e1; }
+        .section-table td h4 { margin-bottom: 0.5em; color: #002855; }
+
+        /* ── No-findings box ──────────────────────────────────────── */
+        .no-findings { background: #e6ffed; border-left: 4px solid #2e8b57; padding: 1em; border-radius: 6px; color: #155724; margin: 1em 0; }
+
+        /* ── Finding cards ────────────────────────────────────────── */
+        .finding-card { border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; margin: 8px 0; page-break-inside: avoid; overflow-wrap: anywhere; word-break: break-word; }
+        .finding-header-table { width: 100%; border-collapse: collapse; margin-bottom: 0.4em; }
+        .finding-header-table td { border: none; padding: 0; vertical-align: middle; }
+        .finding-header-table td:last-child { text-align: right; white-space: nowrap; width: 90px; }
+        .severity-badge { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.82em; text-transform: uppercase; color: #fff; font-weight: 700; }
+        .severity-critical { background: #8B0000; }
+        .severity-high     { background: #DC143C; }
+        .severity-medium   { background: #FF8C00; color: #222; }
+        .severity-low      { background: #2E8B57; }
+        .severity-info     { background: #4682B4; }
+        .finding-source { font-style: italic; color: #444; font-size: 0.9em; margin-top: 0.3em; }
+
+        /* ── Host sections ────────────────────────────────────────── */
+        .host-section { border: 1px solid #e6e9ef; padding: 12px; border-radius: 8px; background: #fff; margin-bottom: 1em; page-break-inside: avoid; }
+        .host-header-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5em; }
+        .host-header-table td { border: none; padding: 0; vertical-align: middle; }
+        .host-header-table td:last-child { text-align: right; }
+        .host-meta  { color: #666; font-size: 0.9em; margin-top: 0.25em; }
+        .host-badge { background: #eaf3ff; color: #0033A0; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.9em; }
+        .toc { margin: 1em 0; padding: 0.8em; background: #f7f9fc; border-left: 4px solid #0033A0; border-radius: 6px; }
+        .service-host-link { color: #0033A0; text-decoration: underline; }
+
+        /* ── Classification table ─────────────────────────────────── */
+        .classification-table { table-layout: fixed; width: 100%; }
+        .classification-table th:nth-child(1) { width: 16%; }
+        .classification-table th:nth-child(2) { width: 18%; }
+        .classification-table th:nth-child(3) { width: 66%; }
+        .badge { display: inline-block; padding: 3px 7px; border-radius: 10px; color: #fff; font-weight: 600; text-transform: uppercase; font-size: 0.8em; }
+        .badge.critical { background: #8B0000; }
+        .badge.high     { background: #DC143C; }
+        .badge.medium   { background: #FF8C00; }
+        .badge.low      { background: #2E8B57; }
+        .badge.info     { background: #4682B4; }
+
+        /* ── Footer ───────────────────────────────────────────────── */
+        .report-footer { margin-top: 2em; padding: 1em 0; border-top: 2px solid #0033A0; font-size: 0.95em; color: #333; }
+        .disclaimer p { margin-bottom: 0.9em; }
+        .page-end-footer {
+            background: #0033A0;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            margin-top: 1.5em;
+            display: block;
+            width: 100%;
+            border-radius: 4px;
+        }
+
+        /* ── Targets table ────────────────────────────────────────── */
+        .targets-table { width: 100%; margin: 0.5em 0 0.8em; }
+        .targets-table th { background: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+<!-- cover page -->
+<div class="cover-page">
+    <div class="cover-header">
+        <div class="cover-logo">Cyber Clinic</div>
+        <div class="cover-subtitle">University of Nevada, Reno &bull; Computer Science &amp; Engineering</div>
+        <div class="cover-client-name">{{ client_name }}</div>
+        <div class="cover-assessment-label">Security Assessment</div>
+    </div>
+
+    <div class="cover-info">
+        <table class="cover-info-grid">
+            <tr>
+                <td>
+                    <div class="cover-info-label">Client</div>
+                    <div class="cover-info-value">{{ client_name }}</div>
+                </td>
+                <td>
+                    <div class="cover-info-label">Report Date</div>
+                    <div class="cover-info-value">{{ report_date }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="cover-info-label">Target{% if targets and targets|length > 1 %}s{% endif %}</div>
+                    <div class="cover-info-value">
+                        {% if targets and targets|length > 0 %}
+                            {% for t in targets %}{{ t.target_name }}{% if t.target_value and t.target_value != t.target_name %} ({{ t.target_value }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+                        {% elif hosts_list and hosts_list|length > 0 %}
+                            {{ hosts_list|join(', ') }}
+                        {% else %}N/A{% endif %}
+                    </div>
+                </td>
+                <td>
+                    <div class="cover-info-label">Scan Type</div>
+                    <div class="cover-info-value">{{ scan_type_display }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="cover-info-label">Contact</div>
+                    <div class="cover-info-value">{{ contact_email }}</div>
+                </td>
+                <td>
+                    <div class="cover-info-label">Duration</div>
+                    <div class="cover-info-value">{{ scan_duration }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="confidential-banner">
+            <div class="confidential-title">CONFIDENTIAL</div>
+            <div class="confidential-text">This report contains sensitive security information and should be handled accordingly.</div>
+        </div>
+    </div>
+
+    <div class="cover-footer">Generated by Cyber Clinic - CS 425 Team 13</div>
+</div>
+
+<!-- body content -->
+<div class="content">
+
+    <!-- executive summary -->
+    <h1>Executive Summary</h1>
+    <div class="executive-summary">
+        <p>This security assessment was conducted by Cyber Clinic on <strong>{{ report_date }}</strong>
+        for <strong>{{ client_name }}</strong>.</p>
+
+        <p style="margin-top:0.6em;">The scan targeted the following hosts:</p>
+        {% if targets and targets|length > 0 %}
+            <table class="targets-table">
+                <thead>
+                    <tr><th>Target Name</th><th>Target Address</th><th>Target Type</th></tr>
+                </thead>
+                <tbody>
+                    {% for t in targets %}
+                    <tr>
+                        <td>{{ t.target_name }}</td>
+                        <td>{{ t.target_value }}</td>
+                        <td>{{ t.target_type | replace('_',' ') | title }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% elif hosts_list and hosts_list|length > 0 %}
+            <p><strong>{{ hosts_list|join(', ') }}</strong></p>
+        {% else %}
+            <p><em>No target information available.</em></p>
+        {% endif %}
+
+        <p style="margin-top:0.8em;">
+            <strong>Scan tools used:</strong>
+            {% if scan_types_used and scan_types_used|length > 0 %}
+                {% for tool in scan_types_used %}
+                    {% set ver = tool_versions.get(tool.lower()) if tool_versions else None %}
+                    {% if not ver %}{% set ver = default_tool_versions_map.get(tool.lower()) if default_tool_versions_map else None %}{% endif %}
+                    {{ tool }}{% if ver %} ({{ ver }}){% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            {% else %}-{% endif %}
+            &nbsp;&nbsp;
+            <strong>Overall Risk Level:</strong>
+            <span class="overall-risk-pill {{ overall_risk_class }}">{{ overall_risk }}</span>
+        </p>
+
+        <div class="scan-warning">{{ scan_warning }}</div>
+    </div>
+
+    <!-- findings overview -->
+    <h2>Findings Overview</h2>
+    <table class="stats-table">
+        <tr>
+            <td class="critical"><span class="stat-number">{{ finding_stats.critical }}</span><span class="stat-label">Critical</span></td>
+            <td class="high"><span class="stat-number">{{ finding_stats.high }}</span><span class="stat-label">High</span></td>
+            <td class="medium"><span class="stat-number">{{ finding_stats.medium }}</span><span class="stat-label">Medium</span></td>
+            <td class="low"><span class="stat-number">{{ finding_stats.low }}</span><span class="stat-label">Low</span></td>
+            <td class="info"><span class="stat-number">{{ finding_stats.info }}</span><span class="stat-label">Info</span></td>
+        </tr>
+    </table>
+
+    <!-- scan details -->
+    <h2>Scan Details</h2>
+    <table>
+        <tr>
+            <th>Targets</th>
+            <td>{% if hosts_list and hosts_list|length > 0 %}{{ hosts_list|join(', ') }}{% elif targets and targets|length > 0 %}{% for t in targets %}{{ t.target_value }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+            <th>Target Type</th>
+            <td>{% if targets and targets|length > 0 and targets[0].target_type %}{{ targets[0].target_type | replace('_',' ') | title }}{% elif target_type %}{{ target_type | replace('_',' ') | title }}{% else %}IP / Domain{% endif %}</td>
+        </tr>
+        <tr><th>Scan Type</th><td>{{ scan_type_display }}</td></tr>
+        <tr><th>Scan Date</th><td>{{ report_date }}</td></tr>
+        <tr><th>Duration</th><td>{{ scan_duration }}</td></tr>
+        <tr><th>Hosts Scanned</th><td>{{ hosts_scanned }}</td></tr>
+        <tr><th>Open Ports</th><td>{{ open_ports_total }}</td></tr>
+    </table>
+
+    <!-- hosts ummary -->
+    <h2>Hosts Summary</h2>
+    {% if 'nmap' in scan_types_used %}
+        {% if nmap_data and nmap_data.hosts and nmap_data.hosts|length > 0 %}
+            {% if hosts_list|length > 1 %}
+            <div class="toc">
+                <strong>Report Contents:</strong>
+                <div style="margin-top:0.5em;">
+                    {% for htoc in hosts_list %}
+                        <a class="service-host-link" href="#host-{{ htoc | replace('.', '-') }}">{{ htoc }}{% if hosts_summary.get(htoc) and hosts_summary.get(htoc)|length > 0 %} ({{ hosts_summary.get(htoc)[0] }}){% endif %}</a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {# iterate nmap_data.hosts directly, source of truth for IPs and ports #}
+            {% for hh in nmap_data.hosts %}
+                {% set hh_ip = hh.get('ip') or hh.get('ipv4') or hh.get('ipv6') or '' %}
+                {% if hh_ip %}
+                <div id="host-{{ hh_ip | replace('.', '-') }}" class="host-section">
+                    <table class="host-header-table">
+                        <tr>
+                            <td>
+                                <h3 style="margin-bottom:0.2em;">
+                                    {{ hh_ip }}
+                                    {% if hosts_summary.get(hh_ip) and hosts_summary.get(hh_ip)|length > 0 %}
+                                        {{ hosts_summary.get(hh_ip)|join(', ') }}
+                                    {% endif %}
+                                </h3>
+                                {# collect open ports using Jinja2 namespace to allow set inside loop #}
+                                {% set ns = namespace(open_ports=[]) %}
+                                {% for p in hh.get('ports', []) %}
+                                    {% if p.get('state') == 'open' %}
+                                        {% set pn = p.get('port') | string %}
+                                        {% if pn and pn not in ns.open_ports %}
+                                            {% set ns.open_ports = ns.open_ports + [pn] %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                                <div class="host-meta">
+                                    Hostnames: {% if hosts_summary.get(hh_ip) and hosts_summary.get(hh_ip)|length > 0 %}{{ hosts_summary.get(hh_ip)|join(', ') }}{% else %}-{% endif %}
+                                    &bull; Discovered ports:
+                                    {% if ns.open_ports|length > 0 %}{{ ns.open_ports|join(', ') }} (open){% else %}None{% endif %}
+                                </div>
+                            </td>
+                            <td style="text-align:right; white-space:nowrap;">
+                                <span class="host-badge">Findings: {{ (per_host_findings.get(hh_ip)|length) if per_host_findings and per_host_findings.get(hh_ip) else 0 }}</span>
+                            </td>
+                        </tr>
+                    </table>
+                    <p style="font-style:italic; color:#444; margin-top:0.4em; font-size:0.9em;">
+                        Note: All findings listed under the 'Findings by Host' section for this host apply to {{ hh_ip }}.
+                        Use the links above to jump to each host section.
+                    </p>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <p>No per-host details were available from Nmap.</p>
+        {% endif %}
+    {% else %}
+        <p><em>Nmap was not run for this scan.</em></p>
+    {% endif %}
+
+    <!-- coverage highlights -->
+    <h2>Coverage Highlights</h2>
+    <table class="section-table">
+        <tr>
+            <td>
+                <h4>Findings by Type</h4>
+                {% if finding_types %}
+                    <table>
+                        <thead><tr><th>Type</th><th>Count</th></tr></thead>
+                        <tbody>{% for ftype, count in finding_types.items() %}<tr><td>{{ ftype }}</td><td>{{ count }}</td></tr>{% endfor %}</tbody>
+                    </table>
+                {% else %}<p>No categorized findings available.</p>{% endif %}
+            </td>
+            <td>
+                <h4>Tools Used</h4>
+                <p><strong>Scan Tools:</strong> {{ scan_types_used|join(', ') or '—' }}</p>
+                <p style="margin-top:0.5em;"><strong>Versions:</strong></p>
+                <ul style="margin-left:1.2em; margin-top:0.3em;">
+                    {% for tool in scan_types_used %}
+                        {% set ver = tool_versions.get(tool.lower()) if tool_versions else None %}
+                        {% if not ver %}{% set ver = default_tool_versions_map.get(tool.lower()) if default_tool_versions_map else None %}{% endif %}
+                        <li>{{ tool }}: {{ ver if ver else '—' }}</li>
+                    {% endfor %}
+                </ul>
+            </td>
+        </tr>
+    </table>
+
+    <!-- services summary -->
+    <h2>Services Summary</h2>
+    {% if 'nmap' in scan_types_used %}
+        {% if nmap_data and nmap_data.hosts and nmap_data.hosts|length > 0 %}
+            {% for hh in nmap_data.hosts %}
+                {% set hh_ip = hh.get('ip') or hh.get('ipv4') or hh.get('ipv6') or '' %}
+                {% if hh_ip %}
+                    <h3 style="margin-top:1em;">{{ hh_ip }}</h3>
+                    {% set open_ports_list = hh.get('ports', []) | selectattr('state', 'equalto', 'open') | list %}
+                    {% if open_ports_list|length > 0 %}
+                        <table>
+                            <thead><tr><th>Port</th><th>Protocol</th><th>Service</th><th>Product</th><th>Version</th></tr></thead>
+                            <tbody>
+                                {% for p in open_ports_list %}
+                                    {% set svc = p.get('service') or {} %}
+                                    <tr>
+                                        <td>{{ p.get('port') }}</td>
+                                        <td>{{ p.get('protocol') or '—' }}</td>
+                                        <td>{{ svc.get('name') or '—' }}</td>
+                                        <td>{{ svc.get('product') or '—' }}</td>
+                                        <td>{{ svc.get('version') or '—' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p style="margin-bottom:0.5em; color:#666;">No open ports detected for {{ hh_ip }}.</p>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <p>No open services were detected.</p>
+        {% endif %}
+    {% else %}
+        <p><em>Nmap was not run for this scan; service summaries are unavailable.</em></p>
+    {% endif %}
+
+    <!-- detailed findings -->
+    <h1>Detailed Findings</h1>
+    {% if finding_stats.total == 0 %}
+        <div class="no-findings">
+            <strong>No security findings were detected.</strong>
+            <p>Automated scans did not identify vulnerabilities. Manual testing recommended for higher assurance.</p>
+        </div>
+    {% else %}
+        {% set host_only = per_host_findings.keys()|reject('equalto', 'global')|list if per_host_findings is defined else [] %}
+
+        {% if per_host_findings is defined and host_only|length > 0 %}
+            <h2>Findings by Host</h2>
+            {% for host in host_only %}
+            <div id="host-{{ host | replace('.', '-') }}-findings" class="host-section">
+                <table class="host-header-table" style="margin-bottom:0.5em;">
+                    <tr>
+                        <td>
+                            <h3 style="margin:0;">Host: {{ host }}</h3>
+                            <div class="host-meta">
+                                {% set hf = per_host_findings.get(host, []) %}{{ hf|length }} finding(s)
+                                {# show hostnames next to finding count #}
+                                {% for hh in nmap_data.hosts if hh.get('ip') == host %}
+                                    {% set hn_list = hh.get('hostnames', []) %}
+                                    {% if hn_list|length > 0 %}
+                                    &bull;
+                                    {% for hn in hn_list %}{% if hn is mapping %}{{ hn.get('name','') }}{% else %}{{ hn }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <a href="#host-{{ host | replace('.', '-') }}" class="service-host-link">View summary</a>
+                        </td>
+                    </tr>
+                </table>
+                {% set host_findings = per_host_findings.get(host, []) %}
+                {% if host_findings|length > 0 %}
+                    {% for finding in host_findings %}
+                    <div class="finding-card">
+                        <table class="finding-header-table">
+                            <tr>
+                                <td><h3 style="margin:0; font-size:1em;">{{ finding.title }}</h3></td>
+                                <td><span class="severity-badge severity-{{ finding.severity }}">{{ finding.severity | upper }}</span></td>
+                            </tr>
+                        </table>
+                        <p><strong>Affected:</strong> {{ finding.affected_component }}</p>
+                        <p>{{ finding.description }}</p>
+                        {% if finding.source %}<p class="finding-source"><strong>Source:</strong> {{ finding.source }}</p>{% endif %}
+                        {% if finding.cvss %}<p><strong>CVSS:</strong> {{ finding.cvss.score }} ({{ finding.cvss.severity | upper }})</p>{% endif %}
+                        {% if finding.references and finding.references|length > 0 %}<p><strong>References:</strong> {{ finding.references|join(', ') }}</p>{% endif %}
+                        <p><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No findings for {{ host }}.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            {# nikto global findings #}
+            {% if 'nikto' in scan_types_used %}
+                {% set global_findings = per_host_findings.get('global', []) %}
+                {% if global_findings and global_findings|length > 0 %}
+                    <h2>Global / Shared Findings</h2>
+                    <p style="font-style:italic; color:#444;">These findings are at the site or application level and may apply across multiple hosts listed above.</p>
+                    {% for finding in global_findings %}
+                    <div class="finding-card">
+                        <table class="finding-header-table">
+                            <tr>
+                                <td><h3 style="margin:0; font-size:1em;">{{ finding.title }}</h3></td>
+                                <td><span class="severity-badge severity-{{ finding.severity }}">{{ finding.severity | upper }}</span></td>
+                            </tr>
+                        </table>
+                        <p><strong>Affected:</strong> {{ finding.affected_component }}</p>
+                        <p>{{ finding.description }}</p>
+                        {% if finding.source %}<p class="finding-source"><strong>Source:</strong> {{ finding.source }}</p>{% endif %}
+                        {% if finding.cvss %}<p><strong>CVSS:</strong> {{ finding.cvss.score }} ({{ finding.cvss.severity | upper }})</p>{% endif %}
+                        {% if finding.references and finding.references|length > 0 %}<p><strong>References:</strong> {{ finding.references|join(', ') }}</p>{% endif %}
+                        <p><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% else %}
+                <p><em>Nikto was not run for this scan; web-level findings are unavailable.</em></p>
+            {% endif %}
+
+        {% else %}
+            {# flat fallback #}
+            {% for finding in findings %}
+            <div class="finding-card">
+                <table class="finding-header-table">
+                    <tr>
+                        <td><h3 style="margin:0; font-size:1em;">{{ finding.title }}</h3></td>
+                        <td><span class="severity-badge severity-{{ finding.severity }}">{{ finding.severity | upper }}</span></td>
+                    </tr>
+                </table>
+                <p><strong>Affected:</strong> {{ finding.affected_component }}</p>
+                <p>{{ finding.description }}</p>
+                {% if finding.cvss %}<p><strong>CVSS:</strong> {{ finding.cvss.score }} ({{ finding.cvss.severity | upper }})</p>{% endif %}
+                {% if finding.references and finding.references|length > 0 %}<p><strong>References:</strong> {{ finding.references|join(', ') }}</p>{% endif %}
+                <p><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+
+    <!-- severity Classification -->
+    <h2>Severity Classification</h2>
+    <table class="classification-table">
+        <thead>
+            <tr>
+                <th style="background:#0033A0; color:white;">Severity</th>
+                <th style="background:#0033A0; color:white;">CVSS Score</th>
+                <th style="background:#0033A0; color:white;">Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><span class="badge critical">Critical</span></td><td>9.0 – 10.0</td><td>Vulnerabilities that can be easily exploited and lead to complete system compromise</td></tr>
+            <tr><td><span class="badge high">High</span></td><td>7.0 – 8.9</td><td>Vulnerabilities that could lead to significant security breaches requiring skilled exploitation</td></tr>
+            <tr><td><span class="badge medium">Medium</span></td><td>4.0 – 6.9</td><td>Vulnerabilities that pose moderate risk and should be addressed during regular maintenance</td></tr>
+            <tr><td><span class="badge low">Low</span></td><td>0.1 – 3.9</td><td>Vulnerabilities that pose minimal risk but should still be remediated when convenient</td></tr>
+            <tr><td><span class="badge info">Info</span></td><td>0.0</td><td>Informational findings that do not pose direct security risks but may aid in security hardening</td></tr>
+        </tbody>
+    </table>
+
+    <!-- ── Contact & Disclaimer ── -->
+    <div class="report-footer">
+        <div class="disclaimer">
+            <h3>Contact Information</h3>
+            <p>For questions or assistance regarding this report, please contact Cyber Clinic:</p>
+            <p><strong>Email:</strong> {{ contact_email }}</p>
+            <p><strong>Organization:</strong> Cyber Clinic</p>
+            <p><strong>Website:</strong> github.com/VanessaMedinaUNR/CyberClinic</p>
+            <p style="height:0.5em;" aria-hidden="true"></p>
+            <hr style="border:none; border-top:1px solid #ddd; margin:0.8em 0;" />
+            <h3>Disclaimer</h3>
+            <p>This security assessment report is provided "as is" for informational purposes. While every effort has been made to ensure accuracy, Cyber Clinic makes no warranties regarding the completeness or accuracy of the information contained herein. The findings in this report reflect the state of security at the time of the assessment and may not account for vulnerabilities discovered after the scan date.</p>
+            <p>This report should be treated as confidential and shared only with authorized personnel responsible for security remediation.</p>
+        </div>
+    </div>
+
+    <div class="page-end-footer">Generated on {{ report_date }} &bull; Report Version 1.0</div>
+
+</div><!-- /content -->
+</body>
+</html>

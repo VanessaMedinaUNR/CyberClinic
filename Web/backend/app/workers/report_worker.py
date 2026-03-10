@@ -1,0 +1,279 @@
+from datetime import datetime
+import json
+import os
+from app.report_generator import CustomReportGenerator
+from app.database import get_db
+from threading import Thread
+import logging
+import time
+
+logger = logging.getLogger(__name__)
+
+class ReportWorker:
+    #background worker that processes pending reports
+    def __init__(self, report_dir, poll_interval=50):
+        self.poll_interval = poll_interval
+        self.running = False
+        self.report_generator = CustomReportGenerator(report_dir)
+        self.worker_thread = None
+    
+    def start(self):
+        if not self.running:
+            self.running = True
+            self.worker_thread = Thread(target=self._worker_loop, daemon=True)
+            self.worker_thread.start()
+            logger.info("Report worker started")
+
+    def _worker_loop(self):
+        #main worker loop, polls for pending reports and processes them
+        logger.info("Report worker loop started")
+        
+        while self.running:
+            try:
+                self._process_pending_reports()
+            except Exception as e:
+                logger.error(f"Error in report worker loop: {e}")
+            
+            #wait before next poll
+            time.sleep(self.poll_interval)
+
+    def _process_pending_reports(self):
+        #check for pending scans and process them
+        db = get_db()
+        
+        #get pending scan jobs
+        pending_reports = db.execute_query(
+            """ SELECT report_id, creation_time FROM report 
+                WHERE status = 'pending'
+                ORDER BY creation_time ASC
+                LIMIT 5 """,
+            ()
+        )
+        
+        for report in pending_reports:
+            try:
+                compiled = self._compile_report(report['report_id'], report['creation_time'])
+            except Exception as e:
+                self._mark_report_failed(report['report_id'], e)
+
+    def _compile_report(self, report_id, start_time):
+        logger.info(f'Attempting to compile {report_id[:8]}...')
+
+        db = get_db()
+        report_scans = db.execute_query(
+            """ SELECT sj.*, nt.subnet_name, nt.subnet_ip, nt.subnet_netmask
+                FROM scan_jobs sj
+                LEFT JOIN network nt ON sj.subnet_name = nt.subnet_name AND sj.client_id = nt.client_id
+                WHERE sj.report_id = %s 
+                ORDER BY sj.created_at ASC
+                """,
+            (report_id,)
+        )
+
+        complete_scans = []
+        for scan in report_scans:
+            scan_id = scan['id']
+            status = scan['status']
+            logger.debug(f'{scan_id} - {status}')
+            match status:
+                case 'failed':
+                    self._mark_report_failed(report_id, f'Scan job {scan_id} failed')
+                    break
+                case 'completed':
+                    complete_scans.append(scan)
+                case _:
+                    pass
+        if len(complete_scans) == len(report_scans):
+            logger.info(f"All scans for report {report_id[:8]} completed, generating report...")
+            client_id = complete_scans[0]['client_id']
+            SCAN_ID = complete_scans[0]['id']
+            MODE = complete_scans[0]['scan_type']
+            completed_time = datetime.now()
+
+            #fetch client info
+            client_row = db.execute_single(
+                "SELECT client_name FROM client c JOIN client_users cu ON c.client_id = cu.client_id WHERE cu.client_id = %s LIMIT 1",
+                (client_id,)
+            )
+            client_name = client_row['client_name']
+            if not client_name:
+                self._mark_report_failed(report_id, "Client information not found")
+                return
+            admin_email_row = db.execute_single(
+                "SELECT u.email FROM users u JOIN client_users cu ON cu.user_id = u.user_id WHERE cu.client_id = %s AND u.client_admin = TRUE LIMIT 1",
+                (client_id,)
+            )
+            client_email = admin_email_row['email'] if admin_email_row else 'contact@cyberclinic.unr.edu'
+            
+            targets = []
+            results_paths = []
+            scan_type = complete_scans[0]['scan_type']
+            for scan in complete_scans:
+                if scan['scan_type'] != scan_type:
+                    scan_type = 'full'
+                subnet_name = scan['subnet_name']
+                network = db.execute_single(
+                    """SELECT * FROM network WHERE client_id = %s AND subnet_name = %s""",
+                    (client_id, subnet_name,)
+                )
+                domain = db.execute_single(
+                    """SELECT * FROM network_domains WHERE client_id = %s AND subnet_name = %s""",
+                    (client_id, subnet_name,)
+                )
+                if network:
+                    target_value = network['subnet_ip']
+                    target_type = "range"
+                    if domain:
+                        target_type = "domain"
+                        target_value = domain['domain']
+                    elif network['subnet_netmask'] == '255.255.255.255':
+                        target_type = 'ip'
+                    target = {
+                        'target_name': subnet_name,
+                        'target_value': target_value,
+                        'target_type': target_type
+                    }
+                    if not target in targets:
+                        targets.append(target)
+                results_file: dict = json.loads(scan['results_path'])
+                logger.debug(results_file)
+                #collects every file path stored in results_path that actually exists
+                #keys vary by scan type:
+                #nmap plain: xml, nmap, gnmap
+                #nikto plain: json
+                #full scan: nmap_xml, nmap_nmap, nmap_gnmap, nikto_<n>_json
+                #priority: prefers json files first (already parsed ones), then xml for nmap
+                _added = set()
+
+                def _try_add(p):
+                    if p and isinstance(p, str) and p not in _added and os.path.exists(p):
+                        results_paths.append(p)
+                        _added.add(p)
+                        return True
+                    return False
+
+                #explicit json key (standalone.py/nikto)
+                json_val = results_file.get('json')
+                if json_val:
+                    #standalone.py stores just a base path without extension
+                    _try_add(f'{json_val}.json') or _try_add(json_val)
+                #explicit xml key (plain nmap scan)
+                _try_add(results_file.get('xml'))
+                #full scan prefixed keys (nmap_xml, nikto_*_json, etc)
+                for key, fpath in results_file.items():
+                    if not isinstance(fpath, str) or key in ('json', 'xml', 'report', 'report_pdf'):
+                        continue
+                    _try_add(fpath)
+
+            logger.debug(results_paths)
+            report_data = {
+                'report_id': report_id,
+                'scan_id': SCAN_ID,
+                'scan_type': scan_type,
+                'targets': targets,
+                'client': {
+                    'name': client_name,
+                    'email': client_email
+                },
+                'timestamps': {
+                    #use the actual earliest scan start and latest scan completion
+                    #so the duration in the PDF matches what the web viewer shows
+                    'started': min(
+                        (s['started_at'] for s in complete_scans if s.get('started_at')),
+                        default=start_time
+                    ),
+                    'completed': max(
+                        (s['completed_at'] for s in complete_scans if s.get('completed_at')),
+                        default=completed_time
+                    )
+                },
+                'results_paths': results_paths
+            }
+            try:
+                json_path = self.report_generator.generate_report(report_data, output_format='json')
+                #also generate PDF
+                pdf_path = None
+                try:
+                    pdf_path = self.report_generator.generate_report(report_data, output_format='pdf')
+                except Exception as pdf_err:
+                    logger.warning(f"PDF generation failed in worker, trying HTML: {pdf_err}")
+                    try:
+                        pdf_path = self.report_generator.generate_report(report_data, output_format='html')
+                    except Exception:
+                        pass
+
+                #update ALL scan_jobs in this report with the fresh report paths so fetch_report works
+                for scan in complete_scans:
+                    try:
+                        existing = json.loads(scan['results_path']) if scan.get('results_path') else {}
+                    except Exception:
+                        existing = {}
+                    existing['report'] = json_path
+                    if pdf_path:
+                        existing['report_pdf'] = pdf_path
+                    db.execute_command(
+                        "UPDATE scan_jobs SET results_path = %s WHERE id = %s",
+                        (json.dumps(existing), scan['id'])
+                    )
+                self._mark_report_completed(report_id)
+            except Exception as e:
+                raise e
+        else:
+            in_progress = len(report_scans) - len(complete_scans) 
+            logger.info(f'Still waiting on {in_progress}/{len(report_scans)} scans - Skipping...')
+
+
+    def _mark_report_completed(self, report_id):
+        #mark scan as completed and store results
+        db = get_db()
+        
+        db.execute_command(
+            """UPDATE report SET 
+               status = 'completed',
+               completion_time = CURRENT_TIMESTAMP
+               WHERE report_id = %s""",
+            (report_id,)
+        )
+        
+        logger.info(f"Report {report_id[:8]} compiled successfully")
+
+    def _mark_report_failed(self, report_id, error_message):
+        #mark scan as failed with error message
+        db = get_db()
+        
+        db.execute_command(
+            """UPDATE report SET 
+               status = 'failed',
+               completion_time = CURRENT_TIMESTAMP
+               WHERE report_id = %s""",
+            (report_id,)
+        )
+        logger.error(f"Failed to compile report {report_id}: {error_message}")
+    
+    def stop(self):
+        #stop the background worker
+        self.running = False
+        if self.worker_thread:
+            self.worker_thread.join()
+        logger.info("Report worker stopped")
+
+#global report worker instance
+report_worker = None
+
+def start_report_worker(report_dir):
+    #start the global scan worker
+    global report_worker
+    if report_worker is None:
+        report_worker = ReportWorker(report_dir)
+        report_worker.start()
+        return report_worker
+    return report_worker
+
+def stop_report_worker():
+    #stop the global scan worker
+    global report_worker
+    if report_worker:
+        report_worker.stop()
+        report_worker = None
+
+# Done By Austin Finch

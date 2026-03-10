@@ -22,7 +22,7 @@ class StandaloneAppHandler:
     
     def __init__(self):
         self.standalone_app_path = os.environ.get('STANDALONE_APP_PATH', '/src/standalone')
-        # Use relative path that works both locally and in docker
+        #use relative path that works both locally and in docker
         default_path = os.path.join(os.path.dirname(__file__), '..', '..', 'results')
         self.scan_results_path = os.environ.get('SCAN_RESULTS_PATH', default_path)
         
@@ -79,11 +79,14 @@ class StandaloneAppHandler:
                 #scan completed successfully
                 results_path = config_data['output_path']
                 
+                #store as JSON dict so report worker can parse it the same way scan worker does
+                results_path_json = json.dumps({'json': results_path.replace('.json', '')})
+
                 db.execute_command(
                     """UPDATE scan_jobs 
                        SET status = 'completed', completed_at = CURRENT_TIMESTAMP, results_path = %s 
                        WHERE id = %s""",
-                    (results_path, scan_job_id)
+                    (results_path_json, scan_job_id)
                 )
                 
                 logger.info(f"Scan {scan_job_id} completed successfully")
@@ -171,13 +174,16 @@ class StandaloneAppHandler:
         with open(results_path, 'w') as f:
             json.dump(placeholder_results, f, indent=2)
         
+        #store as JSON dict so report_worker can parse it the same way scan_worker does
+        results_path_json = json.dumps({'json': results_path.replace('.json', '')})
+
         #update database
         db = get_db()
         db.execute_command(
             """UPDATE scan_jobs 
                SET status = 'completed', completed_at = CURRENT_TIMESTAMP, results_path = %s 
                WHERE id = %s""",
-            (results_path, scan_job_id)
+            (results_path_json, scan_job_id)
         )
         
         logger.info(f"Placeholder scan {scan_job_id} completed")
@@ -281,4 +287,4 @@ def standalone_status():
         logger.error(f"Standalone status check failed: {e}")
         return jsonify({'error': 'Status check failed'}), 500
 
-# Done by Morales-Marroquin
+# Done by Manuel Morales-Marroquin

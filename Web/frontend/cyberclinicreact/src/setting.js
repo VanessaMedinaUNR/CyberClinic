@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import Toolbar from './Components/toolbar';
-import './setting.css';
+import './styles/setting.css';
 import api from './api';
 
 function Setting() {

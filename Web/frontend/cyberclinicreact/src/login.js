@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import api from './api';
+import './styles/login.css';
 
 //useState: render changes on website 
 //useNavigate: have access to change pages 
 
-import './login.css';
 
 function Login() {
 
@@ -37,9 +37,9 @@ function Login() {
         }).then(function (response) {
             const jwt_token = response.data.access_token;
             const refresh_token = response.data.refresh_token;
-            localStorage.setItem("access_token", jwt_token); //Add JWT token to local storage
-            localStorage.setItem("refresh_token", refresh_token); //Add JWT refresh token to local storage
-            navigate("./dashboard");
+            sessionStorage.setItem("access_token", jwt_token); //Add JWT token to local storage
+            sessionStorage.setItem("refresh_token", refresh_token); //Add JWT refresh token to local storage
+            navigate("/dashboard");
         }).catch(function (error) {
             if (!error.response)
                 {
@@ -60,11 +60,11 @@ function Login() {
         <form id="loginForm" onSubmit={handleSubmit}>
             <div>
                 <label htmlFor="email">Enter your email:</label>
-                <input type="email" name="email" id="email" value = {email} onChange={(e) => setEmail(e.target.value)} required/>
+                <input type="email" name="email" id="email" autoComplete="email" value = {email} onChange={(e) => setEmail(e.target.value)} required/>
             </div>
             <div>
                 <label htmlFor="password">Enter your password</label>
-                <input type="text" name="password" id="password" value = {password} onChange={(e) => setPassword(e.target.value)}required />
+                <input type="password" name="password" id="password" autoComplete="current-password" value = {password} onChange={(e) => setPassword(e.target.value)}required />
             </div>
             <div>
                 <button id="submit" type="submit">Submit</button>

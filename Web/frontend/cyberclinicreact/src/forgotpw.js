@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 
-import './login.css';
+import './styles/login.css';
 
 function Forgotpw() {
 
@@ -11,7 +11,7 @@ function Forgotpw() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const response = await fetch("http://localhost:5000/api/auth/forgot-pw", {
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_SERVER}/api/auth/forgot-pw`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"

@@ -1,11 +1,15 @@
 #Cyber Clinic backend - Report generation and SysReptor integration
 
 from flask import Blueprint, request, jsonify, send_file
+from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
 import json
 from datetime import datetime
 import logging
 import ipaddress
+
+#import custom report generator
+from app.report_generator import CustomReportGenerator
 
 #import reptor client for report generation
 try:
@@ -27,7 +31,7 @@ class ReportGenerator:
     #creates professional cybersecurity reports from scan results
     def __init__(self):
         self.reptor_client = None
-        # Use relative path that works both locally and in docker
+        #use relative path that works both locally and in docker
         self.reports_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'reports')
         
         #ensure reports directory exists
@@ -79,7 +83,7 @@ class ReportGenerator:
                 FROM users u
                 JOIN client_users cu ON cu.client_id = %s
                 WHERE u.client_admin = TRUE LIMIT 1""",
-                (scan_data['client_id'])
+                (scan_data['client_id'],)
             )
 
             target_value = None
@@ -88,12 +92,12 @@ class ReportGenerator:
             domain = db.execute_single(
                 """SELECT domain
                 FROM network_domains
-                WHERE client_id = %s, subnet_name = %s""",
+                WHERE client_id = %s AND subnet_name = %s""",
                 (scan_data['client_id'], scan_data['subnet_name'])
                 )
             if domain:
                 target_type = "domain"
-                target_value = domain
+                target_value = domain['domain']
             else:
                 if scan_data["subnet_netmask"] == "255.255.255.255":
                     target_type = "ip"
@@ -266,7 +270,8 @@ class ReportGenerator:
                     <tr><td><strong>Scan ID:</strong></td><td>{scan_info['scan_id']}</td></tr>
                     <tr><td><strong>Target:</strong></td><td>{scan_info['target']['name']} ({scan_info['target']['value']})</td></tr>
                     <tr><td><strong>Scan Type:</strong></td><td>{scan_info['scan_type']}</td></tr>
-                    <tr><td><strong>User:</strong></td><td>{scan_info['user']['username']}</td></tr>
+                    <tr><td><strong>Client:</strong></td><td>{scan_info['user']['client_name']}</td></tr>
+                    <tr><td><strong>Contact:</strong></td><td>{scan_info['user']['email']}</td></tr>
                     <tr><td><strong>Completed:</strong></td><td>{scan_info['timestamps']['completed']}</td></tr>
                 </table>
             </div>
@@ -293,147 +298,387 @@ class ReportGenerator:
         
         return html_content
 
-#create global report generator instance
+#create global report generator instances
 report_generator = ReportGenerator()
+custom_generator = CustomReportGenerator()
 
-@reports_bp.route('/generate/<int:scan_id>', methods=['POST'])
-def generate_report(scan_id):
-    #generate a report for a completed scan job
-    #accepts format parameter (pdf, html, json)
+def _extract_results_map(results_path):
+    if not results_path:
+        return {}
+    if isinstance(results_path, dict):
+        return results_path
+    if isinstance(results_path, str):
+        try:
+            parsed = json.loads(results_path)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+def _extract_results_paths(results_path):
+    results_map = _extract_results_map(results_path)
+    if not results_map:
+        return [], {}
+    output_paths = [value for value in results_map.values() if isinstance(value, str)]
+    return output_paths, results_map
+
+def _get_report_path(results_path):
+    if isinstance(results_path, str) and results_path.strip().startswith('{'):
+        results_map = _extract_results_map(results_path)
+        return results_map.get('report')
+    if isinstance(results_path, dict):
+        return results_path.get('report')
+    return results_path
+
+@reports_bp.route('/generate/<report_id>', methods=['POST'])
+@jwt_required()
+def generate_report(report_id):
+    #generate a merged report for all scan jobs under the given report_id
     try:
-        data = request.get_json() or {}
-        report_format = data.get('format', 'html').lower()
-        
-        #validate format
-        valid_formats = ['pdf', 'html', 'json']
-        if report_format not in valid_formats:
-            return jsonify({'error': f'Invalid format. Must be one of: {", ".join(valid_formats)}'}), 400
-        
-        #generate report
-        report_path = report_generator.generate_report(scan_id, report_format)
-        
-        #update database with report path
+        user_id = get_jwt_identity()
         db = get_db()
-        db.execute_command(
-            "UPDATE scan_jobs SET results_path = %s WHERE id = %s",
-            (report_path, scan_id)
+
+        #verify report belongs to requesting user's client
+        client = db.execute_single(
+            "SELECT client_id FROM client_users WHERE user_id = %s",
+            (user_id,)
         )
-        
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 401
+        client_id = client['client_id']
+
+        #fetch all completed scan jobs for this report
+        scan_jobs = db.execute_query(
+            """SELECT sj.*, nt.subnet_name, nt.subnet_ip, nt.subnet_netmask, c.client_name, c.client_id
+               FROM scan_jobs sj
+               JOIN network nt ON sj.client_id = nt.client_id AND sj.subnet_name = nt.subnet_name
+               JOIN client c ON sj.client_id = c.client_id
+               WHERE sj.report_id = %s AND sj.client_id = %s""",
+            (report_id, client_id)
+        )
+
+        if not scan_jobs:
+            return jsonify({'error': f'No scan jobs found for report {report_id}'}), 404
+
+        #check that all jobs are completed
+        not_done = [j for j in scan_jobs if j['status'] != 'completed']
+        if not_done:
+            return jsonify({'error': 'Not all scans are completed yet'}), 400
+
+        admin_email = db.execute_single(
+            """SELECT u.email FROM users u
+               JOIN client_users cu ON cu.user_id = u.user_id
+               WHERE cu.client_id = %s AND u.client_admin = TRUE LIMIT 1""",
+            (client_id,)
+        )
+
+        #build targets list and results_paths from all jobs
+        targets = []
+        results_paths = []
+        scan_type = scan_jobs[0]['scan_type']
+        for job in scan_jobs:
+            if job['scan_type'] != scan_type:
+                scan_type = 'full'
+            subnet_name = job['subnet_name']
+            domain = db.execute_single(
+                "SELECT domain FROM network_domains WHERE client_id = %s AND subnet_name = %s",
+                (client_id, subnet_name)
+            )
+            if domain:
+                t_type = 'domain'
+                t_value = domain['domain']
+            elif str(job['subnet_netmask']) == '255.255.255.255':
+                t_type = 'ip'
+                t_value = str(job['subnet_ip'])
+            else:
+                t_type = 'range'
+                t_value = str(ipaddress.IPv4Network(f'{job["subnet_ip"]}/{job["subnet_netmask"]}', strict=False).compressed)
+            target = {'target_name': subnet_name, 'target_value': t_value, 'target_type': t_type}
+            if target not in targets:
+                targets.append(target)
+
+            #collect raw scan result file paths
+            rp = job.get('results_path')
+            if rp:
+                results_map_job = _extract_results_map(rp)
+                path = results_map_job.get('json')
+                if path and os.path.exists(f'{path}.json'):
+                    results_paths.append(f'{path}.json')
+                elif results_map_job.get('xml') and os.path.exists(results_map_job.get('xml')):
+                    results_paths.append(results_map_job.get('xml'))
+
+        report_data = {
+            'report_id': report_id,
+            'scan_id': scan_jobs[0]['id'],
+            'scan_type': scan_type,
+            'targets': targets,
+            'client': {
+                'name': scan_jobs[0]['client_name'],
+                'email': admin_email['email'] if admin_email else 'contact@cyberclinic.unr.edu'
+            },
+            'timestamps': {
+                'started': min(
+                    (j['started_at'].isoformat() for j in scan_jobs if j.get('started_at')),
+                    default=None
+                ),
+                'completed': max(
+                    (j['completed_at'].isoformat() for j in scan_jobs if j.get('completed_at')),
+                    default=None
+                )
+            },
+            'results_paths': results_paths
+        }
+
+        #generate JSON (for web viewer) and PDF (for download)
+        json_path = custom_generator.generate_report(report_data, output_format='json')
+        try:
+            pdf_path = custom_generator.generate_report(report_data, output_format='pdf')
+        except Exception as pdf_err:
+            logger.warning(f"PDF generation failed, falling back to HTML: {pdf_err}")
+            pdf_path = custom_generator.generate_report(report_data, output_format='html')
+
+        #update ALL scan_jobs in this report with the fresh report paths
+        for job in scan_jobs:
+            try:
+                existing = json.loads(job['results_path']) if job.get('results_path') else {}
+            except Exception:
+                existing = {}
+            existing['report'] = json_path
+            existing['report_pdf'] = pdf_path
+            db.execute_command(
+                "UPDATE scan_jobs SET results_path = %s WHERE id = %s",
+                (json.dumps(existing), job['id'])
+            )
+
         return jsonify({
             'success': True,
-            'scan_id': scan_id,
-            'report_path': report_path,
-            'format': report_format,
+            'report_id': report_id,
+            'report_path': json_path,
+            'format': 'json',
             'generated_at': datetime.now().isoformat(),
-            'download_url': f'/api/reports/download/{scan_id}'
+            'download_url': f'/api/reports/download/{report_id}'
         }), 201
-        
+
     except Exception as e:
-        logger.error(f"Report generation failed for scan {scan_id}: {e}")
+        logger.error(f"Report generation failed for report {report_id}: {e}")
         return jsonify({'error': 'Report generation failed'}), 500
 
-@reports_bp.route('/download/<int:scan_id>', methods=['GET'])
-def download_report(scan_id):
-    #download the generated report file for a scan
+@reports_bp.route('/<report_id>', methods=["GET"])
+@jwt_required()
+def fetch_report(report_id):
     try:
+        user_id = get_jwt_identity()
         db = get_db()
-        
+
+        #verify the report belongs to the requesting user's client
+        client = db.execute_single(
+            "SELECT client_id FROM client_users WHERE user_id = %s",
+            (user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 401
+        client_id = client['client_id']
+
+        #find a completed scan job for this report_id that has a report path
+        scan = db.execute_single(
+            """SELECT results_path FROM scan_jobs
+               WHERE report_id = %s AND client_id = %s AND status = 'completed'
+               ORDER BY completed_at DESC LIMIT 1""",
+            (report_id, client_id)
+        )
+        if not scan:
+            return jsonify({'error': 'Report not found'}), 404
+
+        report_path = _get_report_path(scan['results_path'])
+        if not report_path or not os.path.exists(report_path):
+            return jsonify({'error': 'Report file not found'}), 404
+
+        with open(report_path) as file:
+            data = json.load(file)
+        return jsonify(data), 200
+
+    except Exception as e:
+        logger.error(f"fetch_report failed: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+def _get_html_report_path(results_path):
+    """Get the PDF (or HTML fallback) report path for download."""
+    if isinstance(results_path, str) and results_path.strip().startswith('{'):
+        results_map = _extract_results_map(results_path)
+        return results_map.get('report_pdf') or results_map.get('report_html') or results_map.get('report')
+    if isinstance(results_path, dict):
+        return results_path.get('report_pdf') or results_path.get('report_html') or results_path.get('report')
+    return results_path
+
+@reports_bp.route('/download/<report_id>', methods=['GET'])
+@jwt_required()
+def download_report(report_id):
+    #download the generated PDF report file for a report
+    try:
+        user_id = get_jwt_identity()
+        db = get_db()
+
+        #verify report belongs to requesting user's client
+        client = db.execute_single(
+            "SELECT client_id FROM client_users WHERE user_id = %s",
+            (user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 401
+        client_id = client['client_id']
+        client = db.execute_single(
+            "SELECT * FROM client WHERE client_id = %s",
+            (client_id,)
+        )
+        client_name_safe = client['client_name'].replace(' ', '_') if client and client.get('client_name') else 'Unknown_Client'
+
         scan_data = db.execute_single(
-            "SELECT results_path, subnet_name FROM scan_jobs sj JOIN network nt ON sj.client_id = nt.client_id WHERE sj.id = %s",
-            (scan_id,)
+            """SELECT sj.results_path, nt.subnet_name
+               FROM scan_jobs sj
+               JOIN network nt ON sj.client_id = nt.client_id AND sj.subnet_name = nt.subnet_name
+               WHERE sj.report_id = %s AND sj.client_id = %s AND sj.status = 'completed'
+               ORDER BY sj.completed_at DESC LIMIT 1""",
+            (report_id, client_id)
         )
         
         if not scan_data or not scan_data['results_path']:
             return jsonify({'error': 'Report not found'}), 404
         
-        report_path = scan_data['results_path']
-        
-        if not os.path.exists(report_path):
+        report_path = _get_html_report_path(scan_data['results_path'])
+
+        if not report_path or not os.path.exists(report_path):
             return jsonify({'error': 'Report file not found'}), 404
+
+        ext = os.path.splitext(report_path)[1][1:] or 'pdf'
+        timestamp = datetime.now().strftime('%Y-%m-%d')
+        filename = f"CyberClinic_Report_{client_name_safe}_{timestamp}.{ext}"
+        mimetype = 'application/pdf' if ext == 'pdf' else 'text/html'
         
-        #determine appropriate filename for download
-        filename = f"cyberclinic_report_{scan_data['subnet_name']}_{scan_id}.{os.path.splitext(report_path)[1][1:]}"
-        
-        return send_file(report_path, as_attachment=True, download_name=filename)
+        return send_file(report_path, as_attachment=True, download_name=filename, mimetype=mimetype)
         
     except Exception as e:
-        logger.error(f"Report download failed for scan {scan_id}: {e}")
+        logger.error(f"Report download failed for report {report_id}: {e}")
         return jsonify({'error': 'Report download failed'}), 500
 
 @reports_bp.route('/list', methods=['GET'])
+@jwt_required()
 def list_reports():
-    #list all available reports
-    #shows completed scans that have generated reports
+    #list completed reports and active scans for the logged-in user's client
+    #groups scan_jobs by report_id so full scans appear as a single row
     try:
-        user_filter = request.args.get('user_id')
+        user_id = get_jwt_identity()
         limit = int(request.args.get('limit', 50))
         offset = int(request.args.get('offset', 0))
-        
+
         db = get_db()
-        
-        #build query for completed scans with reports
-        where_conditions = ["sj.status = 'completed'", "sj.results_path IS NOT NULL"]
-        params = []
-        
-        if user_filter:
-            where_conditions.append("sj.user_id = %s")
-            params.append(int(user_filter))
-        
-        where_clause = "WHERE " + " AND ".join(where_conditions)
-        params.extend([limit, offset])
-        
-        query = f"""
-            SELECT sj.id, sj.scan_type, sj.completed_at, sj.results_path,
-                   nt.subnet_name, nt.subnet_ip, nt.subnet_netmask, c.client_id c.client_name
-            FROM scan_jobs sj 
-            JOIN network nt ON sj.subnet_name = nt.subnet_name AND sj.client_id = nt.client_id
-            JOIN users u ON sj.user_id = u.id
-            {where_clause}
-            ORDER BY sj.completed_at DESC
+
+        #get client_id from JWT identity
+        client = db.execute_single(
+            "SELECT client_id FROM client_users WHERE user_id = %s",
+            (user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Authentication required'}), 401
+        client_id = client['client_id']
+
+        #fetch all scan jobs for this client, grouped under their report
+        #we use a CTE to aggregate per-report data in one query
+        query = """
+            SELECT
+                r.report_id,
+                r.status         AS report_status,
+                r.creation_time,
+                r.completion_time,
+                -- aggregate scan types to determine full/nmap/nikto
+                array_agg(DISTINCT sj.scan_type ORDER BY sj.scan_type) AS scan_types,
+                -- overall status: pending if any pending, running if any running, failed if any failed, else completed
+                CASE
+                    WHEN bool_or(sj.status = 'failed')    THEN 'failed'
+                    WHEN bool_or(sj.status = 'running')   THEN 'running'
+                    WHEN bool_or(sj.status = 'pending')   THEN 'pending'
+                    ELSE 'completed'
+                END AS overall_status,
+                MIN(sj.started_at)   AS started_at,
+                MAX(sj.completed_at) AS completed_at,
+                -- pick the results_path from the most-recently completed job (has report key)
+                (SELECT sj2.results_path FROM scan_jobs sj2
+                 WHERE sj2.report_id = r.report_id AND sj2.client_id = %s
+                   AND sj2.status = 'completed'
+                 ORDER BY sj2.completed_at DESC LIMIT 1) AS results_path,
+                -- pick one representative subnet_name and network info
+                (SELECT sj3.subnet_name FROM scan_jobs sj3
+                 WHERE sj3.report_id = r.report_id AND sj3.client_id = %s
+                 LIMIT 1) AS subnet_name,
+                c.client_name
+            FROM report r
+            JOIN scan_jobs sj ON sj.report_id = r.report_id AND sj.client_id = %s
+            JOIN client c ON c.client_id = r.client_id
+            WHERE r.client_id = %s
+            GROUP BY r.report_id, r.status, r.creation_time, r.completion_time, c.client_name
+            ORDER BY COALESCE(MAX(sj.completed_at), MAX(sj.started_at), r.creation_time) DESC
             LIMIT %s OFFSET %s
         """
-        
-        reports = db.execute_query(query, params)
-        
-        target_value = None
-        target_type = None
-        #determine target value and type
-        domain = db.execute_single(
-            """SELECT domain
-            FROM network_domains
-            WHERE client_id = %s, subnet_name = %s""",
-            (reports['client_id'], reports['subnet_name'])
-            )
-        if domain:
-            target_type = "domain"
-            target_value = domain
-        else:
-            if reports["subnet_netmask"] == "255.255.255.255":
-                target_type = "ip"
-                target_value = reports["subnet_ip"]
-            else:
-                target_type = "range"
-                subnet_ip = reports['subnet_ip']
-                subnet_netmask = reports['subnet_netmask']
-                target_value = ipaddress.IPv4Network(f'{subnet_ip}/{subnet_netmask}').compressed
+        rows = db.execute_query(query, (client_id, client_id, client_id, client_id, limit, offset))
 
-        #format report list
         report_list = []
-        for report in reports:
+        for row in rows:
+            report_path = _get_report_path(row.get('results_path'))
+
+            #resolve target type and value from the representative subnet
+            subnet_name = row['subnet_name']
+            target_type = None
+            target_value = None
+            net_info = db.execute_single(
+                "SELECT subnet_ip, subnet_netmask FROM network WHERE client_id = %s AND subnet_name = %s",
+                (client_id, subnet_name)
+            ) if subnet_name else None
+            domain = db.execute_single(
+                "SELECT domain FROM network_domains WHERE client_id = %s AND subnet_name = %s",
+                (client_id, subnet_name)
+            ) if subnet_name else None
+
+            if domain:
+                target_type = "domain"
+                target_value = domain['domain']
+            elif net_info:
+                if str(net_info["subnet_netmask"]) == "255.255.255.255":
+                    target_type = "ip"
+                    target_value = str(net_info["subnet_ip"])
+                else:
+                    target_type = "range"
+                    target_value = str(ipaddress.IPv4Network(
+                        f'{net_info["subnet_ip"]}/{net_info["subnet_netmask"]}', strict=False
+                    ).compressed)
+
+            #determine display scan type
+            scan_types = row.get('scan_types') or []
+            if len(scan_types) > 1 or 'full' in scan_types:
+                display_type = 'full'
+            elif scan_types:
+                display_type = scan_types[0]
+            else:
+                display_type = 'unknown'
+
+            overall_status = row['overall_status']
+
             report_list.append({
-                'scan_id': report['id'],
-                'scan_type': report['scan_type'],
+                'report_id': row['report_id'],
+                'scan_id': row['report_id'],
+                'scan_type': display_type,
+                'status': overall_status,
                 'target': {
-                    'name': report['target_name'],
+                    'name': subnet_name or '',
                     'type': target_type,
                     'value': target_value
                 },
-                'client_name': report['client_name'],
-                'completed_at': report['completed_at'].isoformat(),
-                'has_report': bool(report['results_path']),
-                'download_url': f'/api/reports/download/{report["id"]}'
+                'client_name': row['client_name'],
+                'started_at': row['started_at'].isoformat() if row['started_at'] else None,
+                'completed_at': row['completed_at'].isoformat() if row['completed_at'] else None,
+                'has_report': bool(report_path),
+                'download_url': f'/api/reports/download/{row["report_id"]}' if report_path else None
             })
-        
+
         return jsonify({
             'reports': report_list,
             'total': len(report_list),
@@ -449,7 +694,7 @@ def list_reports():
 def debug_reptor():
     #debug endpoint to test SysReptor initialization and connection
     try:
-        # Test if reptor module is available
+        #tests if reptor module is available
         if not REPTOR_AVAILABLE:
             return jsonify({
                 'status': 'error',
@@ -457,7 +702,7 @@ def debug_reptor():
                 'reptor_available': False
             })
         
-        # Test initialization
+        #tests initialization
         server_url = os.environ.get('REPTOR_SERVER_URL', 'http://reptor:8000')
         token = os.environ.get('REPTOR_API_TOKEN', 'dev-token')
         
@@ -468,7 +713,7 @@ def debug_reptor():
             'initialization_attempts': []
         }
         
-        # Try different initialization methods
+        #try different initialization methods
         methods = [
             ('server_token', lambda: Reptor(server=server_url, token=token)),
             ('serverurl_token', lambda: Reptor(serverurl=server_url, token=token)),
@@ -484,9 +729,9 @@ def debug_reptor():
                     'status': 'success',
                     'client_type': str(type(client))
                 })
-                # Test connection if possible
+                #test connection if possible
                 try:
-                    # Try to call a simple method if available
+                    #try to call a simple method if available
                     if hasattr(client, 'get_projects'):
                         projects = client.get_projects()
                         debug_info['initialization_attempts'][-1]['connection_test'] = 'success'
@@ -494,7 +739,7 @@ def debug_reptor():
                         debug_info['initialization_attempts'][-1]['connection_test'] = 'no_test_method'
                 except Exception as conn_e:
                     debug_info['initialization_attempts'][-1]['connection_test'] = f'failed: {str(conn_e)}'
-                break  # Use first successful method
+                break  
             except Exception as e:
                 debug_info['initialization_attempts'].append({
                     'method': method_name,
@@ -513,4 +758,4 @@ def debug_reptor():
             'error_type': type(e).__name__
         }), 500
 
-# Done by Morales-Marroquin and Austin Finch
+# Done by Manuel Morales-Marroquin and Austin Finch
