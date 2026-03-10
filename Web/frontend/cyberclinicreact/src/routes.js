@@ -8,6 +8,7 @@ import Setting from "./setting";
 import NewTarget from './newtarget';
 import CodeChecker from './codechecker';
 import Home from "./home";
+import Faq from "./faq";
 
 //make sure the import... is cap
 
@@ -23,6 +24,7 @@ export default function AppRoutes() {
             <Route path="/dashboard" element ={<Dashboard/>} />
             <Route path="/setting" element ={<Setting/>} />
             <Route path="/codechecker" element ={<CodeChecker/>} />
+            <Route path="/faq" element ={<Faq/>} />
            
         </Routes>
     );

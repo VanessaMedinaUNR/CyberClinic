@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import logo from './logo.png';
 import './home.css'
 
 function Home() {
@@ -9,18 +10,20 @@ function Home() {
         <div id="homepage">
             <nav id="navbar">
                 <div id="navleft">
-                    <button className="navlink" onClick={() => navigate('/')}>Home</button>
-                    <button className="navlink" onClick={() => navigate('/faq')}>FAQ</button>
+                    <span className="navlink" onClick={() => navigate('/')}>Home</span>
+                    <span className="navlink" onClick={() => navigate('/faq')}>FAQ</span>
                 </div>
-                <div id="navbrand">CyberClinic</div>
+                <div id="navbrand">
+                    <img src={logo} alt="CyberClinic" id="nav-logo" />
+                </div>
                 <div id="navright">
-                    <button className="navlink" onClick={() => navigate('/login')}>Login / Create</button>
+                    <span className="navlink" onClick={() => navigate('/login')}>Login / Create</span>
                 </div>
             </nav>
 
             <div id="bounding_box">
                 <div id="aboutgrid">
-                    <div className="gridItem highlight">
+                    <div className="gridItem">
                         <h2>Who Are We?</h2>
                         <p>CyberClinic is a cybersecurity platform developed at the University of Nevada, Reno by Team 13 as part of CS 426. We support the mission of the Cyber Clinic, a student-led nonprofit helping small businesses, tribal agencies, and local governments address cybersecurity risks they can't afford to fix alone.</p>
                         <br/>
@@ -28,7 +31,7 @@ function Home() {
                         <br/>
                         <p>Our platform provides automated vulnerability scanning, readable security reports, and a direct path to connect with Cyber Clinic experts for further remediation and education. No technical background required. Just register, submit a domain or IP, and receive actionable insights.</p>
                     </div>
-                    <div className="gridItem highlight">
+                    <div className="gridItem">
                         <h2>How To Use?</h2>
                         <p>1. <strong>Register</strong> — Create a secure account<br/>
                         2. <strong>Submit</strong> — Enter a domain or IP to assess<br/>
@@ -39,7 +42,7 @@ function Home() {
                     </div>
                     <div className="gridItem mission-block">
                         <h1>Our Mission</h1>
-                        <p>To make cybersecurity accessible and affordable for small organizations by providing free, automated vulnerability scanning with clear, actionable reports.Lowering the financial and technical barriers that leave communities exposed to preventable risks.</p>
+                        <p>To make cybersecurity accessible and affordable for small organizations by providing free, automated vulnerability scanning with clear, actionable reports. Lowering the financial and technical barriers that leave communities exposed to preventable risks.</p>
                     </div>
                 </div>
             </div>
@@ -48,3 +51,11 @@ function Home() {
 }
 
 export default Home;
+
+
+
+
+
+
+
+
