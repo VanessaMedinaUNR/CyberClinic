@@ -1,0 +1,5 @@
+reports/
+scans/
+certs/*
+!certs/example.*
+!certs/generate_certs.sh

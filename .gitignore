@@ -30,20 +30,13 @@ Thumbs.db
 
 # Application specific
 _internal
-build/
-Cyberclinic.spec
-/Web/backend/app/reports/
-/Web/backend/app/results/
 *.log
 *.sqlite
 *.db
-VPN_config
-Application/src/server.crt
-Web/backend/results
-Web/backend/reports
-server.crt
 
 # Development and testing
+.vscode
+.venv
 test_results.json
 coverage/
 .coverage
