@@ -47,7 +47,7 @@ function Signup() {
             {
                 navigate("/login")
             }
-            else if (response.status === 200)
+            else if (response.status === 202)
             {
                 setNewClient(true)
             }
