@@ -37,7 +37,7 @@ function NewTarget () {
             else
             {  
                 alert("Failed to add target: " + error.response.data.error)
-                if (error.response.status === 401){ navigate('/') }
+                if (error.response.status === 403 || error.response.status === 401){ navigate('/') }
             }
         });
     }

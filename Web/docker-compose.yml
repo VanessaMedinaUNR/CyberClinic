@@ -193,6 +193,7 @@ services:
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     # Expose datbase locally for development and testing
+    # Comment out the two lines below for production deployment
     ports:
       - ${DB_PORT}:${DB_PORT}
     expose:
