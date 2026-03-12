@@ -33,7 +33,7 @@ def generate_prompt(user_code):
 @jwt_required()
 @ai_bp.route("/codescan", methods=["POST"])
 def code_scan():
-    data = request.get_data
+    data = request.get_json()
     logger.debug(f"Received data for code scan: {data}")
     user_code = data["code"]
 
