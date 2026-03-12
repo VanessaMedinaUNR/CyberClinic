@@ -20,41 +20,56 @@ api.interceptors.response.use(
         return(res)
     },
     async (error) => {
-        const origConf = error.config;
-        if (origConf.url !== "/auth/login" && error.response) {
-            console.log(error.response);
-            if (error.response.data.code === 'fresh_token_required') {
-                sessionStorage.setItem('access_token', '');
-                sessionStorage.setItem('refresh_token', '');
-                return window.location.href = "/login";
-             }
-            if (error.response.status === 403 && !origConf._retry) {
-                origConf._retry = true;
-
-                try {
-                    const refresh = sessionStorage.getItem('refresh_token');
-
-                    if (refresh){
-                        sessionStorage.setItem('access_token', refresh);
-                        const rs = await api.post("/auth/refresh");
-                        
-                        const { access_token } = rs.data;
-                        sessionStorage.setItem('access_token', access_token);
-                        sessionStorage.setItem('refresh_token', '');
+        return new Promise((resolve, reject) => {
+            const origConf = error.config;
+            if (origConf.url !== "/auth/login" && error.response) {
+                console.log(error.response);
+                if (error.response.status === 401) {
+                    if (error.response.data.code === 'fresh_token_required') {
+                        sessionStorage.removeItem('access_token');
+                        sessionStorage.removeItem('refresh_token');
                     }
-                    return api(origConf);
-                } catch (_error)
-                {
-                    console.log(_error)
-                    return Promise.reject(error);
+                    reject(error);
+                } else if (error.response.status === 403 && !origConf._retry) {
+                    origConf._retry = true;
+                    const refresh = sessionStorage.getItem('refresh_token');
+    
+                    if (refresh){
+                        console.log("Attempting to refresh access token using refresh token...");
+                        sessionStorage.setItem('access_token', refresh);
+                        api.post("/auth/refresh").then(function (rs) {
+                            const { access_token, refresh_token } = rs.data;
+                            console.log("Access token refreshed successfully:", access_token);
+                            sessionStorage.setItem('access_token', access_token);
+                            sessionStorage.setItem('refresh_token', refresh_token);
+                            origConf.headers['Authorization'] = 'Bearer ' + access_token;
+                        }).catch(function (err) {
+                            sessionStorage.removeItem('access_token');
+                            sessionStorage.removeItem('refresh_token');
+                            console.log(err);
+                            reject(err);
+                        });
+                    } else {
+                        sessionStorage.removeItem('access_token');
+                        sessionStorage.removeItem('refresh_token');
+                        reject(error);
+                    }
+                    console.log("Retrying original request with new access token...");
+                    api(origConf).then(function (response) {
+                        console.log(response)
+                        resolve(response);
+                    }).catch(function (err) {
+                        console.log("Error retrying original request:", err);
+                        reject(err);
+                    });
+                } else if (error.response.status === 403) {
+                    sessionStorage.removeItem('access_token');
+                    sessionStorage.removeItem('refresh_token');
+                    reject(error);
                 }
-            } else if (error.response.status === 403) {
-                sessionStorage.setItem('access_token', '');
-                sessionStorage.setItem('refresh_token', '');
-                return window.location.href = "/login";
             }
-        }
-        return Promise.reject(error);
+            reject(error);
+        });
     }
 );
 

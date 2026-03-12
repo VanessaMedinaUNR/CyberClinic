@@ -52,8 +52,7 @@ function Setting() {
         })
         .then(function (response) {
             alert(response.data.message);
-            localStorage.setItem('access_token', response.data.access_token)
-            localStorage.setItem('refresh_token', response.data.refresh_token)
+            sessionStorage.setItem('access_token', response.data.access_token)
             window.location.reload();
         })
         .catch(function (error) {

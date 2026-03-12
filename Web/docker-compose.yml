@@ -99,7 +99,7 @@ services:
       context: backend
       target: builder
       args:
-        - BACKEND_SERVER=${BACKEND_SERVER:-backend}
+        - BACKEND_SERVER=${BACKEND_SERVER:-backend-dev}
         - BACKEND_PORT=${BACKEND_PORT:-5000}
         - AUTHED_CRT=${AUTHED_CRT}
     environment:

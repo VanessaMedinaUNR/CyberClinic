@@ -149,7 +149,6 @@ def register():
             return jsonify({
                 'message': 'User registered successfully',
                 'user': {
-                    'user_id': user_id,
                     'email': email,
                     'organization': client_name,
                     'phone_number': phone_number
@@ -231,9 +230,10 @@ def login():
 def refresh_token():
     current_user = get_jwt_identity()
     new_token = create_access_token(identity=current_user, fresh=False, expires_delta=timedelta(minutes=10))
+    new_refresh_token = create_refresh_token(identity=current_user, expires_delta=timedelta(minutes=30))
     old = get_jwt()['jti']
     block_jwt(old)
-    return {"access_token": new_token}, 200
+    return {"access_token": new_token, "refresh_token": new_refresh_token}, 200
 
 @auth_bp.route('/user', methods=['GET'])
 @jwt_required()
@@ -274,7 +274,6 @@ def get_user():
 def update_user():
     user_id = get_jwt_identity()
     access_token = get_jwt()
-    refresh_token = create_refresh_token(identity=user_id, expires_delta=timedelta(minutes=30))
     try:
         data = request.get_json()
         email = data.get('email')
@@ -355,8 +354,7 @@ def update_user():
 
         return jsonify({
             'message': 'User updated sucessfully!',
-            'access_token': access_token,
-            'refresh_token': refresh_token
+            'access_token': access_token
         }), 200
 
     except Exception as e:

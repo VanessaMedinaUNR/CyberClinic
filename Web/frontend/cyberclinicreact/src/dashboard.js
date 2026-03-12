@@ -29,7 +29,7 @@ function Dashboard() {
             })
             .catch(err => {
                 const errcode = err.response?.status || err.status || null;
-                if (errcode && errcode === 401) {
+                if (errcode && errcode === 403) {
                     setGenerateError('Session expired. Please log in again.');
                     setTimeout(() => navigate('/'), 3000);
                 } else {
