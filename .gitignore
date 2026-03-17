@@ -37,6 +37,7 @@ _internal
 
 # Development and testing
 .vscode
+*.code-workspace
 .venv
 test_results.json
 coverage/

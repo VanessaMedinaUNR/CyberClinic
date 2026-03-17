@@ -5,11 +5,11 @@ services:
   frontend:
     container_name: cyberclinic-frontend
     environment:
-      - REACT_APP_FRONTEND_SERVER=${FRONTEND_SERVER}
-      - REACT_APP_FRONTEND_PORT=${FRONTEND_PORT}
-      - REACT_APP_BACKEND_SERVER=http://${HOST}:${BACKEND_PORT}
+      - REACT_APP_FRONTEND_SERVER=frontend
+      - REACT_APP_FRONTEND_PORT=${FRONTEND_PORT:-3000}
+      - REACT_APP_BACKEND_SERVER=http://${HOST}:${BACKEND_PORT:-5000}
     ports:
-      - ${FRONTEND_PORT}:${FRONTEND_PORT}
+      - ${FRONTEND_PORT:-3000}:${FRONTEND_PORT:-3000}
     build:
       context: frontend
       dockerfile: Dockerfile
@@ -29,7 +29,7 @@ services:
       context: backend
       target: builder
       args:
-        - BACKEND_SERVER=${BACKEND_SERVER-backend}
+        - BACKEND_SERVER=backend
         - BACKEND_PORT=${BACKEND_PORT:-5000}
         - AUTHED_CRT=${AUTHED_CRT}
     volumes:
@@ -37,12 +37,12 @@ services:
     environment:
       - SCAN_DIR=${SCAN_DIR:-/src/scans}
       - REPORT_DIR=${REPORT_DIR:-/src/reports}
-      - OLLAMA_HOST=${OLLAMA_HOST:-ollama}
+      - OLLAMA_HOST=ollama
       - OLLAMA_PORT=${OLLAMA_PORT:-11434}
     #web-related variables
       - FRONTEND_HOST=frontend
       - FRONTEND_PORT=${FRONTEND_PORT:-3000}
-      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_SERVER=backend
       #-- Windows/Linux start
       - FLASK_PORT=${BACKEND_PORT:-5000}
       #-- windows/linux end
@@ -99,18 +99,18 @@ services:
       context: backend
       target: builder
       args:
-        - BACKEND_SERVER=${BACKEND_SERVER:-backend-dev}
+        - BACKEND_SERVER=backend-dev
         - BACKEND_PORT=${BACKEND_PORT:-5000}
         - AUTHED_CRT=${AUTHED_CRT}
     environment:
       - SCAN_DIR=${SCAN_DIR:-/src/scans}
       - REPORT_DIR=${REPORT_DIR:-/src/reports}
-      - OLLAMA_HOST=${OLLAMA_HOST:-ollama}
+      - OLLAMA_HOST=ollama
       - OLLAMA_PORT=${OLLAMA_PORT:-11434}
     #Web-related Variables
       - FRONTEND_HOST=frontend
       - FRONTEND_PORT=${FRONTEND_PORT:-3000}
-      - FLASK_SERVER=${BACKEND_SERVER}
+      - FLASK_SERVER=backend-dev
       #-- Windows/Linux start
       - FLASK_PORT=${BACKEND_PORT:-5000}
       #-- Windows/Linux end

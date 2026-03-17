@@ -36,8 +36,8 @@
 -  Richie White  - Computer Science & Engineering, University of Nevada, Reno 
 
 **External Advisors:**
- - Dr. Bill Doherty - Cybersecuirty Center, University of Nevada, Reno
- - Dr. Shamik Sengupta - Cybersecuirty Center, University of Nevada, Reno
+ - Dr. Bill Doherty - Cybersecurity Center, University of Nevada, Reno
+ - Dr. Shamik Sengupta - Cybersecurity Center, University of Nevada, Reno
 ---
 ## Project Title
 **Cyber Clinic Web Application: Accessible Cybersecurity for small organizations** This website documents our **CS 426 Senior Project in Computer Science (Spring 2026)** at the **Inoversity of Nevada,Reno - Deparment of Computer Science & Engineering**
@@ -45,13 +45,13 @@
 ---
 ## Project Description
 
-Small organization such as lcal businesses, tribal agencies, and community nonprofits often lack the budget and technical expertise needed to preform regular cybersecuirty assessments. Commercual vulnerability scanners can cost hundreds r even thosands of dollars annually, crreatinf a barrier that leaves many organizations exposed to preventable risks. The *Cyber Web Application** is designed as an afforadable and easy to us alternative that helps non technical users understand their cybersecuirty posture.The system integrates trusted open source tools such as **Nmap** and **Nikto to preform vulerablity scans onpublic facing systems. Instead of presenting raw technical output, the platform translates scan results into **plain-language rports** with clear explanations and suggested remediation steps.The long-term goal of this project is to demonstrate how **automation, usability, and education ** can work together to make cybersecuirt more accessible.By lowering financial and techinal barrier, the Cyber Clinic Web Application aims to empower small organization to make proactive steps towars improving their secuirty. 
+Small organization such as local businesses, tribal agencies, and community nonprofits often lack the budget and technical expertise needed to perform regular cybersecurity assessments. Commercial vulnerability scanners can cost hundreds or even thosands of dollars annually, creating a barrier that leaves many organizations exposed to preventable risks. The **CyberClinic Web Application** is designed as an afforadable and easy to us alternative that helps non technical users understand their cybersecurity posture. The system integrates trusted open source tools such as **Nmap** and **Nikto** to perform vulerablity scans onpublic facing systems. Instead of presenting raw technical output, the platform translates scan results into **plain-language reports** with clear explanations and suggested remediation steps.The long-term goal of this project is to demonstrate how **automation, usability, and education** can work together to make cybersecurity more accessible. By lowering financial and techinal barrier, the Cyber Clinic Web Application aims to empower small organizations to make proactive steps towards improving their security. 
 
 ---
 
 ## Project Vision
 
-Team 13 is proposing the Cyber Clinic Web Application, an affordable and simple alternative to commercial vulnerability scanners that can cost more than $1,000. The project supports the mission of the Cyber Clinic, a student-led nonprofit founded at the University of Nevada, Las Vegas (UNLV), which is now opening a chapter at the University of Nevada, Reno (UNR) to help small businesses, tribal agencies, and local governments address cybersecurity risks. Our prototype includes functional user authentication, a working dashboard, and integrated scanning for public domains/IPs using open-source tools such as Nmap and Nikto. The system produces readable reports that translates technical scanner output into plain English with clear suggested fixes, giving non-technical users a clear first assessment and a direct path to contact Cyber Clinic for further remediation and education. 
+Team 13 is proposing the Cyber Clinic Web Application, an affordable and simple alternative to commercial vulnerability scanners that can cost organizations thousands they may not have to spare. The project supports the mission of the Cyber Clinic, a student-led nonprofit founded at the University of Nevada, Las Vegas (UNLV), which is now opening a chapter at the University of Nevada, Reno (UNR) to help small businesses, tribal agencies, and local governments address cybersecurity risks. Our prototype includes functional user authentication, a working dashboard, and integrated scanning for public domains/IPs, as well as subnets without a public-facing address, using open-source tools such as Nmap and Nikto. The system produces readable reports that translates technical scanner output into plain English with clear suggested fixes, giving non-technical users a clear first assessment and a direct path to contact Cyber Clinic for further remediation and education. 
 
 ---
 ### **Planned User Journey**
@@ -71,11 +71,13 @@ Team 13 is proposing the Cyber Clinic Web Application, an affordable and simple 
 
 | Component | Technology | Status |
 |-----------|------------|--------|
-| **Frontend** | HTML5, CSS3, JavaScript | 📋 Planned |
-| **Backend** | Python, Flask/FastAPI | 📋 Planned |
+| **Frontend** | ReactJS | 📋 Planned |
+| **Backend** | Python, Flask | 📋 Planned |
 | **Database** | PostgreSQL, SQLAlchemy | 📋 Planned |
-| **Security Tools** | Nmap, Nikto, OpenVAS | 📋 Planned |
-| **Reporting** | SysReptor | 📋 Planned |
+| **Security Tools** | Nmap, Nikto | 📋 Planned |
+|  | OpenVAS |⏰ Future |
+| **Live Network Monitoring** |  | ⏰ Future |
+| **Reporting** | SysReptor | ❌ Canceled |
 | **AI Analysis** | Ollama | 📋 Planned |
 
 ### **What We're Building**
@@ -100,26 +102,27 @@ Our application will provide:
 - Modern browser (Chrome, Edge, Firefox)
 
 ### For 
-### 1) Build Web Portal
+#### 1) Set up the environment
 
 ```bash
 #Clone the repository
 git clone https://github.com/VanessaMedinaUNR/CyberClinic.git
 cd CyberClinic
 
-#Start Web App and all associated containers
 cd Web
 cp .env.dev .env
 #Update .env file with secrets
-
-cd reptor/sysreptor/deploy
-cp app.env.example app.env
-#Update app.env as shown at https://docs.sysreptor.com/setup/installation/#manual-installation
-
-docker-compose up
 ```
 
-#### 2) Build Standalone Application (For subnets without public IP addresses)
+#### 2) [Follow the Backend guide for the frontend](backend\README.md)
+
+#### 3) Start the frontend
+```
+docker-compose up -d --build frontend
+```
+
+
+#### 4) Build Standalone Application (For subnets without public IP addresses)
 [Follow the Standalone Application Build Steps](Application/README.md)
 
 > **Development Note:** Full installation instructions will be updated as we build out the application components.
