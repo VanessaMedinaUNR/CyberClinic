@@ -3,12 +3,38 @@ import Toolbar from './Components/toolbar';
 import './styles/codechecker.css';
 import ReactMarkdown from "react-markdown";
 import api from "./api";
+import { useNavigate } from "react-router-dom";
 
 function CodeChecker() {
 
     const [code, setCode] = useState("");
     const [result, setResult] = useState("");
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        api.get("/auth/user")
+        .then(function (response) {
+            const user = response.data
+            setUserData({
+              email: user.email,
+              admin: user.admin,
+              phone: user.phone,
+              scan_frequency: user.scan_frequency
+            });
+        })
+        .catch(function (error) {
+            if (!error.response)
+            {
+                alert("Connection error: Please try again later");
+            }
+            else    
+            {
+                console.log('Error fetching data: ' + error);
+                if (error.response.status === 401){ navigate('/') }
+            }
+        });
+      }, [navigate]);
 
     async function handleScan(){
         setResult("Please wait while we analyze your code...");
@@ -37,6 +63,7 @@ function CodeChecker() {
 
     return (
         <div className="codechecker-wrapper">
+            
             <div id="code_box">
                 <Toolbar/>
                 <h1>Code Checker</h1>
