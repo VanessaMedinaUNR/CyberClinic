@@ -2,25 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from './logo.png';
 import './styles/home.css'
+import Toolbar from './Components/toolbar';
 
 function Home() {
     const navigate = useNavigate();
 
     return (
         <div id="homepage">
-            <nav id="navbar">
-                <div id="navleft">
-                    <span className="navlink" onClick={() => navigate('/')}>Home</span>
-                    <span className="navlink" onClick={() => navigate('/faq')}>FAQ</span>
-                </div>
-                <div id="navbrand">
-                    <img src={logo} alt="CyberClinic" id="nav-logo" />
-                </div>
-                <div id="navright">
-                    <span className="navlink" onClick={() => navigate('/login')}>Login / Create</span>
-                </div>
-            </nav>
-
+            <Toolbar/>
             <div id="bounding_box">
                 <div id="aboutgrid">
                     <div className="gridItem">

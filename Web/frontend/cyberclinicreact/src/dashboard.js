@@ -99,99 +99,101 @@ function Dashboard() {
     const hasActive = scans.some(s => s.status === 'running' || s.status === 'pending');
 
     return (
-        <div id="bounding_box">
+        <>
             <Toolbar/>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h1 style={{ fontSize: '20px', color: '#333', margin: 0 }}>Dashboard</h1>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button className="btn-black" onClick={() => navigate("/newTarget")}>+ Configure New Target</button>
-                    <button className="btn-black" onClick={() => navigate("/newScan")}>+ Configure New Scan</button>
+            <div id="bounding_box">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h1 style={{ fontSize: '20px', color: '#333', margin: 0 }}>Dashboard</h1>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button className="btn-black" onClick={() => navigate("/newTarget")}>+ Configure New Target</button>
+                        <button className="btn-black" onClick={() => navigate("/newScan")}>+ Configure New Scan</button>
+                    </div>
+                    <button className="btn-black" id = "codeChecker" onClick={() => (navigate("/codechecker"))}>+ Check Code
+                    </button>
                 </div>
-                <button className="btn-black" id = "codeChecker" onClick={() => (navigate("/codechecker"))}>+ Check Code
-                </button>
-            </div>
 
-            <div className="content-card">
-                <div className="card-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ margin: 0 }}>Active Scans &amp; Reports</h2>
-                    {hasActive && (
-                        <span style={{ fontSize: '12px', color: '#856404', background: '#fff3cd', padding: '4px 10px', borderRadius: '12px' }}>
-                            ⟳ Auto-refreshing every 15s
-                        </span>
+                <div className="content-card">
+                    <div className="card-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2 style={{ margin: 0 }}>Active Scans &amp; Reports</h2>
+                        {hasActive && (
+                            <span style={{ fontSize: '12px', color: '#856404', background: '#fff3cd', padding: '4px 10px', borderRadius: '12px' }}>
+                                ⟳ Auto-refreshing every 15s
+                            </span>
+                        )}
+                    </div>
+
+                    {loading && <p style={{ color: '#666', padding: '10px' }}>Loading scans...</p>}
+                    {error   && <p style={{ color: 'red',  padding: '10px' }}>{error}</p>}
+                    {generateError && <p style={{ color: 'red', padding: '10px' }}>{generateError}</p>}
+
+                    {!loading && !error && (
+                        <table id="scans-table">
+                            <thead>
+                                <tr>
+                                    <th>Name / Target</th>
+                                    <th>Scan Type</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th style={{ textAlign: 'right' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {scans.length === 0 && (
+                                    <tr>
+                                        <td colSpan="5" style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
+                                            No scans yet. Configure a target and run a scan to get started.
+                                        </td>
+                                    </tr>
+                                )}
+                                {scans.map(scan => (
+                                    <tr key={scan.report_id || scan.scan_id}>
+                                        <td>
+                                            <strong>{scan.target.name}</strong>
+                                            <br />
+                                            <span style={{ fontSize: '12px', color: '#666' }}>{scan.target.value}</span>
+                                        </td>
+                                        <td>{scan.scan_type}</td>
+                                        <td>{formatDate(scan.completed_at || scan.started_at)}</td>
+                                        <td>{getStatusBadge(scan.status)}</td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            {scan.has_report ? (
+                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                    <button
+                                                        className="btn-black"
+                                                        onClick={() => navigate('/report', { state: { id: scan.report_id || scan.scan_id } })}
+                                                    >
+                                                        View Report
+                                                    </button>
+                                                    <button
+                                                        className="btn-black"
+                                                        onClick={() => handleDownload(scan.report_id || scan.scan_id, scan.download_url)}
+                                                    >
+                                                        ↓ Download
+                                                    </button>
+                                                </div>
+                                            ) : scan.status === 'completed' ? (
+                                                <button
+                                                    className="btn-black"
+                                                    disabled={generatingId === (scan.report_id || scan.scan_id)}
+                                                    onClick={() => handleGenerateReport(scan.report_id || scan.scan_id)}
+                                                    style={{ opacity: generatingId === (scan.report_id || scan.scan_id) ? 0.6 : 1 }}
+                                                >
+                                                    {generatingId === (scan.report_id || scan.scan_id) ? 'Generating...' : 'Generate Report'}
+                                                </button>
+                                            ) : (
+                                                <span style={{ fontSize: '12px', color: '#888' }}>
+                                                    {scan.status === 'running' ? 'Scan in progress...' : 'Pending...'}
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     )}
                 </div>
-
-                {loading && <p style={{ color: '#666', padding: '10px' }}>Loading scans...</p>}
-                {error   && <p style={{ color: 'red',  padding: '10px' }}>{error}</p>}
-                {generateError && <p style={{ color: 'red', padding: '10px' }}>{generateError}</p>}
-
-                {!loading && !error && (
-                    <table id="scans-table">
-                        <thead>
-                            <tr>
-                                <th>Name / Target</th>
-                                <th>Scan Type</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th style={{ textAlign: 'right' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {scans.length === 0 && (
-                                <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
-                                        No scans yet. Configure a target and run a scan to get started.
-                                    </td>
-                                </tr>
-                            )}
-                            {scans.map(scan => (
-                                <tr key={scan.report_id || scan.scan_id}>
-                                    <td>
-                                        <strong>{scan.target.name}</strong>
-                                        <br />
-                                        <span style={{ fontSize: '12px', color: '#666' }}>{scan.target.value}</span>
-                                    </td>
-                                    <td>{scan.scan_type}</td>
-                                    <td>{formatDate(scan.completed_at || scan.started_at)}</td>
-                                    <td>{getStatusBadge(scan.status)}</td>
-                                    <td style={{ textAlign: 'right' }}>
-                                        {scan.has_report ? (
-                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                                <button
-                                                    className="btn-black"
-                                                    onClick={() => navigate('/report', { state: { id: scan.report_id || scan.scan_id } })}
-                                                >
-                                                    View Report
-                                                </button>
-                                                <button
-                                                    className="btn-black"
-                                                    onClick={() => handleDownload(scan.report_id || scan.scan_id, scan.download_url)}
-                                                >
-                                                    ↓ Download
-                                                </button>
-                                            </div>
-                                        ) : scan.status === 'completed' ? (
-                                            <button
-                                                className="btn-black"
-                                                disabled={generatingId === (scan.report_id || scan.scan_id)}
-                                                onClick={() => handleGenerateReport(scan.report_id || scan.scan_id)}
-                                                style={{ opacity: generatingId === (scan.report_id || scan.scan_id) ? 0.6 : 1 }}
-                                            >
-                                                {generatingId === (scan.report_id || scan.scan_id) ? 'Generating...' : 'Generate Report'}
-                                            </button>
-                                        ) : (
-                                            <span style={{ fontSize: '12px', color: '#888' }}>
-                                                {scan.status === 'running' ? 'Scan in progress...' : 'Pending...'}
-                                            </span>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
             </div>
-        </div>
+        </>
     );
 }
 

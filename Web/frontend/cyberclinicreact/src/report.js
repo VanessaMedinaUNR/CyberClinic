@@ -150,46 +150,54 @@ export default function ReportViewer () {
         }
     }
     if (loading) return (
-        <div id = "bounding_box" style={{ alignItems: 'center'}}>
+        <>
             <Toolbar/>
-            <h2>Loading...</h2>
-        </div>
+            <div id = "bounding_box" style={{ alignItems: 'center'}}>
+                <h2>Loading...</h2>
+            </div>
+        </>
     )
     if (notReady) return (
-        <div id = "bounding_box" style={{ alignItems: 'center'}}>
+        <>
             <Toolbar/>
-            <div style={{ textAlign: 'center', marginTop: '60px' }}>
-                <h2>Report Not Ready Yet</h2>
-                <p style={{ color: '#666' }}>The scan is still running or the report hasn't been generated yet.</p>
-                <button className="btn-black" onClick={() => window.history.back()} style={{ marginTop: '20px' }}>
-                    ← Back to Dashboard
-                </button>
-            </div>
-        </div>
-    )
-    if (success === false) return (
-        <div id = "bounding_box" style={{ alignItems: 'center'}}>
-            <Toolbar/>
-            <h1>Failed Fetching Report Data</h1>
-        </div>
-    )
-    return(
-        <div id="bounding_box">
-            <Toolbar/>
-            {/* Action bar — outside reportRef so it is excluded from print */}
-            <div className="report-action-bar no-print">
-                <button className="btn-outline" onClick={() => window.history.back()}>← Back</button>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button className="btn-black" onClick={handleDownloadJSON}>
-                        ↓ Download Report (PDF)
+            <div id = "bounding_box" style={{ alignItems: 'center'}}>
+                <div style={{ textAlign: 'center', marginTop: '60px' }}>
+                    <h2>Report Not Ready Yet</h2>
+                    <p style={{ color: '#666' }}>The scan is still running or the report hasn't been generated yet.</p>
+                    <button className="btn-black" onClick={() => window.history.back()} style={{ marginTop: '20px' }}>
+                        ← Back to Dashboard
                     </button>
                 </div>
             </div>
-            <div className="report-paper">
-                <ReportTemplate reportData={reportData} reportRef={reportRef} sectionRef={sectionRef} location={location} />
+        </>
+    )
+    if (success === false) return (
+        <>
+            <Toolbar/>
+            <div id = "bounding_box" style={{ alignItems: 'center'}}>
+                <h1>Failed Fetching Report Data</h1>
             </div>
-            <div className="page-end-footer no-print">Generated on { reportData.report_date } • Report Version 1.0</div>
-        </div>
+        </>
+    )
+    return(
+        <>
+            <Toolbar/>
+            <div id="bounding_box">
+                {/* Action bar — outside reportRef so it is excluded from print */}
+                <div className="report-action-bar no-print">
+                    <button className="btn-outline" onClick={() => window.history.back()}>← Back</button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button className="btn-black" onClick={handleDownloadJSON}>
+                            ↓ Download Report (PDF)
+                        </button>
+                    </div>
+                </div>
+                <div className="report-paper">
+                    <ReportTemplate reportData={reportData} reportRef={reportRef} sectionRef={sectionRef} location={location} />
+                </div>
+                <div className="page-end-footer no-print">Generated on { reportData.report_date } • Report Version 1.0</div>
+            </div>
+        </>
     )
 }
 

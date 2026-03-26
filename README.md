@@ -71,14 +71,14 @@ Team 13 is proposing the Cyber Clinic Web Application, an affordable and simple 
 
 | Component | Technology | Status |
 |-----------|------------|--------|
-| **Frontend** | ReactJS | 📋 Planned |
-| **Backend** | Python, Flask | 📋 Planned |
-| **Database** | PostgreSQL, SQLAlchemy | 📋 Planned |
-| **Security Tools** | Nmap, Nikto | 📋 Planned |
+| **Frontend** | ReactJS | 🛠️ In-Progress |
+| **Backend** | Python, Flask | 🛠️ In-Progress |
+| **Database** | PostgreSQL, SQLAlchemy | ✅ Done  |
+| **Security Tools** | Nmap, Nikto | 🛠️ In-Progress |
 |  | OpenVAS |⏰ Future |
 | **Live Network Monitoring** |  | ⏰ Future |
 | **Reporting** | SysReptor | ❌ Canceled |
-| **AI Analysis** | Ollama | 📋 Planned |
+| **AI Analysis** | Ollama | ✅ Done |
 
 ### **What We're Building**
 

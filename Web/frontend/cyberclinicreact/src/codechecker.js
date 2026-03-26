@@ -36,32 +36,34 @@ function CodeChecker() {
     }
 
     return (
-        <div className="codechecker-wrapper">
-            <div id="code_box">
-                <Toolbar/>
-                <h1>Code Checker</h1>
-                <h3>Please input your code to see what security vulnerabilities are found and how they could be improved</h3>
-                <textarea placeholder="Paste your code here..." value = { code } onChange={(e) => setCode(e.target.value)} disabled={loading}/>
-                <button onClick={handleScan} disabled={loading}>
-                    {loading ? "Scanning..." : "Scan Code"}
-                </button>
+        <>
+            <Toolbar/>
+            <div className="codechecker-wrapper">
+                <div id="code_box">
+                    <h1>Code Checker</h1>
+                    <h3>Please input your code to see what security vulnerabilities are found and how they could be improved</h3>
+                    <textarea placeholder="Paste your code here..." value = { code } onChange={(e) => setCode(e.target.value)} disabled={loading}/>
+                    <button onClick={handleScan} disabled={loading}>
+                        {loading ? "Scanning..." : "Scan Code"}
+                    </button>
 
-                {result && (
-                    <div className="result_box">
-                        <h4>Analysis Result:</h4>
-                        <pre>
-                            {result}
-                        </pre>
-                        {!loading &&
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <button onClick={() => navigator.clipboard.writeText(result)}>Copy to Clipboard</button>
-                                <button onClick={() => { setResult(""); setCode("") }}>Clear</button>
-                            </div>
-                        }
-                    </div>
-                )}
+                    {result && (
+                        <div className="result_box">
+                            <h4>Analysis Result:</h4>
+                            <pre>
+                                {result}
+                            </pre>
+                            {!loading &&
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button onClick={() => navigator.clipboard.writeText(result)}>Copy to Clipboard</button>
+                                    <button onClick={() => { setResult(""); setCode("") }}>Clear</button>
+                                </div>
+                            }
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>    
+        </>
     );
 }
 export default CodeChecker;

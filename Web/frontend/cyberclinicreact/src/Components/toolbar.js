@@ -1,35 +1,59 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import logo from '../img/logo_transparent.png';
 import '../styles/toolbar.css';
+import api from "../api";
 
 export default function Toolbar() {
     const navigate = useNavigate();   
     const location = useLocation();
     const page = location.pathname
+    const [loggedIn, setLoggedIn] = useState(false);
+    useEffect(() => {
+        api.get('/auth/status')
+            .then(response => {
+                setLoggedIn(response.data.logged_in);
+            })
+            .catch(error => {
+                console.error('Error checking auth status:', error);
+                setLoggedIn(false);
+                navigate('/');
+            });
+    }, []);
+
     return (
         <>
-            <div className="dashboard-header">
-                <div className="brand-section">
-                    <img src={logo} alt="Cyber Clinic Logo" id="logo"/>
-                    <p>University of Nevada, Reno </p>
+            <nav id="navbar">
+                <div id="navleft">
+                    <span className="navlink" onClick={() => navigate('/')}>Home</span>
+                    <span className="navlink" onClick={() => navigate('/faq')}>FAQ</span>
+                    {loggedIn && <span className="navlink" onClick={() => navigate('/dashboard')}>Dashboard</span>}
                 </div>
-                {page === '/dashboard' &&
-                    <div className="user-controls">
-                        <span id="User-email"> </span> 
-                        <button type = "button" onClick={() => (navigate("/setting"))} style={{ textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer' }}>⚙️</button>
-                    </div>
-                }
-            </div>
-             {page !== '/dashboard' &&
-                <>
-                    <a onClick={(e)=>{ //when clicks runs the code 
-                        e.preventDefault();//this is code
-                        navigate('/dashboard'); //goes to dash board //svg got from got this from https://www.svgrepo.com/svg/324205/back-arrow-navigation
-                    }} className="back-link">
-                        <svg fill="#000000" viewBox="0 0 52 52" data-name="Layer 1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier"><path d="M50,24H6.83L27.41,3.41a2,2,0,0,0,0-2.82,2,2,0,0,0-2.82,0l-24,24a1.79,1.79,0,0,0-.25.31A1.19,1.19,0,0,0,.25,25c0,.07-.07.13-.1.2l-.06.2a.84.84,0,0,0,0,.17,2,2,0,0,0,0,.78.84.84,0,0,0,0,.17l.06.2c0,.07.07.13.1.2a1.19,1.19,0,0,0,.09.15,1.79,1.79,0,0,0,.25.31l24,24a2,2,0,1,0,2.82-2.82L6.83,28H50a2,2,0,0,0,0-4Z"></path></g></svg>
-                    </a>
-                </>
-            }
+                <div id="navbrand">
+                    <img src={logo} alt="CyberClinic" id="nav-logo" />
+                </div>
+                <div id="navright">
+                    {loggedIn ? (
+                        <>
+                            <span className="navlink" onClick={() => {
+                                api.post('/auth/logout')
+                                    .then(() => {
+                                        sessionStorage.clear();
+                                        setLoggedIn(false);
+                                        navigate('/');
+                                    })
+                                    .catch(error => {
+                                        console.error('Error logging out:', error);
+                                        alert('Error logging out. Please try again.');
+                                    });
+                            }}>Logout</span>
+                            <button type = "button" onClick={() => (navigate("/setting"))} style={{ textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer' }}>⚙️</button>
+                        </>
+                    ) : (
+                        <span className="navlink" onClick={() => navigate('/login')}>Login / Create</span>
+                    )}
+                </div>
+            </nav>
         </>
     ) 
 } 

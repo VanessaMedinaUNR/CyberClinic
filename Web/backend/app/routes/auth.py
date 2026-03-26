@@ -225,6 +225,35 @@ def login():
         #handle any unexpected errors during login
         return jsonify({'error': 'login failed', 'details': str(e)}), 500
 
+
+@auth_bp.route('/status', methods=['GET'])
+@jwt_required(optional=True)
+def status():
+    #check if user is logged in by verifying JWT token
+    try:
+        user_id = get_jwt_identity()
+        if user_id:
+            return jsonify({'logged_in': True}), 200
+        else:
+            return jsonify({'logged_in': False}), 200
+    except Exception as e:
+        logger.error(f"Error checking login status: {e}")
+        return jsonify({'error': 'Status check failed'}), 500
+
+
+@auth_bp.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    #handle when someone wants to log out of their account
+    try:
+        jti = get_jwt()['jti']
+        block_jwt(jti)
+        return jsonify({'message': 'logout successful'}), 200
+    except Exception as e:
+        logger.error(e)
+        return jsonify({'error': 'Logout failed', 'details': str(e)}), 500
+
+
 @auth_bp.route('/refresh', methods = ['POST'])
 @jwt_required(refresh=True)
 def refresh_token():

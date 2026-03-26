@@ -65,43 +65,45 @@ function NewScan () {
     }
 
     return(
-        <div id = "bounding_box">
+        <>
             <Toolbar/> 
-            <h1>Generate a New Scan!</h1>
-            <h4>Please select your target and what type of scan</h4>
-            {!loading && targets.length === 0 && (
-                <p style={{ color: 'red', marginBottom: '10px' }}>
-                    No targets found. Please <button className="btn-black" style={{padding:'4px 10px'}} onClick={() => navigate('/newTarget')}>add a target</button> first.
-                </p>
-            )}
-            <form id="newScanForm" onSubmit={handleSubmit}>
-                <div>
-                    <label htmlFor="target_name">Select your target: </label>
-                    <select disabled={loading} name="target_name" id="target_name" value = { selectedTarget } onChange= {(e) => setSelectedTarget(e.target.value)}required>
-                        <option key="None" value="None" disabled>Select a target</option>
-                        {targets.map((item) => (
-                            <option key={item.value} value={item.value}>
-                            {item.label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="scan_type">Select scan type:</label>
-                    <select name="scan_type" id="scan_type" value = { scanType } onChange = {(e) => setScanType(e.target.value)}required>
-                        <option value="None" disabled>NMAP/Nikto/Full</option>
-                        <option value="nmap">NMAP (Network/Port Scan)</option>
-                        <option value="nikto">Nikto (Web Vulnerability Scan)</option>
-                        <option value="full">Full</option>
-                    </select>
-                </div>
-                <div id="external_buttons">
-                    <button type="submit">Generate Scan</button>
-                    <button type="button">Back</button>
-                    {/* fixed the ./bashbaord, its not suppoused to have the .*/}
-                </div>
-            </form>    
-        </div>
+            <div id = "bounding_box">
+                <h1>Generate a New Scan!</h1>
+                <h4>Please select your target and what type of scan</h4>
+                {!loading && targets.length === 0 && (
+                    <p style={{ color: 'red', marginBottom: '10px' }}>
+                        No targets found. Please <button className="btn-black" style={{padding:'4px 10px'}} onClick={() => navigate('/newTarget')}>add a target</button> first.
+                    </p>
+                )}
+                <form id="newScanForm" onSubmit={handleSubmit}>
+                    <div>
+                        <label htmlFor="target_name">Select your target: </label>
+                        <select disabled={loading} name="target_name" id="target_name" value = { selectedTarget } onChange= {(e) => setSelectedTarget(e.target.value)}required>
+                            <option key="None" value="None" disabled>Select a target</option>
+                            {targets.map((item) => (
+                                <option key={item.value} value={item.value}>
+                                {item.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="scan_type">Select scan type:</label>
+                        <select name="scan_type" id="scan_type" value = { scanType } onChange = {(e) => setScanType(e.target.value)}required>
+                            <option value="None" disabled>NMAP/Nikto/Full</option>
+                            <option value="nmap">NMAP (Network/Port Scan)</option>
+                            <option value="nikto">Nikto (Web Vulnerability Scan)</option>
+                            <option value="full">Full</option>
+                        </select>
+                    </div>
+                    <div id="external_buttons">
+                        <button type="submit">Generate Scan</button>
+                        <button type="button">Back</button>
+                        {/* fixed the ./bashbaord, its not suppoused to have the .*/}
+                    </div>
+                </form>    
+            </div>
+        </>
     );
 }
 

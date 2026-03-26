@@ -42,40 +42,42 @@ function NewTarget () {
         });
     }
 
-    return( 
-        <div id = "bounding_box">
+    return(
+        <>
             <Toolbar/>
-            <h1>Create a New Target!</h1>
-            <h4>Please enter a name for your target, select target type; ip, domain, or range, if it is public facing, and it's target value!</h4>
-            <form id="newTargetForm" onSubmit={handleSubmit}>
-                <div>
-                    <label htmlFor="target_name">Enter your scan name:</label>
-                    <input type="text" name="target_name" id="target_name" value = { targetName } onChange= {(e) => setTargetName(e.target.value)}required></input>
-                </div>
-                <div>
-                    <label htmlFor="target_type">Select your target type:</label>
-                    <select name="target_type" id="target_type" value = { targetType } onChange= {(e) => setTargetType(e.target.value)}required>
-                        <option value="None" disabled>Domain/IP/Range</option>
-                        <option value="domain">Domain</option>
-                        <option value="ip">IP</option>
-                        <option value="range">Range</option>
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="target_value">Enter target value:</label>
-                    <input type="text" name="target_value" id="target_value" value = { targetValue } onChange= {(e) => setTargetValue(e.target.value)}required></input>
-                </div>
-                <div>
-                    <label htmlFor="public_facing">Public?</label>
-                    <input type="checkbox" name="public_facing" id="public_facing" value = { targetPublic } onChange= {(e) => setTargetPublic(e.target.checked)}></input>
-                </div>
-                <div id="external_buttons">
-                    <button type="submit">Add Target</button>
-                    <button type="button">Back</button>
-                    {/* fixed the ./bashbaord, its not suppoused to have the .*/}
-                </div>
-            </form>    
-        </div>
+            <div id = "bounding_box">
+                <h1>Create a New Target!</h1>
+                <h4>Please enter a name for your target, select target type; ip, domain, or range, if it is public facing, and it's target value!</h4>
+                <form id="newTargetForm" onSubmit={handleSubmit}>
+                    <div>
+                        <label htmlFor="target_name">Enter your scan name:</label>
+                        <input type="text" name="target_name" id="target_name" value = { targetName } onChange= {(e) => setTargetName(e.target.value)}required></input>
+                    </div>
+                    <div>
+                        <label htmlFor="target_type">Select your target type:</label>
+                        <select name="target_type" id="target_type" value = { targetType } onChange= {(e) => setTargetType(e.target.value)}required>
+                            <option value="None" disabled>Domain/IP/Range</option>
+                            <option value="domain">Domain</option>
+                            <option value="ip">IP</option>
+                            <option value="range">Range</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="target_value">Enter target value:</label>
+                        <input type="text" name="target_value" id="target_value" value = { targetValue } onChange= {(e) => setTargetValue(e.target.value)}required></input>
+                    </div>
+                    <div>
+                        <label htmlFor="public_facing">Public?</label>
+                        <input type="checkbox" name="public_facing" id="public_facing" value = { targetPublic } onChange= {(e) => setTargetPublic(e.target.checked)}></input>
+                    </div>
+                    <div id="external_buttons">
+                        <button type="submit">Add Target</button>
+                        <button type="button">Back</button>
+                        {/* fixed the ./bashbaord, its not suppoused to have the .*/}
+                    </div>
+                </form>    
+            </div>
+        </>
     );
 }
 
