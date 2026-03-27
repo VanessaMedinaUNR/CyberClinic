@@ -11,6 +11,7 @@ from app.routes.scans import scans_bp
 from app.routes.auth import auth_bp
 from flask import Flask, jsonify
 from app.routes.ai import ai_bp
+from app.routes.saveCode_bp import from saveCode_bp
 from flask_cors import CORS
 import logging
 import atexit
@@ -41,6 +42,7 @@ def create_app(debug=False):
     app.register_blueprint(standalone_bp)
     app.register_blueprint(targets_bp)
     app.register_blueprint(ai_bp)
+    app.register_blueprint(saveCode_bp)
     #create a simple health check endpoint at the root URL
     @app.route('/')
     def health_check():

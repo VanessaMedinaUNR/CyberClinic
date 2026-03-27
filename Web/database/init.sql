@@ -119,7 +119,7 @@ CREATE TABLE blocked_jwt
 CREATE TABLE codechecker_results 
 (
   report_id varchar(36) DEFAULT gen_random_uuid(),
-  input text,
+  code_input text,
   report text,
   user_id varchar(36) NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(user_id),

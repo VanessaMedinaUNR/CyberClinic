@@ -50,4 +50,3 @@ def code_scan():
     result = response
 
     return jsonify({"analysis": result["response"]})
-

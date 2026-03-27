@@ -17,10 +17,7 @@ function CodeChecker() {
         .then(function (response) {
             const user = response.data
             setUserData({
-              email: user.email,
-              admin: user.admin,
-              phone: user.phone,
-              scan_frequency: user.scan_frequency
+              id: user.user_id
             });
         })
         .catch(function (error) {
@@ -34,7 +31,33 @@ function CodeChecker() {
                 if (error.response.status === 401){ navigate('/') }
             }
         });
-      }, [navigate]);
+    }, [navigate]);
+
+    
+    async function saveCode(code){
+        
+        api.post("/auth/user", code, {
+            headers: {
+                "Content-Type": "application/json"
+            },
+        })
+        .then(function (response) {
+            alert(response.data.message);
+            sessionStorage.setItem('access_token', response.data.access_token)
+            window.location.reload();
+        })
+        .catch(function (error) {
+            if (!error.response)
+            {
+                alert("Connection error: Please try again later");
+            }
+            else
+            {  
+                alert("User code update failed: " + error.response.data.error);
+                if (error.response.status === 401){ navigate('/') }
+            }
+        });
+    }
 
     async function handleScan(){
         setResult("Please wait while we analyze your code...");
@@ -52,7 +75,10 @@ function CodeChecker() {
             setLoading(false);
             setResult("Error scanning code.");
         });
+        saveCode(code);
     };
+
+
       
     function getCookie(name) {
         const value = `; ${document.cookie}`;
