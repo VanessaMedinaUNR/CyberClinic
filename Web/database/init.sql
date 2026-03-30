@@ -122,6 +122,7 @@ CREATE TABLE codechecker_results
   code_input text,
   report text,
   user_id varchar(36) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(user_id),
   PRIMARY KEY(report_id)
 );
