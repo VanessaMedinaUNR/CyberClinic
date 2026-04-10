@@ -66,7 +66,7 @@ def savecode():
 
 
 @jwt_required()
-@saveCode_bp.route("/savecode", methods=["GET"])
+@saveCode_bp.route("/getsavecodes", methods=["GET"])
 def get_saved_codes():
 
 
@@ -96,6 +96,48 @@ def get_saved_codes():
         #return success, scans are in JSON format
         return jsonify(scans), 200
 
+
+    #server doesn't work
+    except Exception as e:
+        logger.error(str(e))
+        return jsonify({"error": "Internal server error"}), 500
+
+@jwt_required()
+@saveCode_bp.route("/deletereport", methods=["POST"])
+def delete_report():
+
+
+    try:
+
+        #get the data provided (code input and result) and if no data is provided then returns error message
+        data = request.get_json()
+
+
+    
+        #get report_id
+        report_id = data.get('report_id')
+        user_id = get_jwt_identity()
+       
+        logger.info(f"Delete request for report_id={report_id}")
+        
+        #make sure required information was provided 
+        if not report_id:
+            return jsonify({
+                'error': 'missing required fields',
+                'required': [ 'report_id']
+            }), 400
+
+        #connect database 
+        db = get_db()
+        
+        
+        #delete from db 
+        db.execute_single(
+            "DELETE FROM codechecker_results WHERE report_id = %s AND user_id = %s", (report_id, user_id)
+        )
+    
+        #return success
+        return jsonify({"message": "Report deleted successfully"}), 200
 
     #server doesn't work
     except Exception as e:

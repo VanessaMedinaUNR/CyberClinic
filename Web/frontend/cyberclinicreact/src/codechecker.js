@@ -36,14 +36,13 @@ function CodeChecker() {
     
     async function saveCode(code){
         
-        api.post("/auth/user", code, {
+        api.post("/saveCode/savecode", code, {
             headers: {
                 "Content-Type": "application/json"
             },
         })
         .then(function (response) {
-            alert(response.data.message);
-            sessionStorage.setItem('access_token', response.data.access_token)
+            
             window.location.reload();
         })
         .catch(function (error) {
@@ -53,7 +52,7 @@ function CodeChecker() {
             }
             else
             {  
-                alert("User code update failed: " + error.response.data.error);
+                alert("Saving user code failed: " + error.response.data.error);
                 if (error.response.status === 401){ navigate('/') }
             }
         });
