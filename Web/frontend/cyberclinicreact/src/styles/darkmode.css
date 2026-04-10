@@ -12,7 +12,6 @@
     --accent-color: #90caf9;
 }
   
-/* Global resets using the variables */
 body {
     background-color: var(--bg-color) !important;
     color: var(--text-color);
@@ -26,4 +25,20 @@ body {
 
 h1, h2, h3, h4, label, p, span {
     color: var(--text-color);
+}
+
+.dark-mode-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    color: #333;
+}
+
+[data-theme='dark'] .dark-mode-btn {
+    color: #e0e0e0;
 }
