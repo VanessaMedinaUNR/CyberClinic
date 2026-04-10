@@ -17,6 +17,7 @@ export default function Toolbar() {
             .catch(error => {
                 console.error('Error checking auth status:', error);
                 setLoggedIn(false);
+                if (page !== '/faq' && page !== '/')
                 navigate('/');
             });
     }, []);

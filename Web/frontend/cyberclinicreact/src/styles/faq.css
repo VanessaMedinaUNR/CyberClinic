@@ -1,0 +1,68 @@
+/* faq.css — imports home styles, only adds FAQ-specific overrides */
+
+#faq-page {
+    background: #f3f5f7;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+}
+
+.faq-category {
+    font-size: 11px;
+    font-weight: bold;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 28px 0 10px 4px;
+}
+
+.faq-item {
+    margin-bottom: 10px;
+    padding: 20px 30px;
+    min-height: unset;
+}
+
+.faq-question-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    padding: 0;
+}
+
+.faq-question-text {
+    color: navy;
+    font-size: 15px;
+    margin: 0;
+    font-weight: bold;
+    flex: 1;
+}
+
+.faq-chevron {
+    font-size: 11px;
+    color: #999;
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+
+.faq-chevron.open {
+    transform: rotate(180deg);
+    color: navy;
+}
+
+.faq-answer {
+    color: #555;
+    font-size: 14px;
+    line-height: 1.8;
+    margin: 12px 0 0 0;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
