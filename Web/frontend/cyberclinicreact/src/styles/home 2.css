@@ -1,0 +1,164 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f5f7;
+    min-height: 100vh;
+    display: block;
+    height: auto;
+}
+
+/* Navbar */
+#navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 40px;
+    background: #ffffff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    width: 100%;
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+#navleft {
+    display: flex;
+    gap: 5px;
+    flex: 1;
+}
+
+#navbrand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    background: transparent;
+}
+
+#nav-logo {
+    height: 100px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+}
+
+#navright {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.navlink {
+    background: none;
+    border: none;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-weight: 500;
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.navlink:hover {
+    color: navy;
+    background: #eef0f8;
+}
+
+.navlink:focus,
+.navlink:focus-visible,
+.navlink:active,
+.navlink:focus-within {
+    outline: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    background: #eef0f8;
+    color: navy;
+}
+
+/* Bounding Box */
+#bounding_box {
+    padding: 20px 40px 60px;
+    width: 85%;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Grid */
+#aboutgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.gridItem {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: left;
+    min-height: 160px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+    border-top: 4px solid navy;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gridItem:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.highlight h2 {
+    color: navy;
+    font-size: 10px;
+    margin: 0 0 5px 0;
+}
+
+.highlight p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0;
+}
+
+.text-block p {
+    color: #555;
+    font-size: 14px;
+    line-height: 1.8;
+    margin: 0;
+}
+
+.mission-block {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, navy, #1a3a8f);
+    border-radius: 12px;
+    padding: 5px;
+    text-align: center;
+    border-top: none;
+    box-shadow: 0 8px 25px rgba(0, 0, 128, 0.3);
+}
+
+.mission-block:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 128, 0.4);
+}
+
+.mission-block h1 {
+    color: white;
+    font-size: 32px;
+    margin: 0 0 10px 0;
+    letter-spacing: 3px;
+}
+
+.mission-block p {
+    color: rgba(255,255,255,0.75);
+    font-size: 15px;
+    margin: 0;
+}

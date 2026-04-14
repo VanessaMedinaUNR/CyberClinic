@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <style>
+      .bg { fill:#123a63; }
+      .primary { fill:none; stroke:#e6edf3; stroke-width:28; stroke-linecap:round; stroke-linejoin:round; }
+      .thin { fill:none; stroke:#e6edf3; stroke-width:14; stroke-linecap:round; stroke-linejoin:round; }
+      .text { fill:#e6edf3; font-family:Arial, Helvetica, sans-serif; font-weight:700; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect class="bg" width="1024" height="1024" rx="120"/>
+
+  <!-- Shield -->
+  <path class="primary"
+        d="M512 160
+           L720 240
+           L720 420
+           C720 560 620 660 512 720
+           C404 660 304 560 304 420
+           L304 240 Z"/>
+
+  <!-- Central circle -->
+  <circle class="primary" cx="512" cy="420" r="110"/>
+
+  <!-- Network ring -->
+  <circle class="thin" cx="512" cy="420" r="170"/>
+
+  <!-- Connecting lines -->
+  <line class="thin" x1="512" y1="250" x2="512" y2="310"/>
+  <line class="thin" x1="675" y1="420" x2="622" y2="420"/>
+  <line class="thin" x1="512" y1="580" x2="512" y2="530"/>
+  <line class="thin" x1="350" y1="420" x2="402" y2="420"/>
+
+  <!-- Check mark -->
+  <path class="primary"
+        d="M455 420 L495 460 L575 380"/>
+
+  <!-- Gear -->
+  <g transform="translate(640,650) scale(1.1)">
+    <circle stroke="#e6edf3" stroke-width="25" cx="0" cy="0" r="45" fill="#123a63"/>
+    <g stroke="#e6edf3" stroke-width="14">
+      <line x1="0" y1="-70" x2="0" y2="-50"/>
+      <line x1="0" y1="70" x2="0" y2="50"/>
+      <line x1="-70" y1="0" x2="-50" y2="0"/>
+      <line x1="70" y1="0" x2="50" y2="0"/>
+      <line x1="-50" y1="-50" x2="-35" y2="-35"/>
+      <line x1="50" y1="-50" x2="35" y2="-35"/>
+      <line x1="-50" y1="50" x2="-35" y2="35"/>
+      <line x1="50" y1="50" x2="35" y2="35"/>
+    </g>
+  </g>
+
+  <!-- Text -->
+  <text x="512" y="880" text-anchor="middle" font-size="96" class="text">
+    CYBERCLINIC
+  </text>
+</svg>
