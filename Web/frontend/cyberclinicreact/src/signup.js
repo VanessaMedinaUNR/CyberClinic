@@ -66,6 +66,9 @@ function Signup() {
 
     return (
         <div id = "bounding_box">
+            <div id="back_buttons">
+            <button type="button" onClick={() => navigate(-1)}>← Back</button>
+        </div>
             <h1>Welcome to CyberClinic</h1>
             <h2>University of Nevada Reno</h2>
             <form id="signup" onSubmit={handleSubmit}>
