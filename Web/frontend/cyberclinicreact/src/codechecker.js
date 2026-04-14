@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import api from "./api";
 import { useNavigate } from "react-router-dom";
 
+
+
 function CodeChecker() {
 
     const [code, setCode] = useState("");
@@ -12,38 +14,15 @@ function CodeChecker() {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        api.get("/auth/user")
-        .then(function (response) {
-            const user = response.data
-            setUserData({
-              id: user.user_id
-            });
-        })
-        .catch(function (error) {
-            if (!error.response)
-            {
-                alert("Connection error: Please try again later");
-            }
-            else    
-            {
-                console.log('Error fetching data: ' + error);
-                if (error.response.status === 401){ navigate('/') }
-            }
-        });
-    }, [navigate]);
-
-    
-    async function saveCode(code){
+   
+    async function saveCode(code, report){
         
-        api.post("/saveCode/savecode", code, {
-            headers: {
-                "Content-Type": "application/json"
-            },
+        api.post("/saveCode/savecode",  {
+           code_input: code,
+           report: report 
         })
         .then(function (response) {
-            
-            window.location.reload();
+            console.log("saved successfully");
         })
         .catch(function (error) {
             if (!error.response)
@@ -68,13 +47,14 @@ function CodeChecker() {
             const data = response.data;
             setLoading(false);
             setResult(data.analysis);
+            saveCode(code, data.analysis);
         }
         ).catch(function (error) {
             console.error("Error:", error);
             setLoading(false);
             setResult("Error scanning code.");
         });
-        saveCode(code);
+        
     };
 
 
@@ -108,10 +88,12 @@ function CodeChecker() {
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 <button onClick={() => navigator.clipboard.writeText(result)}>Copy to Clipboard</button>
                                 <button onClick={() => { setResult(""); setCode("") }}>Clear</button>
+                                <button onClick={() => navigate("/saved-codes")}>Saved Codes</button>
                             </div>
                         }
                     </div>
                 )}
+
             </div>
         </div>    
     );

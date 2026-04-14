@@ -4,6 +4,7 @@ import logging
 from app.database import get_db
 
 
+
 saveCode_bp = Blueprint('ai', __name__, url_prefix='/api/saveCode')
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ def delete_report():
         user_id = get_jwt_identity()
        
         logger.info(f"Delete request for report_id={report_id}")
-        
+
         #make sure required information was provided 
         if not report_id:
             return jsonify({

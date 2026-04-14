@@ -10,6 +10,8 @@ import CodeChecker from './codechecker';
 import ReportViewer from "./report";
 import Home from "./home";
 import Faq from "./faq";
+import SavedCodes from "./Components/savedCodes";
+
 
 //make sure the import... is cap
 
@@ -27,6 +29,7 @@ export default function AppRoutes() {
             <Route path="/codechecker" element ={<CodeChecker/>} />
             <Route path="/faq" element ={<Faq/>} />
             <Route path="/report" element ={<ReportViewer/>} />
+            <Route path="/saved-codes" element={<SavedCodes />} />
         </Routes>
     );
 }
