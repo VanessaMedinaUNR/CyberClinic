@@ -98,7 +98,7 @@ function NewScan () {
                     </div>
                     <div id="external_buttons">
                         <button type="submit">Generate Scan</button>
-                        <button type="button">Back</button>
+                        <button type="button" onClick={() => navigate("/dashboard")}>Back</button>
                         {/* fixed the ./bashbaord, its not suppoused to have the .*/}
                     </div>
                 </form>    

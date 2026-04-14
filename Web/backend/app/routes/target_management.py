@@ -8,6 +8,7 @@ import socket
 import ipaddress
 from datetime import datetime
 import logging
+import ipwhois
 from ping3 import ping
 
 #import our database manager for data operations
@@ -19,17 +20,16 @@ targets_bp = Blueprint('targets', __name__, url_prefix='/api/target')
 #setup logging for scan operations
 logger = logging.getLogger(__name__)
 
-def validate_domain(domain):
+def validate_domain(domain) -> bool:
     #validate that a domain name is properly formatted
     #checks for valid domain pattern and reasonable length
     if not domain or len(domain) > 253:
         return False
-    
     #domain validation regex pattern - more flexible for real domains
     domain_pattern = r'^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)*[A-Za-z0-9-]{1,63}(?<!-)$'
     return bool(re.match(domain_pattern, domain))
 
-def validate_ip_address(ip):
+def validate_ip_address(ip) -> bool:
     #validate that an IP address is properly formatted
     #supports both IPv4 and IPv6 addresses
     try:
@@ -38,13 +38,37 @@ def validate_ip_address(ip):
     except ValueError:
         return False
 
-def validate_ip_range(ip_range):
+def validate_ip_range(ip_range) -> bool:
     #validate that an IP range is properly formatted
     #supports CIDR notation like 192.168.1.0/24
     try:
         ipaddress.ip_network(ip_range, strict=False)
         return True
     except ValueError:
+        return False
+
+def verify_domain_ownership(ip, client_admin_email) -> bool:
+    #verify domain ownership by checking WHOIS data against client admin email
+    try:
+        whois = ipwhois.IPWhois(ip)
+        whois_data = whois.lookup_whois()
+        logger.debug(whois_data)
+        nets = whois_data['nets']
+        if nets:
+            for net in nets:
+                emails = net['emails']
+            if emails:
+                for email in emails:
+                    logger.debug(f"Checking WHOIS email: {email} against client admin email: {client_admin_email}")
+                    if email.strip().lower() == client_admin_email.strip().lower():
+                        return True
+            if whois_data['registrar']:
+                logger.debug(f"Checking WHOIS registrar: {whois_data['registrar']} against client admin email: {client_admin_email}")
+                if whois_data['registrar'].strip().lower() == client_admin_email.strip().lower():
+                    return True
+            return False
+    except Exception as e:
+        logger.error(f"Error verifying domain ownership: {e}")
         return False
 
 
@@ -98,9 +122,21 @@ def add_target():
                 return jsonify({'error': 'Invalid domain format'}), 400
             if public_facing:
                 ip = ipaddress.IPv4Network(socket.gethostbyname(target_value))
-                verified = True
-                verified_date = datetime.now()
-                logger.info(f'{target_value} Verified at: {verified_date}')
+                
+                db = get_db()
+                client_admin_email = db.execute_single(
+                    """SELECT email FROM users NATURAL JOIN client_users
+                    WHERE client_id = %s AND client_admin = TRUE""",
+                    (client_id,)
+                )['email']
+
+                verified = verify_domain_ownership(ip.network_address, client_admin_email) 
+                if verified:
+                    verified_date = datetime.now()
+                    logger.info(f'{target_value} Verified at: {verified_date}')
+                else:
+                    logger.warning(f'{target_value} WHOIS data did not match client admin email')
+                    return jsonify({'error': 'Domain WHOIS data did not match client admin email. Target ownership cannot be verified.'}), 400
 
         elif target_type == 'ip':
             if not validate_ip_address(target_value):
