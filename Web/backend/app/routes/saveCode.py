@@ -5,13 +5,13 @@ from app.database import get_db
 
 
 
-saveCode_bp = Blueprint('ai', __name__, url_prefix='/api/saveCode')
+saveCode_bp = Blueprint('save_code_scans', __name__, url_prefix='/api/saveCode')
 logger = logging.getLogger(__name__)
 
 #saving code from when a code scan is submitted, report_id is generated automatically
 
-@jwt_required()
 @saveCode_bp.route("/savecode", methods=["POST"])
+@jwt_required()
 def savecode():
 
 
@@ -21,7 +21,7 @@ def savecode():
         data = request.get_json()
         if not data:
             return jsonify({"error": "Invalid or missing JSON"}), 400
-        logger.info(data)
+        logger.debug(data)
 
 
     
@@ -51,7 +51,7 @@ def savecode():
             return jsonify({"message": "Code already saved"}), 200
         
         #saves to db 
-        db.execute_single(
+        db.execute_command(
             """INSERT INTO codechecker_results (code_input, report, user_id) 
             VALUES (%s, %s, %s)""",
             (code_input, report, user_id)
@@ -66,8 +66,8 @@ def savecode():
         return jsonify({"error": "Internal server error"}), 500
 
 
-@jwt_required()
 @saveCode_bp.route("/getsavecodes", methods=["GET"])
+@jwt_required()
 def get_saved_codes():
 
 
@@ -81,7 +81,7 @@ def get_saved_codes():
         
        
         #retrieve all scans from db, limited 10, and ordered by when it was created 
-        results = db.execute(
+        results = db.execute_query(
             """SELECT code_input, report, report_id FROM codechecker_results WHERE user_id = %s ORDER BY created_at DESC LIMIT 10""",(user_id,)
         )
     
@@ -119,7 +119,7 @@ def delete_report():
         report_id = data.get('report_id')
         user_id = get_jwt_identity()
        
-        logger.info(f"Delete request for report_id={report_id}")
+        logger.debug(f"Delete request for report_id={report_id}")
 
         #make sure required information was provided 
         if not report_id:

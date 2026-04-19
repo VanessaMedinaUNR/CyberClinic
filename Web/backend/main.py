@@ -4,6 +4,7 @@ from app.workers.scan_worker import start_scan_worker, stop_scan_worker
 from standalone_handler import start_standalone_handler
 from app.routes.target_management import targets_bp
 from app.routes.standalone import standalone_bp
+from app.routes.saveCode import saveCode_bp
 from app.database import get_db, block_jwt
 from app.routes.reports import reports_bp
 from flask_jwt_extended import JWTManager
@@ -11,7 +12,6 @@ from app.routes.scans import scans_bp
 from app.routes.auth import auth_bp
 from flask import Flask, jsonify
 from app.routes.ai import ai_bp
-from app.routes.saveCode_bp import from saveCode_bp
 from flask_cors import CORS
 import logging
 import atexit
