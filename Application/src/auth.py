@@ -1,5 +1,18 @@
 #Cyber Clinic Standalone Application - User Authenication Form
-#CS 426 Team 13 - Spring 2026
+#
+#    Copyright (C) 2026  Austin Finch
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    See <https://www.gnu.org/licenses/> for full license terms.
 
 from PyQt6.QtCore import pyqtSignal, QObject, QVariant
 from subnet_validation import Subnet_Form
@@ -15,62 +28,7 @@ from PyQt6.QtWidgets import (
     QPushButton
 )
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-class User_Auth(QObject):
-    user_verified = pyqtSignal(QVariant, arguments=['result'])  # Define a signal to send data back
-    
-    def __init__(self, form: Auth_Form, email, passwd):
-        super().__init__()
-        self.form = form
-        self.email = email
-        self.passwd = passwd
-        self.apphash = form.apphash
-
-
-    def start(self, auth_tunnel: TunnelHandler):
-
-        logger.debug(f"hash: {self.apphash}\n")
-        logger.debug(f"{self.email}: {self.passwd}")
-        send = f'AUTH|{self.apphash}|{self.email}|{self.passwd}'
-
-        try:
-            auth_tunnel.conn.send(send.encode())
-            data = auth_tunnel.conn.recv(1024)
-            logger.debug(data)
-            response = data.decode().strip().split('|')
-            success = response.pop(0)
-            match success:
-                case "AUTH_FAILED":
-                    message = response.pop(0)
-                    logger.debug(f"Received from server: {success}: {message}")
-                    self.form.l.setText(message)
-                    self.form.app.processEvents()
-                    self.form.p.clear()
-                    self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel}) # Emit the result when done
-                case "AUTH_SUCCESS":
-                    logger.debug(f"Received from server: {success}")
-
-                    self.form.l.setText("User verification success!")
-                    self.form.app.processEvents()
-                    self.user_verified.emit({"success": True, "auth_tunnel": auth_tunnel})  
-                case _:
-                    auth_tunnel.close_tunnel()
-                    raise ValueError("Unexpected response from server during authentication.")
-        except TimeoutError as e:
-            logger.error(f'{e}')
-            self.form.l.setText("Connection error, please try again later")
-            self.form.app.processEvents()
-            time.sleep(5)
-            self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel})
-        except Exception as e:
-            logger.error(f'{e}')
-            self.form.l.setText("User verification failed! If you continue to recieve this error, please contact our support team: ")
-            self.form.app.processEvents()
-            time.sleep(5)
-            self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel})
-
 
 class Auth_Form(QDialog):
 
@@ -164,4 +122,57 @@ class Auth_Form(QDialog):
         except Exception as e:
             logger.error(f'{e}')
             self.l.setText("Unexpected error. Please contact support: [email].")
-        
+
+
+class User_Auth(QObject):
+    user_verified = pyqtSignal(QVariant, arguments=['result'])  # Define a signal to send data back
+    
+    def __init__(self, form: Auth_Form, email, passwd):
+        super().__init__()
+        self.form = form
+        self.email = email
+        self.passwd = passwd
+        self.apphash = form.apphash
+
+
+    def start(self, auth_tunnel: TunnelHandler):
+
+        logger.debug(f"hash: {self.apphash}\n")
+        logger.debug(f"{self.email}: {self.passwd}")
+        send = f'AUTH|{self.apphash}|{self.email}|{self.passwd}'
+
+        try:
+            auth_tunnel.conn.send(send.encode())
+            data = auth_tunnel.conn.recv(1024)
+            logger.debug(data)
+            response = data.decode().strip().split('|')
+            success = response.pop(0)
+            match success:
+                case "AUTH_FAILED":
+                    message = response.pop(0)
+                    logger.debug(f"Received from server: {success}: {message}")
+                    self.form.l.setText(message)
+                    self.form.app.processEvents()
+                    self.form.p.clear()
+                    self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel}) # Emit the result when done
+                case "AUTH_SUCCESS":
+                    logger.debug(f"Received from server: {success}")
+
+                    self.form.l.setText("User verification success!")
+                    self.form.app.processEvents()
+                    self.user_verified.emit({"success": True, "auth_tunnel": auth_tunnel})  
+                case _:
+                    auth_tunnel.close_tunnel()
+                    raise ValueError("Unexpected response from server during authentication.")
+        except TimeoutError as e:
+            logger.error(f'{e}')
+            self.form.l.setText("Connection error, please try again later")
+            self.form.app.processEvents()
+            time.sleep(5)
+            self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel})
+        except Exception as e:
+            logger.error(f'{e}')
+            self.form.l.setText("User verification failed! If you continue to recieve this error, please contact our support team: ")
+            self.form.app.processEvents()
+            time.sleep(5)
+            self.user_verified.emit({"success": False, "auth_tunnel": auth_tunnel})

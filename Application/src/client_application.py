@@ -1,5 +1,19 @@
 #Cyber Clinic Standalone Application - Main entry point
-#CS 426 Team 13 - Spring 2026
+#
+#    Copyright (C) 2026  Austin Finch
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    See <https://www.gnu.org/licenses/> for full license terms.
+
 from apscheduler.schedulers.blocking import BlockingScheduler
 from storage_handler import StorageHandler
 from subprocess import CompletedProcess
@@ -22,7 +36,7 @@ from PyQt6.QtWidgets import (
     QPushButton
 )
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 scans_running = False
 
@@ -136,28 +150,70 @@ def auto_run(app: QApplication, app_hash, app_storage: StorageHandler, server_ho
 
 def check_tools(app: QApplication):
     tools = scanner.check_tools()
-    if tools['nmap'] == False:
-        alert = Alert(app, "Please install nmap. The installer will start shortly.")
+    logger.debug(tools)
+    changed = 0
+    if any(val is False for val in tools.values()):
+        if tools['nmap'] == False:
+            alert = Alert(app, "Nmap was not found but is required. Press Ok to launch the installer.")
+            alert.show()
+            app.exec()
+            match sys.platform:
+                case 'win32':
+                    nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-setup.exe'))
+                case 'linux':
+                    nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-1.x86_64.rpm'))
+                case 'darwin':
+                    nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98.dmg'))
+            result: CompletedProcess = subprocess.run({nmap_installer})
+            if result.returncode == 0:
+                changed = 1
+            else:
+                alert = Alert(app, "Installation Failed! Please try again.")
+                alert.show()
+                app.exec()
+                return -1
+        if tools['perl'] == False:
+            match sys.platform:
+                case 'win32':
+                    alert = Alert(app, "Perl was not found but is required. Press Ok to install it now.")
+                    alert.show()
+                    app.exec()
+                    perl_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-setup.exe'))
+                    result = subprocess.run()
+                    if result.returncode == 0:
+                        alert = Alert(app, "Installation Successful! Please re-run the app if it does not run automatically")
+                        alert.show()
+                        app.exec()
+                        changed = 1
+                    else:
+                        alert = Alert(app, "Installation Failed! Please try again.")
+                        alert.show()
+                        app.exec()
+                        return -1
+                case 'linux':
+                    alert = Alert(app, "Perl was not found but is required. Please install it manually and try again.")
+                    alert.show()
+                    app.exec()
+                    return -1
+                case 'darwin':
+                    alert = Alert(app, "Perl was not found but is required. Please install it manually and try again.")
+                    alert.show()
+                    app.exec()
+                    return -1
+        if tools['perl.XML::Writer'] == False:
+            try:
+                subprocess.run(['cpan', 'XML::Writer'])
+                tools = check_tools()
+                if tools['perl.XML::Writer'] == False:
+                    raise Exception
+            except Exception:
+                alert = Alert(app, "The perl XML::Writer module was not found and was unable to be installed automatically. Please install it manually and try again.")
+                alert.show()
+                app.exec()
+                return -1
+        alert = Alert(app, "All required components were installed Successfully! Please re-run the app if it does not run automatically")
         alert.show()
         app.exec()
-        match sys.platform:
-            case 'win32':
-                nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-setup.exe'))
-            case 'linux':
-                nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-1.x86_64.rpm'))
-            case 'darwin':
-                nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98.dmg'))
-        result: CompletedProcess = subprocess.run({nmap_installer})
-        if result.returncode == 0:
-            alert = Alert(app, "Installation Successful! Please re-run the app if it doesn not run automatically")
-            alert.show()
-            app.exec()
-            return 1
-        else:
-            alert = Alert(app, "Installation Failed! Please try again.")
-            alert.show()
-            app.exec()
-            return -1
     else:
         return 0
 
@@ -178,6 +234,7 @@ if __name__ == '__main__':
     server_host = 'cyberclinic.unr.edu'
     auth_port = 6666
     authed_port = 9999
+    
     
     refresh = check_tools(app)
     if refresh != 0:

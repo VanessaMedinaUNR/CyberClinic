@@ -1,5 +1,18 @@
 #Cyber Clinic Standalone Application - Subnet Validation Form
-#CS 426 Team 13 - Spring 2026
+#
+#    Copyright (C) 2026  Austin Finch
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    See <https://www.gnu.org/licenses/> for full license terms.
 
 import base64
 
@@ -21,7 +34,6 @@ from PyQt6.QtWidgets import (
     QComboBox
 )
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class Subnet_Form(QDialog):

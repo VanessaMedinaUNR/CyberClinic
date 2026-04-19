@@ -1,7 +1,21 @@
 #Cyber Clinic Standalone Application - Scan Handler
-#CS 426 Team 13 - Spring 2026
+#
+#    Copyright (C) 2026  Austin Finch
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    See <https://www.gnu.org/licenses/> for full license terms.
 
 from re import match
+import subprocess
 
 from storage_handler import StorageHandler
 from tunnel import TunnelHandler
@@ -10,7 +24,6 @@ import nmap
 import ast
 import os
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def fetch_scans(authed_tunnel: TunnelHandler, subnet_name):
@@ -110,13 +123,27 @@ def execute_scan(id: str, info: dict[str], storage: StorageHandler):
 
 def check_tools() -> dict[str, bool]:
     tools = {}
+    logger.debug("Checking nmap installation")
     try:
         scanner = nmap.PortScanner()
         tools['nmap'] = True
-        tools['nikto'] = False
     except nmap.PortScannerError:
         tools['nmap'] = False
+    logger.debug("Checking perl and modules")
+    try:
+        subprocess.run(['perl', '-v'])
+        tools['perl'] = True
+        
+        res = subprocess.run(['perl', '-e', 'XML::Writer'])
+        if res.returncode == 0:
+            tools['perl.XML::Writer'] = True
+        else:
+            tools['perl.XML::Writer'] = False
     except FileNotFoundError:
+        tools['perl'] = False
+
+    except FileNotFoundError as e:
+        logger.error(e)
         tools['nikto'] = False
     return tools
 
