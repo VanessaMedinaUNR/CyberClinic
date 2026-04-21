@@ -1,33 +1,35 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import { CountryDropdown, StateDropdown, CityDropdown } from "react-country-state-dropdown";
 
 export default function LocationSelector({sendLocation}) {
     const [location, setLocation] = useState({
-        country: 'Select A Country',
-        state: 'Select A State',
-        city: 'Select A City',
+        country: '',
+        state: '',
+        city: '',
     });
 
-    const updateLocation = (e) =>
+    const updateLocation = (field, value) =>
     {
-        const { name, value } = e.target;
-        setLocation(prev => ({...prev, [name]: value}))
-        if (location.country !== "" && (location.state !== "" && location.city !== ""))
+        const newLocation = {...location, [field]: value};
+        setLocation(newLocation)
+        if (newLocation.country && newLocation.state && newLocation.city)
         {
             sendLocation(location)
         }
-    }
+    };
     return <>
         <div>
             <label htmlFor="Country">Select a Country:</label>
-            <input type="text" name="country" id="country" value = {location.country} onChange = {(e) => updateLocation(e)}required/>
+            <CountryDropdown value={location.country} onChange = {(val) => updateLocation("country",val)}required/>
         </div>
         <div>
             <label htmlFor="State">Select a State:</label>
-            <input type="text" name="state" id="state" value = {location.state} onChange = {(e) => updateLocation(e)}required/>
+            <StateDropdown country={location.country} value={location.state} onChange = {(val) => updateLocation("state",val)}required/>
         </div>
         <div>
             <label htmlFor="City">Select a City:</label>
-            <input type="text" name="city" id="city" value = {location.city} onChange = {(e) => updateLocation(e)}required/>
+            <CityDropdown country={location.country} state={location.state} value={location.city} onChange = {(val) => updateLocation("city", val)}required/>
         </div>
     </>
 }
+
