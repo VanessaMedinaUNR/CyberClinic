@@ -31,6 +31,9 @@ function Forgotpw() {
 
   return (
     <div id = "bounding_box">
+        <div id="back_buttons">
+            <button type="button" onClick={() => navigate(-1)}>← Back</button>
+        </div>
         <h1>Forgot your password</h1>
         <h4>Please enter the email you'd like your password reset information sent to.</h4>
         <form id="forgotpw">

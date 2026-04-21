@@ -23,17 +23,10 @@ function DarkModeToggle() {
         className="dark-mode-btn"
         aria-pressed={isDark} 
         onClick={() => setIsDark(!isDark)}
-        style={{ 
-            position: 'fixed', 
-            top: '10px', 
-            right: '10px', 
-            zIndex: 1000, 
-            cursor: 'pointer' 
-        }}
       >
         {isDark ? '☀️ Light' : '🌙 Dark'}
       </button>
     );
-  }
+}
   
-  export default DarkModeToggle;
+export default DarkModeToggle;

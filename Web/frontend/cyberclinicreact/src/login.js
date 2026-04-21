@@ -54,9 +54,12 @@ function Login() {
 
   return (
     <div id = "bounding_box">
+        <div id="back_buttons">
+              <button type="button" onClick={() => navigate(-1)}>← Back</button>
+        </div>
         <h1>Welcome to CyberClinic</h1>
         <h2>University of Nevada, Reno</h2>
-
+        
         <form id="loginForm" onSubmit={handleSubmit}>
             <div>
                 <label htmlFor="email">Enter your email:</label>

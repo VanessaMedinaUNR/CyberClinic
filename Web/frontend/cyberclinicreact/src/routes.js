@@ -10,11 +10,14 @@ import CodeChecker from './codechecker';
 import ReportViewer from "./report";
 import Home from "./home";
 import Faq from "./faq";
+import DarkModeToggle from "./darkmode";
 
 //make sure the import... is cap
 
 export default function AppRoutes() {
     return (
+        <>
+        <DarkModeToggle/>
         <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -28,5 +31,6 @@ export default function AppRoutes() {
             <Route path="/faq" element ={<Faq/>} />
             <Route path="/report" element ={<ReportViewer/>} />
         </Routes>
+        </>
     );
 }

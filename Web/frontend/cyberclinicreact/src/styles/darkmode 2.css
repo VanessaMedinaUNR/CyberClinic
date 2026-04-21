@@ -1,0 +1,29 @@
+:root {
+    --bg-color: #f3f5f7;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --accent-color: navy;
+}
+  
+[data-theme='dark'] {
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --text-color: #e0e0e0;
+    --accent-color: #90caf9;
+}
+  
+/* Global resets using the variables */
+body {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color);
+    transition: background-color 0.3s ease;
+}
+
+#bounding_box {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color);
+}
+
+h1, h2, h3, h4, label, p, span {
+    color: var(--text-color);
+}
