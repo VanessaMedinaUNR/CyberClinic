@@ -10,6 +10,7 @@
     "jspdf": "^4.2.1",
     "pytest": "^1.0.0",
     "react": "^19.2.3",
+    "react-country-state-dropdown": "^1.1.1",
     "react-dom": "^19.2.3",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.12.0",
