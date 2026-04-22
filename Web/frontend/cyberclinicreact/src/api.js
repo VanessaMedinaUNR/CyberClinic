@@ -39,7 +39,7 @@ api.interceptors.response.use(
                         sessionStorage.setItem('access_token', refresh);
                         api.post("/auth/refresh").then(function (rs) {
                             const { access_token, refresh_token } = rs.data;
-                            console.log("Access token refreshed successfully:", access_token);
+                            console.log("Access token refreshed successfully!");
                             sessionStorage.setItem('access_token', access_token);
                             sessionStorage.setItem('refresh_token', refresh_token);
                             origConf.headers['Authorization'] = 'Bearer ' + access_token;

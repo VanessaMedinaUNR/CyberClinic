@@ -8,6 +8,7 @@ import Setting from "./setting";
 import NewTarget from './newtarget';
 import CodeChecker from './codechecker';
 import ReportViewer from "./report";
+import AdminDashboard from "./admindashboard"
 import Home from "./home";
 import Faq from "./faq";
 
@@ -27,6 +28,7 @@ export default function AppRoutes() {
             <Route path="/codechecker" element ={<CodeChecker/>} />
             <Route path="/faq" element ={<Faq/>} />
             <Route path="/report" element ={<ReportViewer/>} />
+            <Route path="/admin" element ={<AdminDashboard/>} />
         </Routes>
     );
 }

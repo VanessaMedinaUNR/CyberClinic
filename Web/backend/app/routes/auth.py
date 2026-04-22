@@ -268,7 +268,12 @@ def status():
     try:
         user_id = get_jwt_identity()
         if user_id:
-            return jsonify({'logged_in': True}), 200
+            db = get_db()
+            userdata = db.execute_single(
+                """SELECT * FROM users WHERE user_id = %s""",
+                (user_id,)
+            )
+            return jsonify({'logged_in': True, 'admin': userdata['client_admin']}), 200
         else:
             return jsonify({'logged_in': False}), 200
     except Exception as e:
