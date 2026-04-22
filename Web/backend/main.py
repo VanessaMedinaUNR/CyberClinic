@@ -188,6 +188,9 @@ if __name__ == '__main__':
     
     logger.info(f"Server running on http://{host}:{port}")
     
-    app.run(host=host, port=port, debug=debug)
+    web_cert = os.getenv('WEB_CRT', '/src/certs/web.crt')
+    web_key = os.getenv('WEB_KEY', '/src/certs/web.key')
+
+    app.run(host=host, port=port, debug=debug, ssl_context=(web_cert, web_key))
 
 # Done by Morales-Marroquin and Austin Finch

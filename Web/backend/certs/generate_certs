@@ -21,3 +21,14 @@ openssl req \
     -passout env:AUTHED_PASS \
     -config server.cnf \
     -addext "basicConstraints=critical,CA:true" \
+# Server - Generate Web Cert
+openssl req \
+    -x509 \
+    -newkey \
+    rsa:4096 \
+    -keyout web.key \
+    -out web.crt \
+    -sha256 \
+    -days 3650 \
+    -nodes \
+    -config server.cnf

@@ -19,8 +19,11 @@ This backend provides REST API endpoints for the cyber clinic web application. A
     ```bash
     chmod +x generate_certs
     ./generate certs
-    cd ..
     # The password prompt should match your environment variables for "AUTH_PASS" and "AUTHED_PASS"
+    cp web.crt ../../frontend/cyberclinicreact/certs
+    cp web.key ../../frontend/cyberclinicreact/certs
+    # Copy the web certs to be used by the frontend
+    cd ..
     ```
 
 1. **Start the backend server**
