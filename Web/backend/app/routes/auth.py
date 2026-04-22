@@ -118,7 +118,7 @@ def register():
             )
 
             client_admin = False
-            send_registration_email()
+            #send_registration_email(email)
             email_verified = True # Placeholder - will implement email verification later
             active = False # Regular users are not active until approved by an admin
 

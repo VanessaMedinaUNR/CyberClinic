@@ -107,6 +107,7 @@ function Dashboard() {
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <button className="btn-black" onClick={() => navigate("/newTarget")}>+ Configure New Target</button>
                         <button className="btn-black" onClick={() => navigate("/newScan")}>+ Configure New Scan</button>
+                        <button className="btn-black" onClick={() => navigate("/admin")}>Admin</button>
                     </div>
                     <button className="btn-black" id = "codeChecker" onClick={() => (navigate("/codechecker"))}>+ Check Code
                     </button>
