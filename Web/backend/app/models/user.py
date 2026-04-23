@@ -13,6 +13,7 @@ class UserAccount:
         self.organization = organization  #required organization field
         self.phone_number = phone_number  #required phone field
         self.password_hash = None  #handled by PostgreSQL pgcrypto
+        self.is_active = False  #boolean - account activation status
         self.client_admin = False  #boolean - account admin
         self.created_at = None  #timestamp - set by database
         self.last_login = None  #timestamp - updated on login
@@ -24,6 +25,7 @@ class UserAccount:
             'email': self.email,
             'organization': self.organization,
             'phone_number': self.phone_number,
+            'active': self.is_active,
             'client_admin': self.client_admin,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None

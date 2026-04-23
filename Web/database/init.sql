@@ -98,13 +98,15 @@ CREATE TABLE scan_jobs
 
 CREATE TABLE users
 (
-  user_id       varchar(36) DEFAULT gen_random_uuid(),
-  email         email       NOT NULL,
-  password_hash text        NOT NULL,
-  client_admin  boolean     NOT NULL,
-  phone_number  varchar(16) NOT NULL,
-  created_at    timestamp   DEFAULT CURRENT_TIMESTAMP,
-  updated_at    timestamp   DEFAULT CURRENT_TIMESTAMP,
+  user_id        varchar(36) DEFAULT gen_random_uuid(),
+  email          email       NOT NULL,
+  password_hash  text        NOT NULL,
+  email_verified boolean     NOT NULL DEFAULT FALSE,
+  active         boolean     NOT NULL DEFAULT FALSE,
+  client_admin   boolean     NOT NULL,
+  phone_number   varchar(16) NOT NULL,
+  created_at     timestamp   DEFAULT CURRENT_TIMESTAMP,
+  updated_at     timestamp   DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id)
 );
 

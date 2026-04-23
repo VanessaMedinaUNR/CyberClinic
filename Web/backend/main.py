@@ -16,6 +16,8 @@ import logging
 import atexit
 import os
 
+HOST = os.environ.get('HOST', 'localhost')
+
 # setup logging for the application
 logging_format = '%(asctime)s: %(name)s - %(levelname)s: %(message)s'
 logger = logging.getLogger(__name__)
@@ -136,7 +138,7 @@ if __name__ == '__main__':
     @jwt.unauthorized_loader
     def handle_unauthorized(error):
         return jsonify({
-            "error": "You are access this resource",
+            "error": "You are not authorized to access this resource",
             "code": "authorization_required"
         }), 401
 
@@ -183,6 +185,8 @@ if __name__ == '__main__':
     #server settings for docker containers
     host = os.environ.get('FLASK_SERVER')
     port = os.environ.get('FLASK_PORT')
+    if app.config['DEBUG']:
+        host = "0.0.0.0"
     #disable debug in Docker to avoid I/O issues
     debug = app.config['DEBUG'] and not os.path.exists('/.dockerenv')
     

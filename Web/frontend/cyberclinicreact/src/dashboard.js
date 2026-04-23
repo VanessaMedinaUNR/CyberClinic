@@ -12,6 +12,7 @@ function Dashboard() {
     const [generatingId, setGeneratingId] = useState(null);
     const [generateError, setGenerateError] = useState(null);
     const pollRef = useRef(null);
+    const [admin, setAdmin] = useState(false)
 
     const fetchScans = useCallback((isInitial = false) => {
         if (isInitial) setLoading(true);
@@ -43,6 +44,10 @@ function Dashboard() {
     }, []);
 
     useEffect(() => {
+        api.get('/auth/status')
+        .then(response => {
+            setAdmin(response.data.admin);
+        })
         fetchScans(true);
         return () => {
             if (pollRef.current) clearTimeout(pollRef.current);
@@ -107,6 +112,7 @@ function Dashboard() {
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <button className="btn-black" onClick={() => navigate("/newTarget")}>+ Configure New Target</button>
                         <button className="btn-black" onClick={() => navigate("/newScan")}>+ Configure New Scan</button>
+                        {admin && <button className="btn-black" onClick={() => navigate("/admin")}>Admin</button>}
                     </div>
                     <button className="btn-black" id = "codeChecker" onClick={() => (navigate("/codechecker"))}>+ Check Code
                     </button>

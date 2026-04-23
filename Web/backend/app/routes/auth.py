@@ -1,7 +1,7 @@
 #Cyber Clinic Authentication Routes
 #Handles user login and registration with email-based authentication
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, url_for
 import re
 import bcrypt
 import secrets
@@ -52,6 +52,17 @@ def verify_password(password, stored_hash):
         return hash_hex == hash_bytes.hex()
     except ValueError:
         return False
+
+
+def generate_email_verification_token(email):
+    pass
+
+def send_registration_email(email):
+    verify_url = url_for('auth.verifyEmail', token=generate_email_verification_token(email), _external=True)
+    pass
+
+def check_email_verification_token(token):
+    pass
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -106,9 +117,12 @@ def register():
                 "SELECT client_id FROM client WHERE client_name = %s", (client_name,)
             )
 
-            client_admin = False 
+            client_admin = False
+            #send_registration_email(email)
+            email_verified = True # Placeholder - will implement email verification later
+            active = False # Regular users are not active until approved by an admin
 
-            #creates new client if it does not already exist
+            # Creates new client if it does not already exist
             if not client:
                 if location:
                     country = location.get('country')
@@ -117,6 +131,7 @@ def register():
                     logger.info(f"{country}, {province}, {city}")
 
                     client_admin = True # First user to a client is admin by default
+                    active = email_verified # First user to a client admin user is active by default (until email verification is implemented)
                     client_id = db.execute_single(
                         """INSERT INTO client (client_name, country, province, city)
                         VALUES (%s, %s, %s, %s)
@@ -134,20 +149,28 @@ def register():
             #insert new user into database
             #password hashing will be done by PostgreSQL pgcrypto
             user_id = db.execute_single(
-                """INSERT INTO users (email, password_hash, client_admin, phone_number)
-                VALUES (%s, crypt(%s, gen_salt('bf')), %s, %s)
+                """INSERT INTO users (email, password_hash, email_verified, active, client_admin, phone_number)
+                VALUES (%s, crypt(%s, gen_salt('bf')), %s, %s, %s, %s)
                 RETURNING user_id""",
-                (email, password, client_admin, formatted_phone,)
+                (email, password, email_verified, active, client_admin, formatted_phone,)
             )["user_id"]
             db.execute_command(
                 """INSERT INTO client_users (user_id, client_id)
                 VALUES (%s, %s)""",
                 (user_id, client_id)
             )
-            
+
+            extra_msg = "Please wait for an administrator to activate your account."
+            if not email_verified:
+                extra_msg = "\nYour account is pending email verification. Please check your email for a verification link. This link will expire in 24 hours."
+            elif not active and not client_admin:
+                extra_msg = "\nYour account is pending administrator approval."
+            else:
+                extra_msg = "\nYour account is active and ready to use!"
+
             #send back success message without showing password
             return jsonify({
-                'message': 'User registered successfully',
+                'message': 'User registered successfully.' + extra_msg,
                 'user': {
                     'email': email,
                     'organization': client_name,
@@ -167,6 +190,12 @@ def register():
         #handle any unexpected errors that might happen
         logger.error(str(e))
         return jsonify({'error': 'Registration failed'}), 500
+
+@auth_bp.route("/verify/<token>", methods=["GET"])
+def verifyEmail(token):
+    return jsonify({
+        'message': 'Email verification is not implemented yet. Please try again later.'
+    }), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -191,7 +220,7 @@ def login():
             
             #check if user exists and password is correct using pgcrypto
             user_data = db.execute_single(
-                """SELECT u.user_id, cu.client_id, email, phone_number, client_admin
+                """SELECT u.user_id, cu.client_id, email, phone_number, client_admin, active, email_verified
                    FROM users u 
                    JOIN client_users cu ON u.user_id = cu.user_id
                    WHERE email = %s AND password_hash = crypt(%s, password_hash)""",
@@ -200,8 +229,14 @@ def login():
 
             if not user_data:
                 logger.warning(f'Failed login for {email}')
-                return jsonify({'error': 'invalid credentials'}), 401
-            
+                return jsonify({'error': 'Invalid credentials'}), 401
+            elif not user_data['email_verified']:
+                logger.warning(f'Unverified email login attempt for {email}')
+                return jsonify({'error': 'Email not verified'}), 403
+            elif not user_data['active']:
+                logger.warning(f'Inactive account login attempt for {email}')
+                return jsonify({'error': 'Account not active. Please contact your client administrator.'}), 403
+
             #generate JWT Token
             token = create_access_token(identity=user_data["user_id"], expires_delta=timedelta(minutes=5), fresh=True)
             refresh_token = create_refresh_token(user_data["user_id"], expires_delta=timedelta(minutes=30))
@@ -233,7 +268,12 @@ def status():
     try:
         user_id = get_jwt_identity()
         if user_id:
-            return jsonify({'logged_in': True}), 200
+            db = get_db()
+            userdata = db.execute_single(
+                """SELECT * FROM users WHERE user_id = %s""",
+                (user_id,)
+            )
+            return jsonify({'logged_in': True, 'admin': userdata['client_admin']}), 200
         else:
             return jsonify({'logged_in': False}), 200
     except Exception as e:
@@ -391,6 +431,73 @@ def update_user():
         return jsonify({
             'error': 'Format Error',
             'details': 'Please try again'
+        }), 500
+
+@auth_bp.route('/admin/toggle-status', methods=['POST'])
+@jwt_required()
+def toggle_user_status():
+    user_id = get_jwt_identity()
+    try:
+        db = get_db()
+        admin_check = db.execute_single(
+            """SELECT client_admin FROM users WHERE user_id = %s""",
+            (user_id,)
+        )["client_admin"]
+        if not admin_check:
+            return jsonify({
+                'error': 'Unauthorized',
+                'details': 'Admin privileges required'
+            }), 403
+        
+        data = request.get_json()
+        approve_user_id = data.get('user_id')
+        status = data.get('status')
+        db.execute_command(
+            """UPDATE users SET active = %s WHERE user_id = %s""",
+            (status, approve_user_id,)
+        )
+        logger.info(f'{approve_user_id} status updated by {user_id}')
+        return jsonify({
+            'message': 'User status updated successfully'
+        }), 200
+    except Exception as e:
+        logger.error(e)
+        return jsonify({
+            'error': 'Connection Error',
+            'details': 'Please try again later'
+        }), 500
+    
+@auth_bp.route('/admin/get-users', methods=['GET'])
+@jwt_required()
+def get_users():
+    user_id = get_jwt_identity()
+    try:
+        db = get_db()
+        admin_check = db.execute_single(
+            """SELECT client_admin FROM users WHERE user_id = %s""",
+            (user_id,)
+        )["client_admin"]
+        if not admin_check:
+            return jsonify({
+                'error': 'Unauthorized',
+                'details': 'Admin privileges required'
+            }), 403
+        
+        users = db.execute_query(
+            """SELECT user_id, email, phone_number, active, email_verified FROM users
+            NATURAL JOIN (client_users NATURAL JOIN client)
+            WHERE client_id = (SELECT client_id FROM client_users WHERE user_id = %s) AND user_id != %s""",
+            (user_id, user_id,)
+        )
+
+        return jsonify({
+            'users': users
+        }), 200
+    except Exception as e:
+        logger.error(e)
+        return jsonify({
+            'error': 'Connection Error',
+            'details': 'Please try again later'
         }), 500
 
 # Done by Manuel Morales-Marroquin and Austin Finch
