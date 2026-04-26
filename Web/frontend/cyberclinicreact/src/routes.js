@@ -11,6 +11,8 @@ import ReportViewer from "./report";
 import AdminDashboard from "./admindashboard"
 import Home from "./home";
 import Faq from "./faq";
+import SavedCodes from "./Components/savedCodes";
+
 import DarkModeToggle from "./darkmode";
 
 //make sure the import... is cap
@@ -31,6 +33,7 @@ export default function AppRoutes() {
             <Route path="/codechecker" element ={<CodeChecker/>} />
             <Route path="/faq" element ={<Faq/>} />
             <Route path="/report" element ={<ReportViewer/>} />
+            <Route path="/saved-codes" element={<SavedCodes />} />
             <Route path="/admin" element ={<AdminDashboard/>} />
         </Routes>
         </>

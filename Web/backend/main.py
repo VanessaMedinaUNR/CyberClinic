@@ -4,6 +4,7 @@ from app.workers.scan_worker import start_scan_worker, stop_scan_worker
 from standalone_handler import start_standalone_handler
 from app.routes.target_management import targets_bp
 from app.routes.standalone import standalone_bp
+from app.routes.saveCode import saveCode_bp
 from app.database import get_db, block_jwt
 from app.routes.reports import reports_bp
 from flask_jwt_extended import JWTManager
@@ -43,6 +44,7 @@ def create_app(debug=False):
     app.register_blueprint(standalone_bp)
     app.register_blueprint(targets_bp)
     app.register_blueprint(ai_bp)
+    app.register_blueprint(saveCode_bp)
     #create a simple health check endpoint at the root URL
     @app.route('/')
     def health_check():

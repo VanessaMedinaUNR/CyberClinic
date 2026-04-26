@@ -30,8 +30,8 @@ def generate_prompt(user_code):
     {user_code}
     """
 
-@jwt_required()
 @ai_bp.route("/codescan", methods=["POST"])
+@jwt_required()
 def code_scan():
     data = request.get_json()
     logger.debug(f"Received data for code scan: {data}")
@@ -50,4 +50,3 @@ def code_scan():
     result = response
 
     return jsonify({"analysis": result["response"]})
-

@@ -117,6 +117,20 @@ CREATE TABLE blocked_jwt
   PRIMARY KEY (id)
 );
 
+
+CREATE TABLE codechecker_results 
+(
+  report_id varchar(36) DEFAULT gen_random_uuid(),
+  code_input text,
+  report text,
+  user_id varchar(36) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id),
+  PRIMARY KEY(report_id)
+);
+
+--codechecker sql done by vanessa medina
+
 ALTER TABLE client_users
   ADD CONSTRAINT FK_user_TO_client_users
     FOREIGN KEY (user_id)

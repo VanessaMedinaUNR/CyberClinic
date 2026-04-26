@@ -12,6 +12,10 @@ function Home() {
             <Toolbar/>
             <div id="bounding_box">
                 <div id="aboutgrid">
+                    <div className="gridItem mission-block">
+                        <h1>Our Mission</h1>
+                        <p>To make cybersecurity accessible and affordable for small organizations by providing free, automated vulnerability scanning with clear, actionable reports. Lowering the financial and technical barriers that leave communities exposed to preventable risks.</p>
+                    </div>
                     <div className="gridItem">
                         <h2>Who Are We?</h2>
                         <p>CyberClinic is a cybersecurity platform developed at the University of Nevada, Reno by Team 13 as part of CS 426. We support the mission of the Cyber Clinic, a student-led nonprofit helping small businesses, tribal agencies, and local governments address cybersecurity risks they can't afford to fix alone.</p>
@@ -28,10 +32,6 @@ function Home() {
                         4. <strong>Scan</strong> — Run Nmap / Nikto on your targets<br/>
                         5. <strong>Report</strong> — Receive a plain-English security summary<br/>
                         6. <strong>Connect</strong> — Reach Cyber Clinic experts for guidance</p>
-                    </div>
-                    <div className="gridItem mission-block">
-                        <h1>Our Mission</h1>
-                        <p>To make cybersecurity accessible and affordable for small organizations by providing free, automated vulnerability scanning with clear, actionable reports. Lowering the financial and technical barriers that leave communities exposed to preventable risks.</p>
                     </div>
                 </div>
             </div>
