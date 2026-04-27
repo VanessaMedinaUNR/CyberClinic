@@ -78,7 +78,7 @@ function Signup() {
                 </div>
                 <div>
                     <label htmlFor="password">Enter your password:</label>
-                    <input type="text" name="password" id="password" disabled={newClient} value = {password} onChange = {(e) => setPassword(e.target.value)} required/>
+                    <input type="password" name="password" id="password" disabled={newClient} value = {password} onChange = {(e) => setPassword(e.target.value)} required/>
                 </div>
                 <div>
                     <label htmlFor="phone">Enter your phone number:</label>
