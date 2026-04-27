@@ -12,7 +12,7 @@ import AdminDashboard from "./admindashboard"
 import Home from "./home";
 import Faq from "./faq";
 import SavedCodes from "./Components/savedCodes";
-
+import HelpContact from "./Components/HelpContact";
 import DarkModeToggle from "./darkmode";
 
 //make sure the import... is cap
@@ -21,6 +21,7 @@ export default function AppRoutes() {
     return (
         <>
         <DarkModeToggle/>
+        <HelpContact />
         <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />

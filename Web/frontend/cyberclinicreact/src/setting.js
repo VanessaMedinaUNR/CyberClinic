@@ -155,7 +155,7 @@ return(
                 <button className="btn-action" onClick = { handleSaveClientSettings }>Save Client Settings</button>
             </div>
         }
-        <div className="help-icon">?</div>
+        
     </div>
     );
 }
