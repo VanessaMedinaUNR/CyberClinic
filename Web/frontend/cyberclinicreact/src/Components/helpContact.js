@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../api';
 import '../styles/helpContact.css';
 
@@ -8,15 +9,26 @@ function HelpContact() {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
-        reason: ''
+        issue_category: '',
+        message: '',
+        additional_info: ''
     });
+
+    const state = useLocation().state;
+    if (window.location.href.includes('/report')) {
+        const report_id = state?.report_id;
+        if (report_id) {
+            formData.additional_info += `\n\n[Report ID: ${report_id}]`;
+        }
+    }
+
     function handleChange(e) {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     }
     async function handleSubmit(e) {
         e.preventDefault();
         setLoading(true);
-        api.post('/auth/help', formData)
+        api.post('/contact', formData)
         .then(function(){
             setSubmitted(true);
         })
@@ -37,7 +49,7 @@ function HelpContact() {
         // reset form after the popup finishes closing
         setTimeout(() => {
             setSubmitted(false);
-            setFormData({ email: '', reason: '' });
+            setFormData({ email: '', issue_category: '', message: '', additional_info: '' });
         }, 300);
     }
     return(
@@ -75,18 +87,45 @@ function HelpContact() {
                                     />
                                 </div>
                                 <div className="hc-group">
+                                    <label className="hc-label">Issue Category</label>
+                                    <select
+                                        name="issue_category"
+                                        className="hc-input"
+                                        value={ formData.issue_category }
+                                        onChange={ handleChange }
+                                        required
+                                    >
+                                        <option value="" disabled={ true }>Select a category</option>
+                                        <option value="General Inquiry">General Inquiry</option>
+                                        <option value="Technical Question or Issue">Technical Question or Issue</option>
+                                        <option value="Report Question">Report Question</option>
+                                        <option value="Feature Request">Feature Request</option>
+                                    </select>
+                                </div>
+
+                                <div className="hc-group">
                                     <label className="hc-label">How can we help?</label>
                                     <textarea
-                                        name="reason"
+                                        name="message"
                                         className="hc-input hc-textarea"
                                         placeholder="Describe your issue or question..."
-                                        value={ formData.reason }
+                                        value={ formData.message }
                                         onChange={ handleChange }
                                         required
                                         rows={ 4 }
                                     />
                                 </div>
-
+                                <div className="hc-group">
+                                    <label className="hc-label">Additional Information (optional)</label>
+                                    <textarea
+                                        name="additional_info"
+                                        className="hc-input hc-textarea"
+                                        placeholder="Provide any additional details here (Report ID, etc.)..."
+                                        value={ formData.additional_info }
+                                        onChange={ handleChange }
+                                        rows={ 2 }
+                                    />
+                                </div>
                                 <button className="hc-btn" type="submit" disabled={ loading }>
                                     { loading ? 'Sending...' : 'Send Message' }
                                 </button>

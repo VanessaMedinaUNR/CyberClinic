@@ -2,15 +2,16 @@
 from app.workers.report_worker import start_report_worker, stop_report_worker
 from app.workers.scan_worker import start_scan_worker, stop_scan_worker
 from standalone_handler import start_standalone_handler
+from app.email_service import send_help_request_email
 from app.routes.target_management import targets_bp
 from app.routes.standalone import standalone_bp
 from app.routes.saveCode import saveCode_bp
 from app.database import get_db, block_jwt
 from app.routes.reports import reports_bp
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 from app.routes.scans import scans_bp
 from app.routes.auth import auth_bp
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from app.routes.ai import ai_bp
 from flask_cors import CORS
 import logging
@@ -76,6 +77,33 @@ def create_app(debug=False):
             'database': 'connected',
             'reptor': 'not integrated yet'
         })
+    
+    @app.route('/api/contact', methods=['POST'])
+    @jwt_required(optional=True)
+    def contact_form():
+        user_id = get_jwt_identity()
+        if user_id:
+            db = get_db()
+            client_name = db.execute_single("SELECT client_name FROM client NATURAL JOIN client_users WHERE user_id = %s", (user_id,))['client_name'] 
+        else:
+            client_name = "Unknown Client"
+
+        data = request.get_json()
+        logger.debug(f"Received contact form submission: {data}")
+        email = data.get('email')
+        logger.debug(f"Extracted email: {email}")
+        issue_category = data.get('issue_category')
+        logger.debug(f"Extracted issue category: {issue_category}")
+        message = data.get('message')
+        logger.debug(f"Extracted message: {message}")
+        additional_info = data.get('additional_info',None)
+        logger.debug(f"Extracted additional info: {additional_info}")
+
+        if not email or not issue_category or not message:
+            return jsonify({"success": False, "message": "Please fill out all required fields (email, issue_category, message)"}), 400
+        send_help_request_email(email, client_name, issue_category, message, additional_info)
+        return jsonify({"success": True, "message": "Your message has been sent to our support team. We will get back to you shortly."})
+        
 
     return app
 
@@ -192,7 +220,7 @@ if __name__ == '__main__':
     #disable debug in Docker to avoid I/O issues
     debug = app.config['DEBUG'] and not os.path.exists('/.dockerenv')
     
-    logger.info(f"Server running on http://{host}:{port}")
+    logger.info(f"Server running on https://{host}:{port}")
     
     web_cert = os.getenv('WEB_CRT', '/src/certs/web.crt')
     web_key = os.getenv('WEB_KEY', '/src/certs/web.key')

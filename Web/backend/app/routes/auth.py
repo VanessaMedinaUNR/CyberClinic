@@ -1,7 +1,8 @@
 #Cyber Clinic Authentication Routes
 #Handles user login and registration with email-based authentication
 
-from flask import Blueprint, request, jsonify, url_for
+from flask import Blueprint, request, jsonify, redirect
+import os
 import re
 import bcrypt
 import secrets
@@ -9,8 +10,9 @@ import logging
 import hashlib
 import phonenumbers
 from app.database import get_db, block_jwt
+from app.email_service import send_verification_email, send_invite_email
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token, get_jwt
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -53,17 +55,6 @@ def verify_password(password, stored_hash):
     except ValueError:
         return False
 
-
-def generate_email_verification_token(email):
-    pass
-
-def send_registration_email(email):
-    verify_url = url_for('auth.verifyEmail', token=generate_email_verification_token(email), _external=True)
-    pass
-
-def check_email_verification_token(token):
-    pass
-
 @auth_bp.route('/register', methods=['POST'])
 def register():
     #handle when someone wants to create a new account
@@ -93,8 +84,11 @@ def register():
             return jsonify({'error': 'invalid email format'}), 400
         
         #validate and format phone number
-        formatted_phone = validate_and_format_phone(phone_number)
-        
+        phone_result = validate_and_format_phone(phone_number)
+        if isinstance(phone_result, tuple):
+            return phone_result
+        formatted_phone = phone_result
+
         #make sure password is long enough to be secure
         if len(password) < 6:
             return jsonify({'error': 'password must be at least 6 characters'}), 400
@@ -117,64 +111,73 @@ def register():
                 "SELECT client_id FROM client WHERE client_name = %s", (client_name,)
             )
 
-            client_admin = False
-            #send_registration_email(email)
-            email_verified = True # Placeholder - will implement email verification later
-            active = False # Regular users are not active until approved by an admin
-
-            # Creates new client if it does not already exist
+            #new org: ask for location first, then create everything in one transaction
             if not client:
-                if location:
-                    country = location.get('country')
-                    province = location.get('state')
-                    city = location.get('city')
-                    logger.info(f"{country}, {province}, {city}")
-
-                    client_admin = True # First user to a client is admin by default
-                    active = email_verified # First user to a client admin user is active by default (until email verification is implemented)
-                    client_id = db.execute_single(
-                        """INSERT INTO client (client_name, country, province, city)
-                        VALUES (%s, %s, %s, %s)
-                        RETURNING client_id""",
-                        (client_name, country, province, city)
-                    )["client_id"]
-                else:
+                if not location:
                     return jsonify({
-                        'message': f'Welcome {client_name}! Please enter the following registration information'
+                        'message': f'Welcome {client_name}! Please enter your organization location.'
                     }), 202
-            else:
-                client_id = client["client_id"]
-                
-            
-            #insert new user into database
-            #password hashing will be done by PostgreSQL pgcrypto
-            user_id = db.execute_single(
-                """INSERT INTO users (email, password_hash, email_verified, active, client_admin, phone_number)
-                VALUES (%s, crypt(%s, gen_salt('bf')), %s, %s, %s, %s)
-                RETURNING user_id""",
-                (email, password, email_verified, active, client_admin, formatted_phone,)
-            )["user_id"]
-            db.execute_command(
-                """INSERT INTO client_users (user_id, client_id)
-                VALUES (%s, %s)""",
-                (user_id, client_id)
-            )
 
-            extra_msg = "Please wait for an administrator to activate your account."
-            if not email_verified:
-                extra_msg = "\nYour account is pending email verification. Please check your email for a verification link. This link will expire in 24 hours."
-            elif not active and not client_admin:
-                extra_msg = "\nYour account is pending administrator approval."
-            else:
-                extra_msg = "\nYour account is active and ready to use!"
+                country  = location.get('country', '').strip()
+                province = location.get('state', '').strip()
+                city     = location.get('city', '').strip()
 
-            #send back success message without showing password
+                if not country or not province or not city:
+                    return jsonify({'error': 'country, state, and city are required for new organizations'}), 400
+
+                verification_token = secrets.token_urlsafe(32)
+                token_expires_at   = datetime.utcnow() + timedelta(hours=24)
+
+                #single transaction: client + user + client_users all roll back together on failure
+                with db.get_cursor() as cursor:
+                    cursor.execute(
+                        """INSERT INTO client (client_name, country, province, city)
+                           VALUES (%s, %s, %s, %s) RETURNING client_id""",
+                        (client_name, country, province, city)
+                    )
+                    client_id = cursor.fetchone()['client_id']
+
+                    cursor.execute(
+                        """INSERT INTO users (email, password_hash, client_admin, active, phone_number, verification_token, token_expires_at)
+                           VALUES (%s, crypt(%s, gen_salt('bf')), TRUE, TRUE, %s, %s, %s) RETURNING user_id""",
+                        (email, password, formatted_phone, verification_token, token_expires_at)
+                    )
+                    user_id = cursor.fetchone()['user_id']
+
+                    cursor.execute(
+                        "INSERT INTO client_users (user_id, client_id) VALUES (%s, %s)",
+                        (user_id, client_id)
+                    )
+
+            else:
+                #existing org: add user as non-admin, no location needed
+                client_id          = client["client_id"]
+                verification_token = secrets.token_urlsafe(32)
+                token_expires_at   = datetime.utcnow() + timedelta(hours=24)
+
+                with db.get_cursor() as cursor:
+                    cursor.execute(
+                        """INSERT INTO users (email, password_hash, client_admin, active, phone_number, verification_token, token_expires_at)
+                           VALUES (%s, crypt(%s, gen_salt('bf')), FALSE, FALSE, %s, %s, %s) RETURNING user_id""",
+                        (email, password, formatted_phone, verification_token, token_expires_at)
+                    )
+                    user_id = cursor.fetchone()['user_id']
+
+                    cursor.execute(
+                        "INSERT INTO client_users (user_id, client_id) VALUES (%s, %s)",
+                        (user_id, client_id)
+                    )
+
+            try:
+                send_verification_email(email, verification_token)
+            except Exception as email_err:
+                logger.warning(f"Could not send verification email to {email}: {email_err}")
+
             return jsonify({
-                'message': 'User registered successfully.' + extra_msg,
+                'message': 'Registration successful. Please check your email to verify your account.',
                 'user': {
                     'email': email,
                     'organization': client_name,
-                    'phone_number': phone_number
                 }
             }), 201
             
@@ -190,12 +193,6 @@ def register():
         #handle any unexpected errors that might happen
         logger.error(str(e))
         return jsonify({'error': 'Registration failed'}), 500
-
-@auth_bp.route("/verify/<token>", methods=["GET"])
-def verifyEmail(token):
-    return jsonify({
-        'message': 'Email verification is not implemented yet. Please try again later.'
-    }), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -376,32 +373,30 @@ def update_user():
             logger.info(f'{user_id}: phone number updated.')
         if new and old:
             db = get_db()
-            check = db.execute_single(
+            user_check = db.execute_single(
                 """SELECT password_hash FROM users WHERE user_id = %s AND password_hash = crypt(%s, password_hash)""",
                 (user_id, old,)
-            )["password_hash"]
-            if check:
-                if bcrypt.checkpw(bytes(new, encoding="utf-8"), bytes(check, encoding="utf-8")):
-                    return jsonify({
-                        'error': 'New password cannot be the same as old password',
-                        'details': 'Please try again'
-                    }), 406
-                db.execute_command(
-                    """UPDATE users SET password_hash = crypt(%s, gen_salt('bf')) WHERE user_id = %s""",
-                    (new, user_id,)
-                )
-
-                #give user a new fresh token
-                blocked = block_jwt(access_token["jti"])
-                if blocked:
-                    access_token = create_access_token(identity=user_id, fresh=True, expires_delta=timedelta(minutes=5))
-                updated = True
-                logger.info(f"{user_id}: Password updated.")
-            else:
+            )
+            if not user_check:
                 return jsonify({
                     'error': 'Invalid Password',
                     'details': 'Please try again'
                 }), 406
+            check = user_check["password_hash"]
+            if bcrypt.checkpw(bytes(new, encoding="utf-8"), bytes(check, encoding="utf-8")):
+                return jsonify({
+                    'error': 'New password cannot be the same as old password',
+                    'details': 'Please try again'
+                }), 406
+            db.execute_command(
+                """UPDATE users SET password_hash = crypt(%s, gen_salt('bf')) WHERE user_id = %s""",
+                (new, user_id,)
+            )
+            blocked = block_jwt(access_token["jti"])
+            if blocked:
+                access_token = create_access_token(identity=user_id, fresh=True, expires_delta=timedelta(minutes=5))
+            updated = True
+            logger.info(f"{user_id}: Password updated.")
         if scan_frequency:
             db = get_db()
             client_id = db.execute_single(
@@ -432,6 +427,103 @@ def update_user():
             'error': 'Format Error',
             'details': 'Please try again'
         }), 500
+
+@auth_bp.route('/verify/<token>', methods=['GET'])
+def verify_email(token):
+    try:
+        db = get_db()
+        user = db.execute_single(
+            """SELECT user_id FROM users
+               WHERE verification_token = %s AND token_expires_at > NOW()""",
+            (token,)
+        )
+        if not user:
+            return jsonify({'error': 'Invalid or expired verification link'}), 400
+        db.execute_command(
+            """UPDATE users
+               SET email_verified = TRUE, verification_token = NULL, token_expires_at = NULL
+               WHERE user_id = %s""",
+            (user['user_id'],)
+        )
+        app_base_url = os.environ.get('APP_BASE_URL', 'http://localhost:3000')
+        return redirect(f"{app_base_url}/login?verified=true")
+    except Exception as e:
+        logger.error(f"Email verification failed: {e}")
+        return jsonify({'error': 'Verification failed'}), 500
+
+
+@auth_bp.route('/admin/invite-user', methods=['POST'])
+@jwt_required()
+def invite_user():
+    requesting_user_id = get_jwt_identity()
+    try:
+        db = get_db()
+
+        requester = db.execute_single(
+            "SELECT client_admin, email FROM users WHERE user_id = %s",
+            (requesting_user_id,)
+        )
+        if not requester or not requester['client_admin']:
+            return jsonify({'error': 'Admin access required'}), 403
+
+        data = request.get_json()
+        email        = data.get('email', '').strip().lower()
+        phone_number = data.get('phone', '').strip()
+
+        if not email:
+            return jsonify({'error': 'Email required'}), 400
+        if not is_valid_email(email):
+            return jsonify({'error': 'Invalid email format'}), 400
+
+        existing = db.execute_single("SELECT user_id FROM users WHERE email = %s", (email,))
+        if existing:
+            return jsonify({'error': 'Email already registered'}), 409
+
+        client = db.execute_single(
+            "SELECT client_id FROM client_users WHERE user_id = %s",
+            (requesting_user_id,)
+        )
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        client_id = client['client_id']
+
+        formatted_phone = '(000) 000-0000'
+        if phone_number:
+            try:
+                parsed = phonenumbers.parse(phone_number, "US")
+                if phonenumbers.is_valid_number(parsed):
+                    formatted_phone = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.NATIONAL)
+            except Exception:
+                pass
+
+        temp_password  = secrets.token_urlsafe(12)
+        invite_token   = secrets.token_urlsafe(32)
+        token_expires_at = datetime.utcnow() + timedelta(hours=24)
+
+        user_id = db.execute_single(
+            """INSERT INTO users
+               (email, password_hash, client_admin, phone_number, verification_token, token_expires_at)
+               VALUES (%s, crypt(%s, gen_salt('bf')), FALSE, %s, %s, %s)
+               RETURNING user_id""",
+            (email, temp_password, formatted_phone, invite_token, token_expires_at)
+        )["user_id"]
+
+        db.execute_command(
+            "INSERT INTO client_users (user_id, client_id) VALUES (%s, %s)",
+            (user_id, client_id)
+        )
+
+        try:
+            send_invite_email(email, invite_token, requester['email'], temp_password)
+        except Exception as email_err:
+            logger.warning(f"Could not send invite email to {email}: {email_err}")
+
+        return jsonify({'message': f'Invitation sent to {email}'}), 201
+
+    except Exception as e:
+        logger.error(f"Invite user failed: {e}")
+        return jsonify({'error': 'Failed to send invitation'}), 500
+
 
 @auth_bp.route('/admin/toggle-status', methods=['POST'])
 @jwt_required()

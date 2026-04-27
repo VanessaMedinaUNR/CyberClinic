@@ -22,8 +22,8 @@ CREATE TABLE client
 (
   client_id      varchar(36) DEFAULT gen_random_uuid(),
   client_name    varchar     NOT NULL,
-  country        varchar(2)  NOT NULL,
-  province       varchar     NOT NULL,
+  country        varchar(100) NOT NULL,
+  province       varchar      NOT NULL,
   city           varchar     NOT NULL,
   scan_frequency int         NOT NULL DEFAULT -1,
   last_scheduled date        NOT NULL DEFAULT '4713-01-01',
@@ -98,15 +98,17 @@ CREATE TABLE scan_jobs
 
 CREATE TABLE users
 (
-  user_id        varchar(36) DEFAULT gen_random_uuid(),
-  email          email       NOT NULL,
-  password_hash  text        NOT NULL,
-  email_verified boolean     NOT NULL DEFAULT FALSE,
-  active         boolean     NOT NULL DEFAULT FALSE,
-  client_admin   boolean     NOT NULL,
-  phone_number   varchar(16) NOT NULL,
-  created_at     timestamp   DEFAULT CURRENT_TIMESTAMP,
-  updated_at     timestamp   DEFAULT CURRENT_TIMESTAMP,
+  user_id            varchar(36)  DEFAULT gen_random_uuid(),
+  email              email        NOT NULL,
+  password_hash      text         NOT NULL,
+  client_admin       boolean      NOT NULL,
+  active             boolean      NOT NULL DEFAULT FALSE,
+  phone_number       varchar(16)  NOT NULL,
+  email_verified     boolean      NOT NULL DEFAULT FALSE,
+  verification_token varchar(128),
+  token_expires_at   timestamp,
+  created_at         timestamp    DEFAULT CURRENT_TIMESTAMP,
+  updated_at         timestamp    DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id)
 );
 

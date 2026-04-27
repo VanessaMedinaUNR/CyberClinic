@@ -216,6 +216,13 @@ class ReportWorker:
                         (json.dumps(existing), scan['id'])
                     )
                 self._mark_report_completed(report_id)
+
+                try:
+                    from app.email_service import send_report_notification
+                    send_report_notification(client_email, report_id, client_name)
+                except Exception as email_err:
+                    logger.warning(f"Report notification email failed for {report_id}: {email_err}")
+
             except Exception as e:
                 raise e
         else:
