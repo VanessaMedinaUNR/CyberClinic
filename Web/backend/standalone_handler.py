@@ -63,7 +63,7 @@ class StandaloneHandler:
             try:
                 conn = context.wrap_socket(newsocket, server_side=True)
                 try:
-                    self.parse_command(conn, fromaddr, authed_socket=authed_socket)
+                    self.parse_command(conn, authed_socket=authed_socket)
                 except ConnectionError:
                     logger.info(f'Standalone client reset the connection')
                 except Exception as e:

@@ -164,7 +164,7 @@ def check_tools(app: QApplication):
                     nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-1.x86_64.rpm'))
                 case 'darwin':
                     nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98.dmg'))
-            result: CompletedProcess = subprocess.run({nmap_installer})
+            result: CompletedProcess = subprocess.run([nmap_installer], shell=True)
             if result.returncode == 0:
                 changed = 1
             else:
@@ -178,8 +178,10 @@ def check_tools(app: QApplication):
                     alert = Alert(app, "Perl was not found but is required. Press Ok to install it now.")
                     alert.show()
                     app.exec()
-                    perl_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-setup.exe'))
-                    result = subprocess.run()
+                    perl_installer = app_storage.fetch(os.path.join('tools', 'strawberry-perl-5.42.2.1-64bit.msi'))
+                    print(perl_installer)
+                    
+                    result = subprocess.run(['msiexec', '/i', perl_installer, '/quiet'])
                     if result.returncode == 0:
                         alert = Alert(app, "Installation Successful! Please re-run the app if it does not run automatically")
                         alert.show()
