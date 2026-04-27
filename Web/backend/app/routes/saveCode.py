@@ -103,8 +103,8 @@ def get_saved_codes():
         logger.error(str(e))
         return jsonify({"error": "Internal server error"}), 500
 
-@jwt_required()
 @saveCode_bp.route("/deletereport", methods=["POST"])
+@jwt_required()
 def delete_report():
 
 
@@ -133,7 +133,7 @@ def delete_report():
         
         
         #delete from db 
-        db.execute_single(
+        db.execute_command(
             "DELETE FROM codechecker_results WHERE report_id = %s AND user_id = %s", (report_id, user_id)
         )
     

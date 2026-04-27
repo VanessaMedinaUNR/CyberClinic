@@ -238,8 +238,8 @@ def login():
                 return jsonify({'error': 'Account not active. Please contact your client administrator.'}), 403
 
             #generate JWT Token
-            token = create_access_token(identity=user_data["user_id"], expires_delta=timedelta(minutes=5), fresh=True)
-            refresh_token = create_refresh_token(user_data["user_id"], expires_delta=timedelta(minutes=30))
+            token = create_access_token(identity=user_data["user_id"], expires_delta=timedelta(minutes=10), fresh=True)
+            refresh_token = create_refresh_token(user_data["user_id"], expires_delta=timedelta(hours=2))
 
             #login successful
             return jsonify({
