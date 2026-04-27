@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api";
+import './styles/codechecker.css';
 import { useNavigate } from "react-router-dom";
 
 function SavedCodes() {
@@ -48,37 +49,40 @@ function SavedCodes() {
     }
 
     return (
-        <div className="saved-codes">
-            <h1>Saved Codes</h1>
+        <div className="codechecker-wrapper">
+            <div id="code_box">
+                 <h1>Saved Codes</h1>
 
-            {loading && <p>Loading...</p>}
+                {loading && <p>Loading...</p>}
 
-            {!loading && codes.length === 0 && (
-                <p>No saved codes found.</p>
-            )}
+                {!loading && codes.length === 0 && (
+                    <p>No saved codes found.</p>
+                )}
 
-            {codes.map((item) => (
-                <div key={item.report_id} className="code-card">
-                    
-                    <h3>Report #{item.report_id}</h3>
+                {codes.map((item) => (
+                    <div key={item.report_id} className="code-card">
+                        
+                        <h3>Report #{item.report_id}</h3>
 
-                    <pre style={{ background: "#eee", padding: "10px" }}>
-                        {item.code_input}
-                    </pre>
+                        <pre style={{ background: "#eee", padding: "10px" }}>
+                            {item.code_input}
+                        </pre>
 
-                    <div style={{ marginTop: "10px" }}>
-                        <strong>Report:</strong>
-                        <pre>{item.report}</pre>
+                        <div style={{ marginTop: "10px" }}>
+                            <strong>Report:</strong>
+                            <pre>{item.report}</pre>
+                        </div>
+
+                        <button
+                            onClick={() => deleteReport(item.report_id)}
+                            style={{ marginTop: "10px", color: "red" }}
+                        >
+                            Delete
+                        </button>
                     </div>
-
-                    <button
-                        onClick={() => deleteReport(item.report_id)}
-                        style={{ marginTop: "10px", color: "red" }}
-                    >
-                        Delete
-                    </button>
-                </div>
-            ))}
+                ))}  
+            </div>
+            
         </div>
     );
 }
