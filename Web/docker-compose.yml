@@ -64,7 +64,7 @@ services:
       - AUTHED_PASS=${AUTHED_PASS}
     #Databse-related Variables
       - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}  
+      - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
@@ -131,10 +131,18 @@ services:
       - AUTHED_PASS=${AUTHED_PASS}
     #Databse-related Variables
       - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}  
+      - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       - DB_HOST=database
       - DB_PORT=${DB_PORT}
+    #email-related variables
+      - SMTP_HOST=${SMTP_HOST:-mailhog}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@cyberclinic.unr.edu}
+      - APP_BASE_URL=${APP_BASE_URL:-http://localhost:3000}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:5001}
     #sysreptor-related variables
       - REPTOR_SERVER_URL=http://${REPTOR_SERVER}:${REPTOR_PORT}
       - REPTOR_API_TOKEN=${REPTOR_API_TOKEN}
@@ -159,6 +167,16 @@ services:
         condition: service_healthy
       database:
         condition: service_healthy
+
+  mailhog:
+    container_name: cyberclinic-mailhog
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - backend
+    restart: unless-stopped
 
   ollama:
     container_name: cyberclinic-ollama
