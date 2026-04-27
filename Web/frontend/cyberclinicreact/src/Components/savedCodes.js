@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api";
-import './styles/codechecker.css';
+import '../styles/codechecker.css';
 import { useNavigate } from "react-router-dom";
 
 function SavedCodes() {
