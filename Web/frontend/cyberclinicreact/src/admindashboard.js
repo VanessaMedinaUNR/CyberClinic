@@ -123,8 +123,6 @@ return(
     <div id="bounding_box">
         <div className="admin-header">
             <h1>Admin Dashboard</h1>
-            <button className="btn-black" onClick={() => navigate('/dashboard')}> ← Dashboard
-            </button>
             <button className="btn-black" onClick={() => setShowInvite(true)}> + Invite User
             </button>
         </div>

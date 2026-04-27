@@ -59,7 +59,7 @@ function HelpContact() {
                     <div className="hc-popup" onClick={ e => e.stopPropagation() }>
 
                         <div className="hc-header">
-                            <span>Contact Support</span>
+                            <span style={{ color: 'white' }}>Contact Support</span>
                             <button className="hc-close" onClick={ handleClose }>✕</button>
                         </div>
                         { submitted ? (
