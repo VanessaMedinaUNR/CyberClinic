@@ -58,6 +58,6 @@ RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/nikto" | tee -a /etc/sudoers
 USER app
 
 ENTRYPOINT [ "python3",  "main.py" ]
-HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD curl --silent --fail http://${BACKEND_SERVER}:${BACKEND_PORT}/ || exit 1
+HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD curl --silent --fail https://${BACKEND_SERVER}:${BACKEND_PORT}/ || exit 1
 
 # Done by Morales-Marroquin and Austin Finch

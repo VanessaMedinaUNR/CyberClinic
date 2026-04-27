@@ -18,8 +18,8 @@ services:
       #backend:
       #  condition: service_healthy
       # Run with development backend
-      backend-dev:
-        condition: service_healthy
+      - backend-dev
+      #  condition: service_healthy
     networks:
       - frontend
     command: npm start
@@ -88,12 +88,6 @@ services:
     networks:
       - backend
       - frontend
-    healthcheck:
-      test: curl --silent --fail https://${BACKEND_SERVER}:${BACKEND_PORT}/ || exit 1
-      interval: 30s
-      timeout: 30s
-      retries: 5
-      start_period: 30s
 
   backend-dev:
     container_name: cyberclinic-backend

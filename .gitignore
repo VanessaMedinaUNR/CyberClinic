@@ -49,3 +49,4 @@ start_dev.sh
 # Docker volumes and data
 postgres_data/
 reptor_data/
+node_modules
