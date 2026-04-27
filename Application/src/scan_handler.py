@@ -87,7 +87,7 @@ def execute_scan(id: str, info: dict[str], storage: StorageHandler):
     match info['scan_type']:
         case 'nmap':
             of = os.path.join(of, f'nmap_scan_{id}.xml')
-            args = ['-sT', '-Pn', '-sV', '--script=default,safe', '--reason', '--open']
+            args = ['-sT', '-sV', '--script=default,safe', '--reason', '--open']
             logger.info('Executing nmap scan...')
             scanner = nmap.PortScanner()
             #custom options from scan_options
@@ -109,8 +109,19 @@ def execute_scan(id: str, info: dict[str], storage: StorageHandler):
         case 'nikto':
             of = os.path.join(of, f'nikto_scan_{id}.json')
             logger.info('Executing nikto scan...')
-
-            logger.error("Nikto is not installed, cannot execute nikto scan.")
+            live_hosts = nmap.PortScanner().scan(hosts=info["target_value"], arguments='-sn -T4').all_hosts()
+            nikto_results = {}
+            for host in live_hosts:
+                print(host)
+                logger.info(f'Executing nikto scan on host {host}...')
+                try:
+                    res = subprocess.run(['nikto', '-h', host, '-Format', 'json'], capture_output=True, text=True)
+                    if res.returncode == 0:
+                        nikto_results[host] = ast.literal_eval(res.stdout)
+                    else:
+                        logger.error(f'Nikto scan failed on host {host} with error: {res.stderr}')
+                except FileNotFoundError:
+                    logger.error("Nikto is not installed, cannot execute nikto scan.")
         case _:
             info['status'] = 'impossible'
             raise ValueError(f"Unknown scan type: {info['scan_type']}")
