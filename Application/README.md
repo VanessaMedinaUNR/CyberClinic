@@ -12,8 +12,6 @@ pyinstaller `
 -n CyberClinic `
 --distpath ..\\dist\\windows `
 --add-data 'config/auth.crt;config' `
---add-data 'tools/nmap-7.98-setup.exe;tools' `
---add-data 'tools/strawberry-perl-5.42.2.1-64bit.msi;tools' `
 --add-data 'tools/nikto-main;tools' `
 --icon 'CyberClinic.ico'`
 --onefile `

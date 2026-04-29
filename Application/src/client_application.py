@@ -154,51 +154,24 @@ def check_tools(app: QApplication):
     changed = 0
     if any(val is False for val in tools.values()):
         if tools['nmap'] == False:
-            alert = Alert(app, "Nmap was not found but is required. Press Ok to launch the installer.")
+            alert = Alert(app, "Nmap was not found but is required. Please visit https://nmap.org/download.html to download and install it.")
             alert.show()
             app.exec()
-            match sys.platform:
-                case 'win32':
-                    nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-setup.exe'))
-                case 'linux':
-                    nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98-1.x86_64.rpm'))
-                case 'darwin':
-                    nmap_installer = app_storage.fetch(os.path.join('tools', 'nmap-7.98.dmg'))
-            result: CompletedProcess = subprocess.run([nmap_installer], shell=True)
-            if result.returncode == 0:
-                changed = 1
-            else:
-                alert = Alert(app, "Installation Failed! Please try again.")
-                alert.show()
-                app.exec()
-                return -1
+            return -1
         if tools['perl'] == False:
             match sys.platform:
                 case 'win32':
-                    alert = Alert(app, "Perl was not found but is required. Press Ok to install it now.")
+                    alert = Alert(app, "Perl was not found but is required. Please visit https://strawberryperl.com/ to download and install it.")
                     alert.show()
                     app.exec()
-                    perl_installer = app_storage.fetch(os.path.join('tools', 'strawberry-perl-5.42.2.1-64bit.msi'))
-                    print(perl_installer)
-                    
-                    result = subprocess.run(['msiexec', '/i', perl_installer, '/quiet'])
-                    if result.returncode == 0:
-                        alert = Alert(app, "Installation Successful! Please re-run the app if it does not run automatically")
-                        alert.show()
-                        app.exec()
-                        changed = 1
-                    else:
-                        alert = Alert(app, "Installation Failed! Please try again.")
-                        alert.show()
-                        app.exec()
-                        return -1
+                    return -1
                 case 'linux':
-                    alert = Alert(app, "Perl was not found but is required. Please install it manually and try again.")
+                    alert = Alert(app, "Perl was not found but is required. Please visit https://www.perl.org/get.html to download and install it.")
                     alert.show()
                     app.exec()
                     return -1
                 case 'darwin':
-                    alert = Alert(app, "Perl was not found but is required. Please install it manually and try again.")
+                    alert = Alert(app, "Perl was not found but is required. Please visit https://www.perl.org/get.html to download and install it.")
                     alert.show()
                     app.exec()
                     return -1
@@ -208,6 +181,8 @@ def check_tools(app: QApplication):
                 tools = check_tools()
                 if tools['perl.XML::Writer'] == False:
                     raise Exception
+                else:
+                    changed += 1
             except Exception:
                 alert = Alert(app, "The perl XML::Writer module was not found and was unable to be installed automatically. Please install it manually and try again.")
                 alert.show()
@@ -216,6 +191,7 @@ def check_tools(app: QApplication):
         alert = Alert(app, "All required components were installed Successfully! Please re-run the app if it does not run automatically")
         alert.show()
         app.exec()
+        return changed
     else:
         return 0
 
