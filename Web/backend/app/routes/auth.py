@@ -270,7 +270,7 @@ def status():
                 """SELECT * FROM users WHERE user_id = %s""",
                 (user_id,)
             )
-            return jsonify({'logged_in': True, 'admin': userdata['client_admin']}), 200
+            return jsonify({'logged_in': True, 'admin': userdata['client_admin'], 'email': userdata['email']}), 200
         else:
             return jsonify({'logged_in': False}), 200
     except Exception as e:

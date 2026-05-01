@@ -9,10 +9,13 @@ export default function Toolbar() {
     const location = useLocation();
     const page = location.pathname
     const [loggedIn, setLoggedIn] = useState(false);
+    const [email, setEmail] = useState('');
+
     useEffect(() => {
         api.get('/auth/status')
             .then(response => {
                 setLoggedIn(response.data.logged_in);
+                setEmail(response.data.email);
             })
             .catch(error => {
                 console.error('Error checking auth status:', error);
@@ -35,7 +38,8 @@ export default function Toolbar() {
                 </div>
                 <div id="navright">
                     {loggedIn ? (
-                        <>
+                        <div>
+                            <span>{email}</span>
                             <span className="navlink" onClick={() => {
                                 api.post('/auth/logout')
                                     .then(() => {
@@ -47,9 +51,10 @@ export default function Toolbar() {
                                         console.error('Error logging out:', error);
                                         alert('Error logging out. Please try again.');
                                     });
-                            }}>Logout</span>
+                                }
+                            }>Logout</span>
                             <button type = "button" onClick={() => (navigate("/setting"))} style={{ textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer' }}>⚙️</button>
-                        </>
+                        </div>
                     ) : (
                         <span className="navlink" onClick={() => navigate('/login')}>Login / Create</span>
                     )}
