@@ -3,7 +3,7 @@
 import { useState,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import './styles/darkmode.css';
+import '../styles/darkmode.css';
 
 function DarkModeToggle() {
     const [isDark, setIsDark] = useState(localStorage.getItem('theme') === 'dark');

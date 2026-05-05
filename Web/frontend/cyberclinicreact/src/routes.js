@@ -13,7 +13,7 @@ import Home from "./home";
 import Faq from "./faq";
 import SavedCodes from "./Components/savedCodes";
 import HelpContact from "./Components/helpContact";
-import DarkModeToggle from "./darkmode";
+import DarkModeToggle from "./Components/darkmode";
 
 //make sure the import... is cap
 
